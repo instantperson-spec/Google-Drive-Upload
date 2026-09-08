@@ -12,6 +12,8 @@ export async function POST(request) {
     const filesListText = files.map(f => `- \`${f.name}\` (${(f.size / 1024 / 1024).toFixed(2)} MB)`).join('\n');
     const filesListHtml = files.map(f => `<li><strong>${f.name}</strong> (${(f.size / 1024 / 1024).toFixed(2)} MB)</li>`).join('');
 
+    const folderLink = data.folderId ? `https://drive.google.com/drive/folders/${data.folderId}` : '';
+
     const webhookUrl = process.env.WEBHOOK_URL;
     if (webhookUrl) {
       await fetch(webhookUrl, {
@@ -53,6 +55,7 @@ export async function POST(request) {
               <p style="margin-top: 30px; font-size: 14px; color: #666;">
                 All files have been securely saved to a dedicated folder in your Google Drive ("${data.uploaderName} - ${data.uploaderEmail}").
               </p>
+              ${folderLink ? `<a href="${folderLink}" style="display: inline-block; margin-top: 10px; padding: 10px 20px; background-color: #0056b3; color: white; text-decoration: none; border-radius: 6px; font-weight: bold;">Open Folder in Google Drive</a>` : ''}
             </div>
           `
         };

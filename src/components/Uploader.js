@@ -257,7 +257,7 @@ export default function Uploader() {
       fetch('/api/notify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ files: uploadedFilesInfo, uploaderName, uploaderEmail })
+        body: JSON.stringify({ files: uploadedFilesInfo, uploaderName, uploaderEmail, folderId: currentFolderId })
       }).catch(err => console.error('Notification failed:', err));
 
       setStatus('success');
