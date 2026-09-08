@@ -316,6 +316,21 @@ export default function Uploader() {
         />
       </div>
 
+      {sessionData && status !== 'uploading' && files.length === 0 && (
+        <div style={{ marginBottom: '20px', padding: '15px', background: 'rgba(96, 165, 250, 0.15)', border: '1px solid rgba(96, 165, 250, 0.3)', borderRadius: '12px', textAlign: 'center' }}>
+          <h4 style={{ margin: '0 0 10px 0', color: '#60a5fa' }}>⚠️ Previous session was interrupted</h4>
+          <p style={{ margin: 0, fontSize: '14px', color: 'rgba(255,255,255,0.8)' }}>
+            Select the exact same files again to resume your upload. Already completed files will be automatically skipped.
+          </p>
+          <button 
+            onClick={() => { clearSession(); setUploaderName(''); setUploaderEmail(''); }} 
+            style={{ marginTop: '10px', background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '13px', textDecoration: 'underline' }}
+          >
+            Cancel session and start fresh
+          </button>
+        </div>
+      )}
+
       <div 
         className={`dropzone ${isDragging ? 'active' : ''}`}
         onDragOver={handleDragOver}
