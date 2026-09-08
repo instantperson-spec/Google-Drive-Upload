@@ -1,148 +1,272 @@
 'use client';
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+
+const CHUNK_SIZE = 5 * 1024 * 1024; // 5MB
 
 export default function Uploader() {
-  const [files, setFiles] = useState([]);
+  const [files, setFiles] = useState([]); // { file, name, size, type, status, progress, uploadUrl }
   const [isDragging, setIsDragging] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [currentFileIndex, setCurrentFileIndex] = useState(0);
   const [status, setStatus] = useState('idle'); // idle, uploading, success, error
   const [errorMessage, setErrorMessage] = useState('');
   
-  // User details state
   const [uploaderName, setUploaderName] = useState('');
   const [uploaderEmail, setUploaderEmail] = useState('');
+  const [sessionData, setSessionData] = useState(null);
 
   const fileInputRef = useRef(null);
   const folderInputRef = useRef(null);
 
-  const handleDragOver = (e) => {
-    e.preventDefault();
-    setIsDragging(true);
+  // Load session on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('drive_uploader_session');
+      if (saved) {
+        const session = JSON.parse(saved);
+        if (session.uploaderName && session.uploaderEmail && session.folderId) {
+          setUploaderName(session.uploaderName);
+          setUploaderEmail(session.uploaderEmail);
+          setSessionData(session);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to parse session data', e);
+    }
+  }, []);
+
+  const saveSession = (data) => {
+    setSessionData(data);
+    localStorage.setItem('drive_uploader_session', JSON.stringify(data));
   };
 
-  const handleDragLeave = (e) => {
-    e.preventDefault();
-    setIsDragging(false);
+  const clearSession = () => {
+    setSessionData(null);
+    localStorage.removeItem('drive_uploader_session');
   };
+
+  const handleDragOver = (e) => { e.preventDefault(); setIsDragging(true); };
+  const handleDragLeave = (e) => { e.preventDefault(); setIsDragging(false); };
 
   const handleDrop = (e) => {
     e.preventDefault();
     setIsDragging(false);
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      setFiles(Array.from(e.dataTransfer.files));
+      addFiles(Array.from(e.dataTransfer.files));
     }
   };
 
   const handleFileSelect = (e) => {
     if (e.target.files && e.target.files.length > 0) {
-      const selectedFiles = Array.from(e.target.files);
-      setFiles(prev => [...prev, ...selectedFiles]);
+      addFiles(Array.from(e.target.files));
     }
+  };
+
+  const addFiles = (newFiles) => {
+    const fileObjects = newFiles.map(f => ({
+      file: f,
+      name: f.webkitRelativePath ? f.webkitRelativePath : f.name,
+      size: f.size,
+      type: f.type || 'application/octet-stream',
+      status: 'pending',
+      progress: 0,
+      uploadUrl: null
+    }));
+    setFiles(prev => [...prev, ...fileObjects]);
   };
 
   const removeFile = (indexToRemove) => {
     setFiles(files.filter((_, index) => index !== indexToRemove));
   };
 
+  const updateFileState = (index, updates) => {
+    setFiles(prev => {
+      const newFiles = [...prev];
+      newFiles[index] = { ...newFiles[index], ...updates };
+      return newFiles;
+    });
+  };
+
+  // Helper to query existing URL status
+  const queryUploadStatus = async (uploadUrl) => {
+    return new Promise((resolve) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('PUT', uploadUrl, true);
+      xhr.setRequestHeader('Content-Range', 'bytes */*');
+      xhr.onload = () => {
+        if (xhr.status === 308) {
+          const range = xhr.getResponseHeader('Range');
+          if (range) {
+            const endByte = parseInt(range.split('-')[1], 10);
+            resolve({ status: 'incomplete', nextByte: endByte + 1 });
+          } else {
+            resolve({ status: 'incomplete', nextByte: 0 });
+          }
+        } else if (xhr.status === 200 || xhr.status === 201) {
+          resolve({ status: 'completed' });
+        } else {
+          resolve({ status: 'error' });
+        }
+      };
+      xhr.onerror = () => resolve({ status: 'error' });
+      xhr.send();
+    });
+  };
+
+  const uploadChunk = async (url, file, start, end, fileIndex) => {
+    return new Promise((resolve, reject) => {
+      const chunk = file.slice(start, end);
+      const xhr = new XMLHttpRequest();
+      xhr.open('PUT', url, true);
+      xhr.setRequestHeader('Content-Range', `bytes ${start}-${end - 1}/${file.size}`);
+      
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) {
+          const totalLoaded = start + e.loaded;
+          const progress = Math.round((totalLoaded / file.size) * 100);
+          updateFileState(fileIndex, { progress });
+        }
+      };
+
+      xhr.onload = () => {
+        if (xhr.status === 308 || (xhr.status >= 200 && xhr.status < 300)) {
+          resolve();
+        } else {
+          reject(new Error(`Chunk upload failed with status ${xhr.status}`));
+        }
+      };
+      xhr.onerror = () => reject(new Error('Network error during chunk upload'));
+      xhr.send(chunk);
+    });
+  };
+
   const startUpload = async () => {
     if (files.length === 0 || !uploaderName.trim() || !uploaderEmail.trim()) return;
     
     setStatus('uploading');
-    setUploadProgress(0);
-    setCurrentFileIndex(0);
     setErrorMessage('');
 
     try {
-      // 1. Create User Wrapper Folder
-      const folderRes = await fetch('/api/create-folder', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          uploaderName: uploaderName,
-          uploaderEmail: uploaderEmail,
-        }),
-      });
+      let currentFolderId = sessionData?.folderId;
+      let sessionFiles = sessionData?.files || {};
 
-      if (!folderRes.ok) {
-        const errorData = await folderRes.json();
-        throw new Error(errorData.error || 'Failed to create wrapper folder');
-      }
-
-      const { folderId } = await folderRes.json();
-
-      // 2. Upload Files Sequentially
-      for (let i = 0; i < files.length; i++) {
-        setCurrentFileIndex(i);
-        setUploadProgress(0);
-        const file = files[i];
-
-        // 2a. Init upload session for this specific file
-        // We use webkitRelativePath if it's from a folder to preserve the name like "Folder/Sub/Video.mp4"
-        const fileNameToSave = file.webkitRelativePath ? file.webkitRelativePath : file.name;
-        
-        const initRes = await fetch('/api/upload-session', {
+      // 1. Create wrapper folder if we don't have an active session
+      if (!currentFolderId) {
+        const folderRes = await fetch('/api/create-folder', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: fileNameToSave,
-            mimeType: file.type || 'application/octet-stream',
-            size: file.size,
-            folderId: folderId,
-          }),
+          body: JSON.stringify({ uploaderName, uploaderEmail }),
         });
-
-        if (!initRes.ok) {
-          const errorData = await initRes.json();
-          throw new Error(errorData.error || `Failed to initialize upload for ${file.name}`);
-        }
-
-        const { uploadUrl } = await initRes.json();
-
-        // 2b. Upload the file to the resumable URL
-        await new Promise((resolve, reject) => {
-          const xhr = new XMLHttpRequest();
-          
-          xhr.upload.onprogress = (event) => {
-            if (event.lengthComputable) {
-              const percentComplete = Math.round((event.loaded / event.total) * 100);
-              setUploadProgress(percentComplete);
-            }
-          };
-
-          xhr.onload = () => {
-            if (xhr.status >= 200 && xhr.status < 300) {
-              resolve();
-            } else {
-              reject(new Error(`Upload failed for ${file.name} with status ${xhr.status}`));
-            }
-          };
-
-          xhr.onerror = () => reject(new Error(`Network error during upload of ${file.name}`));
-          
-          xhr.open('PUT', uploadUrl, true);
-          xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
-          xhr.send(file);
-        });
+        if (!folderRes.ok) throw new Error('Failed to create wrapper folder');
+        const { folderId } = await folderRes.json();
+        currentFolderId = folderId;
       }
 
-      // 3. Trigger Final Notification
+      saveSession({
+        uploaderName,
+        uploaderEmail,
+        folderId: currentFolderId,
+        files: sessionFiles
+      });
+
+      // 2. Check existing files in folder to silently skip duplicates
+      const checkRes = await fetch('/api/check-folder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ folderId: currentFolderId })
+      });
+      const { files: existingDriveFiles = [] } = await checkRes.json();
+
+      // 3. Upload loop
+      for (let i = 0; i < files.length; i++) {
+        const fObj = files[i];
+        if (fObj.status === 'completed') continue; // already completed in UI
+
+        updateFileState(i, { status: 'uploading' });
+
+        // Check if fully uploaded on Drive
+        const exists = existingDriveFiles.find(df => df.name === fObj.name && parseInt(df.size) === fObj.size);
+        if (exists) {
+          updateFileState(i, { status: 'completed', progress: 100 });
+          continue;
+        }
+
+        let uploadUrl = sessionFiles[fObj.name];
+        let nextByte = 0;
+
+        if (uploadUrl) {
+          const statusCheck = await queryUploadStatus(uploadUrl);
+          if (statusCheck.status === 'completed') {
+            updateFileState(i, { status: 'completed', progress: 100 });
+            continue;
+          } else if (statusCheck.status === 'incomplete') {
+            nextByte = statusCheck.nextByte;
+          } else {
+            // URL expired or error, get a new one
+            uploadUrl = null;
+          }
+        }
+
+        if (!uploadUrl) {
+          const initRes = await fetch('/api/upload-session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              name: fObj.name,
+              mimeType: fObj.type,
+              size: fObj.size,
+              folderId: currentFolderId,
+            }),
+          });
+          if (!initRes.ok) throw new Error(`Failed to init upload for ${fObj.name}`);
+          const data = await initRes.json();
+          uploadUrl = data.uploadUrl;
+          
+          sessionFiles[fObj.name] = uploadUrl;
+          saveSession({ uploaderName, uploaderEmail, folderId: currentFolderId, files: sessionFiles });
+        }
+
+        updateFileState(i, { uploadUrl });
+
+        // Chunk upload loop
+        let retries = 3;
+        while (nextByte < fObj.size) {
+          const endByte = Math.min(nextByte + CHUNK_SIZE, fObj.size);
+          try {
+            await uploadChunk(uploadUrl, fObj.file, nextByte, endByte, i);
+            nextByte = endByte;
+            retries = 3; // reset retries on success
+          } catch (chunkErr) {
+            console.error(chunkErr);
+            retries--;
+            if (retries === 0) {
+              throw new Error(`Failed to upload ${fObj.name} after multiple retries.`);
+            }
+            // Wait 2 seconds before retry
+            await new Promise(res => setTimeout(res, 2000));
+            // Query actual status before retrying in case it was partially received
+            const statusCheck = await queryUploadStatus(uploadUrl);
+            if (statusCheck.status === 'incomplete') nextByte = statusCheck.nextByte;
+            if (statusCheck.status === 'completed') break;
+          }
+        }
+
+        updateFileState(i, { status: 'completed', progress: 100 });
+      }
+
+      // 4. Trigger Final Notification
       const uploadedFilesInfo = files.map(f => ({ name: f.name, size: f.size }));
       fetch('/api/notify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          files: uploadedFilesInfo,
-          uploaderName: uploaderName,
-          uploaderEmail: uploaderEmail
-        })
-      }).catch(notifyErr => console.error('Notification failed:', notifyErr));
+        body: JSON.stringify({ files: uploadedFilesInfo, uploaderName, uploaderEmail })
+      }).catch(err => console.error('Notification failed:', err));
 
       setStatus('success');
+      clearSession();
+
     } catch (error) {
       console.error('Upload Error:', error);
       setStatus('error');
-      setErrorMessage(error.message || 'An error occurred during upload.');
+      setErrorMessage(error.message || 'An error occurred during upload. You can retry safely.');
     }
   };
 
@@ -155,12 +279,10 @@ export default function Uploader() {
             <path className="checkmark-check" fill="none" stroke="#4ade80" strokeWidth="4" d="M14.1 27.2l7.1 7.2 16.7-16.8" />
           </svg>
           <h2 style={{ color: 'white', marginBottom: '10px' }}>Upload Complete!</h2>
-          <p style={{ color: 'rgba(255,255,255,0.7)', marginBottom: '30px' }}>Files ({files.length}) have been successfully uploaded.</p>
+          <p style={{ color: 'rgba(255,255,255,0.7)', marginBottom: '30px' }}>All files have been successfully uploaded to the server.</p>
           <button className="btn" onClick={() => {
             setFiles([]);
             setStatus('idle');
-            setUploadProgress(0);
-            setCurrentFileIndex(0);
             setUploaderName('');
             setUploaderEmail('');
           }}>
@@ -235,50 +357,47 @@ export default function Uploader() {
             </button>
           </div>
         </div>
-        <input 
-          type="file" 
-          multiple
-          ref={fileInputRef} 
-          onChange={handleFileSelect} 
-          style={{ display: 'none' }} 
-        />
-        <input 
-          type="file" 
-          webkitdirectory="true"
-          directory="true"
-          multiple
-          ref={folderInputRef} 
-          onChange={handleFileSelect} 
-          style={{ display: 'none' }} 
-        />
+        <input type="file" multiple ref={fileInputRef} onChange={handleFileSelect} style={{ display: 'none' }} />
+        <input type="file" webkitdirectory="true" multiple ref={folderInputRef} onChange={handleFileSelect} style={{ display: 'none' }} />
       </div>
 
       {files.length > 0 && (
         <div className="file-list" style={{ marginTop: '20px', background: 'rgba(0,0,0,0.2)', padding: '15px', borderRadius: '12px' }}>
-          <h4 style={{ margin: '0 0 10px 0', color: 'rgba(255,255,255,0.8)', fontSize: '14px' }}>Selected files ({files.length}):</h4>
-          <ul style={{ listStyle: 'none', padding: 0, margin: 0, maxHeight: '200px', overflowY: 'auto' }}>
-            {files.map((f, index) => (
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+            <h4 style={{ margin: 0, color: 'rgba(255,255,255,0.8)', fontSize: '14px' }}>Selected files ({files.length})</h4>
+            {sessionData && status !== 'uploading' && (
+              <span style={{ fontSize: '12px', color: '#60a5fa', background: 'rgba(96, 165, 250, 0.1)', padding: '4px 8px', borderRadius: '4px' }}>
+                Resumable Session Active
+              </span>
+            )}
+          </div>
+          <ul style={{ listStyle: 'none', padding: 0, margin: 0, maxHeight: '250px', overflowY: 'auto' }}>
+            {files.map((fObj, index) => (
               <li key={index} style={{ 
-                display: 'flex', 
-                justifyContent: 'space-between', 
-                alignItems: 'center',
-                padding: '8px 10px',
+                padding: '10px',
                 borderBottom: index < files.length - 1 ? '1px solid rgba(255,255,255,0.1)' : 'none',
-                color: (status === 'uploading' && index === currentFileIndex) ? '#4ade80' : 'white',
-                opacity: (status === 'uploading' && index < currentFileIndex) ? 0.5 : 1
+                opacity: (fObj.status === 'completed' || fObj.status === 'pending') && status === 'uploading' ? 0.6 : 1
               }}>
-                <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '70%' }}>
-                  {f.name}
-                </span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <span style={{ fontSize: '12px', opacity: 0.7 }}>{(f.size / (1024 * 1024)).toFixed(2)} MB</span>
-                  {status !== 'uploading' && (
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); removeFile(index); }}
-                      style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0 5px' }}
-                    >×</button>
-                  )}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                  <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '70%', color: fObj.status === 'completed' ? '#4ade80' : 'white' }}>
+                    {fObj.name}
+                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span style={{ fontSize: '12px', opacity: 0.7 }}>{(fObj.size / (1024 * 1024)).toFixed(2)} MB</span>
+                    {status !== 'uploading' && fObj.status !== 'completed' && (
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); removeFile(index); }}
+                        style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0 5px', fontSize: '16px' }}
+                      >×</button>
+                    )}
+                  </div>
                 </div>
+                {(fObj.status === 'uploading' || fObj.progress > 0) && (
+                  <div style={{ width: '100%', height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', marginTop: '6px', overflow: 'hidden' }}>
+                    <div style={{ width: `${fObj.progress}%`, height: '100%', background: fObj.status === 'completed' ? '#4ade80' : '#3b82f6', transition: 'width 0.2s ease' }}></div>
+                  </div>
+                )}
+                {fObj.status === 'completed' && <div style={{ fontSize: '11px', color: '#4ade80', marginTop: '4px' }}>Completed</div>}
               </li>
             ))}
           </ul>
@@ -286,20 +405,8 @@ export default function Uploader() {
       )}
 
       {errorMessage && (
-        <div className="error-message" style={{ color: '#ef4444', marginTop: '15px', textAlign: 'center' }}>
+        <div className="error-message" style={{ color: '#ef4444', marginTop: '15px', textAlign: 'center', background: 'rgba(239, 68, 68, 0.1)', padding: '10px', borderRadius: '8px' }}>
           {errorMessage}
-        </div>
-      )}
-
-      {status === 'uploading' && (
-        <div className="progress-container" style={{ marginTop: '25px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', color: 'rgba(255,255,255,0.8)', fontSize: '14px' }}>
-            <span>Uploading file {currentFileIndex + 1} of {files.length}...</span>
-            <span>{uploadProgress}%</span>
-          </div>
-          <div className="progress-bar-bg" style={{ width: '100%', height: '10px', background: 'rgba(255,255,255,0.1)', borderRadius: '5px', overflow: 'hidden' }}>
-            <div className="progress-bar-fill" style={{ width: `${uploadProgress}%`, height: '100%', background: '#4ade80', transition: 'width 0.2s ease' }}></div>
-          </div>
         </div>
       )}
 
@@ -321,7 +428,7 @@ export default function Uploader() {
           transition: 'all 0.3s ease'
         }}
       >
-        {status === 'uploading' ? 'Upload in progress...' : `Start Upload (${files.length} files)`}
+        {status === 'uploading' ? 'Upload in progress...' : `Start Upload (${files.filter(f => f.status !== 'completed').length} files)`}
       </button>
     </div>
   );
