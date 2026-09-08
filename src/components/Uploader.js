@@ -253,7 +253,7 @@ export default function Uploader() {
       }
 
       // 4. Trigger Final Notification
-      const uploadedFilesInfo = files.map(f => ({ name: f.name, size: f.size, status: f.status }));
+      const uploadedFilesInfo = files.map(f => ({ name: f.name, size: f.size, status: 'completed' }));
       fetch('/api/notify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
