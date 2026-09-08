@@ -1,8 +1,8 @@
 :root {
   --bg-gradient-start: #0f172a;
   --bg-gradient-end: #1e1b4b;
-  --glass-bg: rgba(255, 255, 255, 0.05);
-  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-bg: rgba(15, 23, 42, 0.85);
+  --glass-border: rgba(255, 255, 255, 0.15);
   --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
   --text-primary: #f8fafc;
   --text-secondary: #94a3b8;
@@ -20,7 +20,7 @@
 
 body {
   font-family: var(--font-inter), sans-serif;
-  background: url('/bg.jpg') no-repeat center center fixed;
+  background: linear-gradient(rgba(5, 5, 10, 0.9), rgba(5, 5, 10, 0.95)), url('/bg.jpg') no-repeat center center fixed;
   background-size: cover;
   color: var(--text-primary);
   min-height: 100vh;
