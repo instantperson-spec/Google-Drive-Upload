@@ -1,35 +1,7 @@
 import { google } from 'googleapis';
 import { NextResponse } from 'next/server';
 import { verifyUploadToken, unauthorizedResponse } from '@/lib/auth';
-
-const getAuthClient = async () => {
-  if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET && process.env.GOOGLE_REFRESH_TOKEN) {
-    const oauth2Client = new google.auth.OAuth2(
-      process.env.GOOGLE_CLIENT_ID,
-      process.env.GOOGLE_CLIENT_SECRET
-    );
-    oauth2Client.setCredentials({
-      refresh_token: process.env.GOOGLE_REFRESH_TOKEN
-    });
-    return oauth2Client;
-  }
-
-  const credentials = {
-    client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-    private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-  };
-  
-  if (!credentials.client_email || !credentials.private_key) {
-    throw new Error('Google credentials are not set in .env');
-  }
-
-  const auth = new google.auth.GoogleAuth({
-    credentials,
-    scopes: ['https://www.googleapis.com/auth/drive.file', 'https://www.googleapis.com/auth/drive'],
-  });
-  
-  return await auth.getClient();
-};
+import { getAuthClient, isSessionFolder } from '@/lib/googleAuth';
 
 export async function POST(request) {
   if (!verifyUploadToken(request)) return unauthorizedResponse();
@@ -42,6 +14,12 @@ export async function POST(request) {
     }
 
     const authClient = await getAuthClient();
+
+    // Only session folders under the main folder may be listed
+    if (!(await isSessionFolder(authClient, folderId))) {
+      return NextResponse.json({ error: 'Invalid folder' }, { status: 403 });
+    }
+
     const drive = google.drive({ version: 'v3', auth: authClient });
     
     let allFiles = [];

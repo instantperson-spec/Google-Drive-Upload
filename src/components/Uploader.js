@@ -3,6 +3,19 @@ import React, { useState, useRef, useEffect } from 'react';
 
 const CHUNK_SIZE = 5 * 1024 * 1024; // 5MB
 
+// Mirrors the server-side blacklist in src/lib/validation.js (server is authoritative)
+const BLOCKED_EXTENSIONS = new Set([
+  'exe', 'bat', 'cmd', 'com', 'scr', 'pif', 'msi', 'msp',
+  'vbs', 'vbe', 'ws', 'wsf', 'wsh', 'ps1', 'psm1',
+  'sh', 'bash', 'zsh', 'jar', 'hta', 'cpl', 'lnk', 'reg',
+]);
+
+const isBlockedFile = (name) => {
+  const baseName = name.split('/').pop();
+  const ext = baseName.includes('.') ? baseName.split('.').pop().toLowerCase() : '';
+  return BLOCKED_EXTENSIONS.has(ext);
+};
+
 export default function Uploader() {
   const [files, setFiles] = useState([]); // { file, name, size, type, status, progress, uploadUrl }
   const [isDragging, setIsDragging] = useState(false);
@@ -74,16 +87,28 @@ export default function Uploader() {
   };
 
   const addFiles = (newFiles) => {
-    const fileObjects = newFiles.map(f => ({
-      file: f,
-      name: f.webkitRelativePath ? f.webkitRelativePath : f.name,
-      size: f.size,
-      type: f.type || 'application/octet-stream',
-      status: 'pending',
-      progress: 0,
-      uploadUrl: null
-    }));
-    setFiles(prev => [...prev, ...fileObjects]);
+    const accepted = [];
+    const rejected = [];
+    for (const f of newFiles) {
+      const name = f.webkitRelativePath ? f.webkitRelativePath : f.name;
+      if (isBlockedFile(name)) {
+        rejected.push(name);
+      } else {
+        accepted.push({
+          file: f,
+          name,
+          size: f.size,
+          type: f.type || 'application/octet-stream',
+          status: 'pending',
+          progress: 0,
+          uploadUrl: null
+        });
+      }
+    }
+    if (rejected.length > 0) {
+      setErrorMessage(`Skipped ${rejected.length} file(s) with disallowed type: ${rejected.slice(0, 5).join(', ')}${rejected.length > 5 ? '…' : ''}`);
+    }
+    setFiles(prev => [...prev, ...accepted]);
   };
 
   const removeFile = (indexToRemove) => {

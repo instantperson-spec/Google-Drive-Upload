@@ -1,35 +1,7 @@
-import { google } from 'googleapis';
 import { NextResponse } from 'next/server';
 import { verifyUploadToken, unauthorizedResponse } from '@/lib/auth';
-
-const getAuthClient = async () => {
-  if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET && process.env.GOOGLE_REFRESH_TOKEN) {
-    const oauth2Client = new google.auth.OAuth2(
-      process.env.GOOGLE_CLIENT_ID,
-      process.env.GOOGLE_CLIENT_SECRET
-    );
-    oauth2Client.setCredentials({
-      refresh_token: process.env.GOOGLE_REFRESH_TOKEN
-    });
-    return oauth2Client;
-  }
-
-  const credentials = {
-    client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-    private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-  };
-  
-  if (!credentials.client_email || !credentials.private_key) {
-    throw new Error('Google credentials are not set in .env');
-  }
-
-  const auth = new google.auth.GoogleAuth({
-    credentials,
-    scopes: ['https://www.googleapis.com/auth/drive.file', 'https://www.googleapis.com/auth/drive'],
-  });
-  
-  return await auth.getClient();
-};
+import { getAuthClient, isSessionFolder } from '@/lib/googleAuth';
+import { validateFileMetadata } from '@/lib/validation';
 
 export async function POST(request) {
   if (!verifyUploadToken(request)) return unauthorizedResponse();
@@ -45,7 +17,17 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Target folder ID is required' }, { status: 400 });
     }
 
+    const validationError = validateFileMetadata(name, size);
+    if (validationError) {
+      return NextResponse.json({ error: validationError }, { status: 400 });
+    }
+
     const authClient = await getAuthClient();
+
+    // Only allow uploads into session folders created under the main folder
+    if (!(await isSessionFolder(authClient, folderId))) {
+      return NextResponse.json({ error: 'Invalid target folder' }, { status: 403 });
+    }
     
     // Direct POST request to initiate the resumable upload session
     const response = await authClient.request({
