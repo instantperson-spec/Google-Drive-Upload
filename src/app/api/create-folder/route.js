@@ -1,8 +1,11 @@
 import { NextResponse } from 'next/server';
 import { verifyUploadToken, unauthorizedResponse } from '@/lib/auth';
 import { getAuthClient } from '@/lib/googleAuth';
+import { rateLimit } from '@/lib/rateLimit';
 
 export async function POST(request) {
+  const limited = rateLimit(request, 'create-folder', 10);
+  if (limited) return limited;
   if (!verifyUploadToken(request)) return unauthorizedResponse();
 
   try {

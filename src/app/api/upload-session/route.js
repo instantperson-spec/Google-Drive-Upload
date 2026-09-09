@@ -2,8 +2,12 @@ import { NextResponse } from 'next/server';
 import { verifyUploadToken, unauthorizedResponse } from '@/lib/auth';
 import { getAuthClient, isSessionFolder } from '@/lib/googleAuth';
 import { validateFileMetadata } from '@/lib/validation';
+import { rateLimit } from '@/lib/rateLimit';
 
 export async function POST(request) {
+  // Generous limit: bulk folder uploads legitimately open one session per file
+  const limited = rateLimit(request, 'upload-session', 300);
+  if (limited) return limited;
   if (!verifyUploadToken(request)) return unauthorizedResponse();
 
   try {

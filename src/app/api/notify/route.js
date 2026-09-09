@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
 import { verifyUploadToken, unauthorizedResponse } from '@/lib/auth';
+import { rateLimit } from '@/lib/rateLimit';
 
 const MAX_FILES_IN_NOTIFICATION = 2000;
 const MAX_NAME_LENGTH = 200;
@@ -21,6 +22,8 @@ const isValidFolderId = (value) =>
   typeof value === 'string' && /^[a-zA-Z0-9_-]{10,100}$/.test(value);
 
 export async function POST(request) {
+  const limited = rateLimit(request, 'notify', 5);
+  if (limited) return limited;
   if (!verifyUploadToken(request)) return unauthorizedResponse();
 
   try {
