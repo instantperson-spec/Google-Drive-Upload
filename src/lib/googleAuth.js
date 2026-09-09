@@ -38,6 +38,12 @@ export async function getAuthClient() {
   return await auth.getClient();
 }
 
+// Positive verifications cached to avoid a Drive API call per heartbeat/file-init.
+// A folder verified as a session child stays one; only positives are cached so a
+// transient API failure can never poison the cache.
+const sessionFolderCache = new Map(); // folderId -> verifiedAt (ms)
+const SESSION_FOLDER_TTL_MS = 30 * 60 * 1000;
+
 /**
  * Verifies that the given folder is a direct child of the configured main
  * upload folder (GOOGLE_DRIVE_FOLDER_ID). Prevents clients from pointing
@@ -47,6 +53,9 @@ export async function isSessionFolder(authClient, folderId) {
   const mainFolderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
   if (!mainFolderId || !folderId || typeof folderId !== 'string') return false;
 
+  const cachedAt = sessionFolderCache.get(folderId);
+  if (cachedAt && Date.now() - cachedAt < SESSION_FOLDER_TTL_MS) return true;
+
   try {
     const drive = google.drive({ version: 'v3', auth: authClient });
     const res = await drive.files.get({
@@ -54,13 +63,17 @@ export async function isSessionFolder(authClient, folderId) {
       fields: 'id, mimeType, parents, trashed',
     });
     const f = res.data;
-    return (
+    const ok =
       f.mimeType === 'application/vnd.google-apps.folder' &&
       !f.trashed &&
       Array.isArray(f.parents) &&
-      f.parents.includes(mainFolderId)
-    );
+      f.parents.includes(mainFolderId);
+    if (ok) sessionFolderCache.set(folderId, Date.now());
+    return ok;
   } catch {
+    // Drive hiccup / rate limit: trust a previously verified folder (even stale)
+    // instead of failing the client's in-flight upload session.
+    if (cachedAt) return true;
     return false;
   }
 }

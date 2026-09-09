@@ -93,23 +93,33 @@ export async function readRegistry(force = false) {
     return cache.registry;
   }
 
-  const drive = await getDrive();
-  let file = await findTokenFile(drive);
+  try {
+    const drive = await getDrive();
+    let file = await findTokenFile(drive);
 
-  if (!file) {
-    const registry = bootstrapFromEnv();
-    const fileId = await createTokenFile(drive, registry);
+    if (!file) {
+      const registry = bootstrapFromEnv();
+      const fileId = await createTokenFile(drive, registry);
+      cache.registry = registry;
+      cache.fileId = fileId;
+      cache.loadedAt = Date.now();
+      return registry;
+    }
+
+    const registry = await readFileJson(drive, file.id);
     cache.registry = registry;
-    cache.fileId = fileId;
+    cache.fileId = file.id;
     cache.loadedAt = Date.now();
     return registry;
+  } catch (err) {
+    // Drive hiccup / rate limit: serve last known registry instead of failing
+    // auth (a stale-but-real registry beats a spurious 401 for active clients).
+    if (cache.registry) {
+      console.error('Token registry read failed, using stale cache:', err.message || err);
+      return cache.registry;
+    }
+    throw err;
   }
-
-  const registry = await readFileJson(drive, file.id);
-  cache.registry = registry;
-  cache.fileId = file.id;
-  cache.loadedAt = Date.now();
-  return registry;
 }
 
 async function saveRegistry(registry) {
