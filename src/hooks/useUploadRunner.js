@@ -185,7 +185,8 @@ export function useUploadRunner({
           1000
         );
 
-        let retries = 3;
+        let retries = 0;
+        const MAX_RETRIES = 10;
         while (nextByte < fObj.size) {
           const endByte = Math.min(nextByte + CHUNK_SIZE, fObj.size);
           try {
@@ -198,14 +199,16 @@ export function useUploadRunner({
             });
             nextByte = endByte;
             reportProgress(Math.round((nextByte / fObj.size) * 100));
-            retries = 3;
+            retries = 0;
           } catch (chunkErr) {
             console.error(chunkErr);
-            retries -= 1;
-            if (retries === 0) {
+            retries += 1;
+            if (retries > MAX_RETRIES) {
               throw new Error(`Failed to upload ${fObj.name} after multiple retries.`);
             }
-            await new Promise((res) => setTimeout(res, 2000));
+            const delay = Math.min(2000 * Math.pow(2, retries - 1), 60000); // 2s, 4s, 8s... up to 60s
+            console.log(`Rate limit or error. Retrying in ${delay/1000}s (Attempt ${retries}/${MAX_RETRIES})`);
+            await new Promise((res) => setTimeout(res, delay));
             const statusCheck = await queryUploadStatusWithRetry(uploadUrl);
             if (statusCheck.status === UPLOAD_STATUS.INCOMPLETE) {
               nextByte = statusCheck.nextByte;

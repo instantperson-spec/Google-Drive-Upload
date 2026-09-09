@@ -1,5 +1,5 @@
-// 32MB chunks — fewer round-trips and far fewer UI progress updates on multi-GB MOVs
-export const CHUNK_SIZE = 32 * 1024 * 1024;
+// 64MB chunks — fewer round-trips and far fewer UI progress updates on multi-GB MOVs
+export const CHUNK_SIZE = 64 * 1024 * 1024;
 
 const STATUS_QUERY_TIMEOUT_MS = 30_000;
 const CHUNK_TIMEOUT_MS = 10 * 60 * 1000; // 10 min per chunk (large MOVs on slow links)
