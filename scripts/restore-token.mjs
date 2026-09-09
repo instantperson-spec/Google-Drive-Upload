@@ -40,7 +40,7 @@ function parseArgs(argv) {
 
 async function main() {
   const { token: tokenSlug } = parseArgs(process.argv.slice(2));
-  if (!tokenSlug) throw new Error('Usage: node scripts/restore-token.mjs --token=Woodweb-T7-resume');
+  if (!tokenSlug) throw new Error('Usage: node scripts/restore-token.mjs --token=YOUR_TOKEN_SLUG');
 
   const env = loadEnvFile(ENV_PATH);
   const oauth2 = new google.auth.OAuth2(env.GOOGLE_CLIENT_ID, env.GOOGLE_CLIENT_SECRET);

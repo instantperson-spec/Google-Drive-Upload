@@ -11,7 +11,7 @@ const VOLUME_ROOT_RE = /drive|volume|disk|\(\d+\s*(TB|GB|MB)\)/i;
 
 /**
  * Path variants for matching when the client selected an entire drive root.
- * e.g. "T7 Drive 02 (2TB)/Woodweb (Master)/file.mov" → also "Woodweb (Master)/file.mov"
+ * e.g. "T7 Drive 02 (2TB)/Project/Media/file.mov" → also "Project/Media/file.mov"
  */
 export function clientPathVariants(relativePath) {
   const p = normalizeClientPath(relativePath);

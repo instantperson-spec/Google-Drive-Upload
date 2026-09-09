@@ -6,7 +6,7 @@ import { google } from 'googleapis';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ENV_PATH = path.join(__dirname, '..', '.env.local');
-const SESSION_ID = process.argv[2] || '1zDyGWHbw8Fh-7Zz1LBh56G82Rf72CJDr';
+const SESSION_ID = process.argv[2];
 
 function loadEnvFile(filePath) {
   if (!fs.existsSync(filePath)) return {};
@@ -43,6 +43,9 @@ async function listAllFiles(drive, folderId) {
 }
 
 async function main() {
+  if (!SESSION_ID) {
+    throw new Error('Usage: node scripts/inspect-session.mjs DRIVE_FOLDER_ID');
+  }
   const env = loadEnvFile(ENV_PATH);
   const oauth2 = new google.auth.OAuth2(env.GOOGLE_CLIENT_ID, env.GOOGLE_CLIENT_SECRET);
   oauth2.setCredentials({ refresh_token: env.GOOGLE_REFRESH_TOKEN });

@@ -4,8 +4,14 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { google } from 'googleapis';
 
-const SESSION_ID = '1zDyGWHbw8Fh-7Zz1LBh56G82Rf72CJDr';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+function parseArgs(argv) {
+  for (const arg of argv) {
+    if (arg.startsWith('--folder-id=')) return arg.slice('--folder-id='.length);
+  }
+  return process.env.SESSION_FOLDER_ID || null;
+}
 
 function loadEnv() {
   const env = {};
@@ -44,16 +50,21 @@ async function listChildren(drive, folderId) {
 }
 
 async function main() {
+  const folderId = parseArgs(process.argv.slice(2));
+  if (!folderId) {
+    throw new Error('Usage: node scripts/check-session-activity.mjs --folder-id=DRIVE_FOLDER_ID');
+  }
+
   const env = loadEnv();
   const oauth2 = new google.auth.OAuth2(env.GOOGLE_CLIENT_ID, env.GOOGLE_CLIENT_SECRET);
   oauth2.setCredentials({ refresh_token: env.GOOGLE_REFRESH_TOKEN });
   const drive = google.drive({ version: 'v3', auth: oauth2 });
 
-  const root = await listChildren(drive, SESSION_ID);
+  const root = await listChildren(drive, folderId);
   const folders = root.filter((f) => f.mimeType === 'application/vnd.google-apps.folder');
   const flatFiles = root.filter((f) => f.mimeType !== 'application/vnd.google-apps.folder');
 
-  console.log(`Session: Ciaran Carty (${SESSION_ID})\n`);
+  console.log(`Session folder: ${folderId}\n`);
   console.log(`Subfolders: ${folders.map((f) => f.name).join(', ') || '(none)'}`);
   console.log(`Flat files in session ROOT (new uploads land here): ${flatFiles.length}\n`);
 
@@ -66,18 +77,12 @@ async function main() {
     }
   }
 
-  // Count stills in nested folder
-  const master = folders.find((f) => f.name === 'Woodweb (Master)');
-  if (master) {
-    const stillsFolder = (await listChildren(drive, master.id)).find((f) => f.name === 'Stills');
-    if (stillsFolder) {
-      const stills = await listChildren(drive, stillsFolder.id);
-      const files = stills.filter((f) => f.mimeType !== 'application/vnd.google-apps.folder');
-      console.log(`\nWoodweb (Master)/Stills: ${files.length} files`);
-      const recent = files.sort((a, b) => b.modifiedTime.localeCompare(a.modifiedTime)).slice(0, 8);
-      for (const f of recent) {
-        console.log(`  ${f.modifiedTime}  ${f.name}`);
-      }
+  if (folders.length) {
+    console.log('\nSubfolder file counts:');
+    for (const folder of folders.slice(0, 5)) {
+      const children = await listChildren(drive, folder.id);
+      const fileCount = children.filter((f) => f.mimeType !== 'application/vnd.google-apps.folder').length;
+      console.log(`  ${folder.name}: ${fileCount} files`);
     }
   }
 }

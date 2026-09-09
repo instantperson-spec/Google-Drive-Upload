@@ -1,5 +1,0 @@
-# Extracted from T7_Drive_02__2TB__Contents.pdf (DriveBuddy report)
-# Root-level files (outside Woodweb Master folder on source disk)
-ROOT	Woodweb Test Relight.mov	433.3 MB
-ROOT	Woodweb (Day02).mp4	15.7 GB
-ROOT	Woodweb Test Relight 02.mov	194.6 MB
