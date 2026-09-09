@@ -26,8 +26,12 @@ const MAX_FILES_SHOWN = 8;
 function ActiveSessionCard({ session }) {
   const [showLogs, setShowLogs] = useState(false);
   const isDone = session.sessionStatus === 'completed';
-  const visibleFiles = session.files.slice(0, MAX_FILES_SHOWN);
-  const hiddenCount = session.files.length - visibleFiles.length;
+  
+  // Sort files: uploading first, then pending, then completed
+  const sortedFiles = [...session.files].sort((a, b) => {
+    const score = { uploading: 0, error: 1, pending: 2, completed: 3 };
+    return (score[a.status] ?? 4) - (score[b.status] ?? 4);
+  });
 
   return (
     <div className={`admin-active-card ${isDone ? 'admin-active-card-done' : ''}`}>
@@ -64,8 +68,8 @@ function ActiveSessionCard({ session }) {
         {' · '}updated {formatDate(session.updatedAt)}
       </div>
 
-      <ul className="admin-active-files">
-        {visibleFiles.map((f) => (
+      <ul className="admin-active-files" style={{ maxHeight: '250px', overflowY: 'auto', paddingRight: '5px' }}>
+        {sortedFiles.map((f) => (
           <li key={f.name} className="admin-active-file">
             <div className="admin-active-file-row">
               <span className="admin-active-file-name" title={f.name}>{f.name}</span>
@@ -83,9 +87,6 @@ function ActiveSessionCard({ session }) {
         ))}
       </ul>
 
-      {hiddenCount > 0 && (
-        <p className="admin-active-more">+ {hiddenCount} more file{hiddenCount !== 1 ? 's' : ''}</p>
-      )}
 
       <div style={{ marginTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '0.5rem' }}>
         <button 
