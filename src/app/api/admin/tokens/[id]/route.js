@@ -1,15 +1,8 @@
 import { NextResponse } from 'next/server';
 import { isAdminAuthenticated, unauthorizedAdminResponse } from '@/lib/adminAuth';
 import { revokeToken, restoreToken, buildUploadUrl } from '@/lib/tokenStore';
+import { getUploadOrigin } from '@/lib/uploadOrigin';
 import { rateLimit } from '@/lib/rateLimit';
-
-function getOrigin(request) {
-  return (
-    process.env.PUBLIC_UPLOAD_URL ||
-    request.headers.get('origin') ||
-    'http://localhost:3000'
-  );
-}
 
 export async function PATCH(request, { params }) {
   if (!(await isAdminAuthenticated(request))) return unauthorizedAdminResponse();
@@ -34,7 +27,7 @@ export async function PATCH(request, { params }) {
       );
     }
 
-    const origin = getOrigin(request);
+    const origin = getUploadOrigin(request);
     return NextResponse.json({
       token: {
         ...record,

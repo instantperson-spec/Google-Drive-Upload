@@ -1,15 +1,8 @@
 import { NextResponse } from 'next/server';
 import { isAdminAuthenticated, unauthorizedAdminResponse } from '@/lib/adminAuth';
 import { createToken, listTokens, buildUploadUrl } from '@/lib/tokenStore';
+import { getUploadOrigin } from '@/lib/uploadOrigin';
 import { rateLimit } from '@/lib/rateLimit';
-
-function getOrigin(request) {
-  return (
-    process.env.PUBLIC_UPLOAD_URL ||
-    request.headers.get('origin') ||
-    'http://localhost:3000'
-  );
-}
 
 function enrichWithUrl(record, origin) {
   return {
@@ -27,7 +20,7 @@ export async function GET(request) {
   if (!(await isAdminAuthenticated(request))) return unauthorizedAdminResponse();
 
   try {
-    const origin = getOrigin(request);
+    const origin = getUploadOrigin(request);
     const tokens = await listTokens();
     return NextResponse.json({
       tokens: tokens.map((t) => enrichWithUrl(t, origin)),
@@ -55,7 +48,7 @@ export async function POST(request) {
       notes: body.notes,
     });
 
-    const origin = getOrigin(request);
+    const origin = getUploadOrigin(request);
     return NextResponse.json({ token: enrichWithUrl(record, origin) }, { status: 201 });
   } catch (error) {
     return NextResponse.json({ error: error.message || 'Failed to create token.' }, { status: 400 });
