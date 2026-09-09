@@ -97,9 +97,9 @@ Klient wprowadza email w formularzu — ten email trafia do nazwy folderu Drive 
 
 ## 3. Jakość Kodu i Drogi na Skróty
 
-### Inline styles — 451 linii, ~60% to style
+### ~~Inline styles — 451 linii, ~60% to style~~ ✅ Refaktor 2026-09-09
 
-[`Uploader.js`](file:///Volumes/ENV/Google%20Drive/drive-uploader/src/components/Uploader.js) to jeden z najbardziej ekstremalnych przypadków mieszania logiki z prezentacją. Dosłownie każdy element JSX ma `style={{ ... }}` z dziesiątkami właściwości CSS. Projekt ma kompletny system CSS z tokenami (`globals.css`) — ale jest używany tylko przez trzy-cztery klasy (`.btn`, `.dropzone`, `.glass-panel`), reszta jest inline.
+[`Uploader.js`](file:///Volumes/ENV/Google%20Drive/drive-uploader/src/components/Uploader.js) rozbity na hooki + komponenty w `src/components/upload/`; style przeniesione do `globals.css` (klasy `.upload-*`, `.glass-input`). Jedyny pozostały inline: dynamiczna szerokość paska postępu (`width: N%`).
 
 **Skutki:** Zmiana koloru "sukcesu" z `#4ade80` wymaga edycji min. 5 niezależnych miejsc w jednym pliku. W CSS byłoby to zmienne `--success-color` (już zdefiniowane w globals.css, ale nieużywane w Uploader).
 
@@ -177,13 +177,13 @@ Layout nie zawiera `<meta name="robots" content="noindex">`. To jeden z pierwszy
 
 ### Jeden monolityczny komponent — 451 linii
 
-Cała logika aplikacji jest w jednym pliku [`Uploader.js`](file:///Volumes/ENV/Google%20Drive/drive-uploader/src/components/Uploader.js). Wyodrębnienie w przyszłości planowanego przycisku pauzy, alertu o "drobnicach", czy pola notatek będzie wymagało głębokiej ingerencji w już złożony komponent.
+### ~~God object Uploader.js~~ ✅ Refaktor 2026-09-09
 
-Naturalny podział:
-- `useUploadSession` — hook zarządzający stanem sesji i localStorage
-- `useChunkUpload` — hook z logiką chunków, retry, queryUploadStatus
-- `FileList` — komponent listy plików z paskami postępu
-- `DropZone` — komponent strefy upuszczania
+Podział wdrożony:
+- **Hooki:** `useUploadToken`, `useUploadSession`, `useFileQueue`, `useUploadHeartbeat`, `useUploadRunner`
+- **Lib:** `blocklist.js`, `apiErrors.js`, `chunkUpload.js`
+- **Komponenty:** `UploadStatusScreens`, `UserDetailsForm`, `SessionResumeBanner`, `UploadDropZone`, `UploadFileList`
+- **`Uploader.js`** (~170 linii) — orchestrator UI
 
 ---
 

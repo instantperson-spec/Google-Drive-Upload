@@ -15,14 +15,15 @@ Upload odbywa się **bezpośrednio z przeglądarki klienta do Google Drive** —
 
 ## Co admin potrzebuje (wymagania)
 
-| Potrzeba | Pilność | Obecny stan |
+| Potrzeba | Pilność | Stan po wdrożeniu lokalnym |
 |---|---|---|
-| Lista aktywnych uploadów z % postępu | 🔴 Wysoka | Brak |
-| Historia zakończonych sesji | 🟡 Średnia | Tylko email + foldery na Drive |
-| Powiązanie uploadu z tokenem/klientem | 🟡 Średnia | Token nie jest logowany |
-| Link do folderu sesji na Drive | 🟢 Niska | Jest w mailu admina |
-| Zarządzanie tokenami (CRUD) | 🟡 Średnia | Ręcznie przez env |
-| Revoke tokena bez redeploy | 🟢 Niska | Wymaga edycji env + redeploy |
+| Lista aktywnych uploadów z % postępu | 🔴 Wysoka | ✅ Faza B — „Active now", heartbeat 10s, refresh 5s |
+| Historia zakończonych sesji | 🟡 Średnia | ✅ Faza A — tabela z Drive + email po uploadzie |
+| Powiązanie uploadu z tokenem/klientem | 🟡 Średnia | ✅ Token widoczny w „Active now"; brak mapowania na clientName z registry |
+| Link do folderu sesji na Drive | 🟢 Niska | ✅ W historii + w mailu admina |
+| Zarządzanie tokenami (CRUD) | 🟡 Średnia | ✅ Faza C — create / revoke / restore / copy link |
+| Revoke tokena bez redeploy | 🟢 Niska | ✅ Revoke w `/admin` → natychmiastowy efekt |
+| Diagnostyka OAuth przed deployem | 🟡 Średnia | ✅ OAuth scope test w panelu + CLI |
 
 ---
 
@@ -53,9 +54,9 @@ Upload odbywa się **bezpośrednio z przeglądarki klienta do Google Drive** —
 - liczba plików, łączny rozmiar, data ostatniej modyfikacji
 - link „Otwórz w Drive"
 
-**Czego NIE widać:**
+**Czego NIE widać (w samej Fazie A):**
 - upload w trakcie (plik pojawia się na Drive dopiero po 100%)
-- postęp procentowy na żywo
+- postęp procentowy na żywo → **uzupełnione przez Fazę B**
 
 **Zabezpieczenie:**
 - strona `/admin` chroniona hasłem admina (`ADMIN_SECRET` w env, weryfikacja cookie/sesji)
@@ -126,7 +127,8 @@ Upload odbywa się **bezpośrednio z przeglądarki klienta do Google Drive** —
 
 **Zabezpieczenie endpointu progress:**
 - wymaga ważnego `x-upload-token` (jak pozostałe API)
-- rate limit: 6 req/min per sesja
+- rate limit: **8 req/min** per `sessionId`
+- walidacja `folderId` przez `isSessionFolder`
 
 ---
 
@@ -209,12 +211,143 @@ Upload odbywa się **bezpośrednio z przeglądarki klienta do Google Drive** —
 
 ## Decyzje — stan po wdrożeniu lokalnym
 
-| Decyzja | Wybór | Uwagi |
+Poniżej: decyzje projektowe podjęte (lub domyślnie zaakceptowane) przy implementacji konsoli admina i powiązanych funkcji. Każda zawiera **wybór**, **uzasadnienie**, **implementację w kodzie** oraz **kiedy wrócić do tematu**.
+
+---
+
+### 1. Store na live progress (Faza B)
+
+| | |
+|---|---|
+| **Wybór** | **In-memory `Map`** (`src/lib/progressStore.js`) |
+| **Odrzucone** | Vercel KV, Upstash Redis, plik `_progress.json` na Drive |
+| **Uzasadnienie** | Zero kosztów, zero nowych env, zero zależności npm. Przy jednym studiu i umiarkowanej liczbie równoległych uploadów wystarczy na start. Heartbeat to dane efemeryczne — nie muszą przetrwać restartu serwera. |
+| **Implementacja** | TTL sesji: **24 h**. Aktywna sesja = heartbeat **< 30 s** temu + `sessionStatus: uploading`. Ukończone sesje widoczne jeszcze **2 min** w „Active now". Rate limit heartbeat: **8 req/min** per `sessionId`. |
+| **Ograniczenie na Vercel** | Serverless = wiele instancji + cold start → admin może **nie widzieć** uploadu, jeśli heartbeat trafi na inną instancję niż `/api/admin/active`. Przy 1–2 równoległych uploadach zwykle OK; przy skali rośnie problem. |
+| **Kiedy zmienić** | Po deployie, jeśli „Active now" regularnie pokazuje pustkę mimo trwającego uploadu → migracja na **Vercel KV** (TTL 24h, ten sam payload). Szacunek: ~$0–5/mies. |
+
+---
+
+### 2. Autoryzacja admina (`/admin`)
+
+| | |
+|---|---|
+| **Wybór** | Pojedyncze hasło **`ADMIN_SECRET`** w env |
+| **Odrzucone** | NextAuth, Google Login admina, lista dozwolonych emaili |
+| **Uzasadnienie** | Jeden operator (studio). Brak multi-user, brak rejestracji — zgodnie z filozofią „zero tarcia" dla klientów. Hasło z env to ten sam wzorzec co reszta projektu (OAuth w env, tokeny w env jako fallback). |
+| **Implementacja** | Login: `POST /api/admin/login` → porównanie hasła (`timingSafeEqual`) → cookie **`admin_session`** (httpOnly, secure w prod, sameSite strict, **24 h**). Wartość cookie = HMAC(`ADMIN_SECRET`, `'admin-session-v1'`) — hasło nie trafia do cookie w plaintext. Skrypty/API: nagłówek **`x-admin-secret`** = surowe `ADMIN_SECRET`. Brak `ADMIN_SECRET` → wszystkie `/api/admin/*` zwracają 401. |
+| **Produkcja** | Ustaw **silne, unikalne** hasło (min. 20 znaków). Nie używaj `admin-local-dev`. |
+| **Kiedy zmienić** | Gdy panel ma obsługiwać **wielu użytkowników** (asystent, współwłaściciel) lub wymagany jest audit *kto* zrevokował token → NextAuth + Google Workspace albo magic link. |
+
+---
+
+### 3. Token klienta w widoku „Active now"
+
+| | |
+|---|---|
+| **Wybór** | **Tak — token jest zapisywany i wyświetlany** w sekcji aktywnych uploadów |
+| **Początkowy plan** | „Token nie jest logowany" (wymagania z początku projektu) |
+| **Stan faktyczny** | Heartbeat wysyła `token` z nagłówka `x-upload-token`; `AdminDashboard` pokazuje `· token: StudioAlfa` przy aktywnej sesji. |
+| **Uzasadnienie zmiany** | Przy wielu retainerach jednocześnie admin musi wiedzieć, **który link** uploaduje — bez tego widać tylko email i nazwę z formularza (może być mylące). |
+| **Ryzyko** | Token w panelu admina to OK (chroniony `ADMIN_SECRET`). Token **nie** trafia do logów serwera ani maili. |
+| **Backlog** | Powiązanie sesji z **clientName** z rejestru tokenów (czytelniejsza etykieta niż surowy slug). Statystyki per token (Faza C+). |
+
+---
+
+### 4. Retencja danych progress
+
+| | |
+|---|---|
+| **Wybór** | **24 h TTL** w pamięci; brak archiwum heartbeat |
+| **Uzasadnienie** | Progress to dane operacyjne „tu i teraz". Historia uploadów i tak jest na **Drive** (Faza A) + **email admina** po zakończeniu. Nie duplikować danych. |
+| **Wyjątek** | Sesje `completed` widoczne w „Active now" przez **2 min** po ostatnim heartbeat — żeby admin zdążył zobaczyć 100% bez mrugnięcia. |
+| **Kiedy zmienić** | Jeśli potrzebujesz wykresów „upload w czasie" lub alertów stuck > X h → persystentny store (KV) + job czyszczący. |
+
+---
+
+### 5. Rejestr tokenów klientów (Faza C)
+
+| | |
+|---|---|
+| **Wybór** | Plik **`_uploader_tokens.json`** na Google Drive (w głównym folderze uploadów) |
+| **Odrzucone** | Edycja tylko `UPLOAD_TOKENS` w env, Vercel KV, Postgres/Neon |
+| **Uzasadnienie** | Revoke **natychmiastowy** bez redeploy. Jeden źródłowy magazyn obok danych klientów. Brak dodatkowej bazy. Cache 30 s w pamięci procesu. |
+| **Bootstrap** | Pierwsze `/admin` → tokens lub pierwszy upload: import z **`UPLOAD_TOKENS`** env → utworzenie pliku na Drive. Potem **panel admina = źródło prawdy**; env tylko fallback gdy Drive niedostępny. |
+| **Operacje** | Create, revoke, restore, copy link (`PUBLIC_UPLOAD_URL` + `?token=`). Brak edycji nazwy/expiry (Faza C+). |
+| **Kiedy zmienić** | Przy >100 tokenów lub potrzebie SQL/query → Neon lub KV; na razie JSON na Drive wystarczy. |
+
+---
+
+### 6. Odświeżanie UI admina (polling vs SSE)
+
+| | |
+|---|---|
+| **Wybór** | **Polling HTTP** — „Active now" co **5 s**, „History" co **60 s** |
+| **Odrzucone** | Server-Sent Events, WebSocket |
+| **Uzasadnienie** | Prostota na serverless Vercel. Brak utrzymanych połączeń. Przy 1 adminie i kilku sesjach obciążenie znikome. |
+| **Kiedy zmienić** | Przy wielu równoczesnych adminach lub potrzebie sub-sekundowego refresh → SSE na dedykowanym route. |
+
+---
+
+### 7. Historia sesji — skąd dane (Faza A)
+
+| | |
+|---|---|
+| **Wybór** | **Bezpośredni odczyt Google Drive** — lista podfolderów `GOOGLE_DRIVE_FOLDER_ID` |
+| **Uzasadnienie** | Drive jest source of truth. Zero synchronizacji. Folder sesji = `Imię - email@firma.pl`. Widać liczbę plików, rozmiar, datę modyfikacji, link. |
+| **Ograniczenie** | Plik pojawia się na liście dopiero po **100% uploadu** (resumable upload). W trakcie — tylko Faza B (heartbeat). |
+| **Kiedy zmienić** | Jeśli potrzebny filtr per token lub wyszukiwarka → indeks w KV/DB budowany z notify webhook. |
+
+---
+
+### 8. Diagnostyka OAuth (poza konsolą, ale w `/admin`)
+
+| | |
+|---|---|
+| **Wybór** | Wspólna lib `checkOAuthScopes.js` + **CLI** (`npm run check-oauth-scopes`) + **przycisk w `/admin`** |
+| **Uzasadnienie** | VULN-05 wymaga weryfikacji przed deployem. Admin nie powinien używać terminala na produkcji. Test `files.get` na root folderze = informacyjny (normalne przy `drive.file`). |
+| **Deploy** | Po Publish app w Google Cloud → nowy refresh token → Vercel env → test Pass w panelu. |
+
+---
+
+### 9. Powiązane decyzje spoza panelu (wpływ na admina)
+
+| Temat | Wybór | Wpływ na `/admin` |
 |---|---|---|
-| Store na progress | **In-memory** (TTL 24h) | Vercel KV — opcjonalnie po deployie |
-| Hasło admina | **`ADMIN_SECRET`** w env | wystarczy na start |
-| Token w active upload | nie logowany w heartbeat | backlog audit trail |
-| Retencja progress | 24h TTL | wystarczy na bieżący monitoring |
+| Rate limiting | In-memory per IP | Te same ograniczenia serverless co progress store |
+| Upload token verify | Drive registry + env fallback | Revoke w panelu natychmiast blokuje klienta |
+| Walidacja tokena w UI | `POST /api/validate-token` | Revoked link nie pokazuje formularza — mniej „fałszywych" sesji |
+| Faza 3 struktury | `_manifest.json` w folderze sesji | Backlog: przycisk „Rebuild structure" w adminie |
+
+---
+
+### 10. Decyzje odłożone (backlog — świadomy brak implementacji)
+
+| Temat | Dlaczego odłożone | Trigger do implementacji |
+|---|---|---|
+| **Vercel KV** dla progress | Koszt/złożoność vs korzyść na start | „Active now" niestabilne po deployie |
+| **NextAuth** dla admina | Jeden użytkownik | Wielu operatorów studia |
+| **Metryki per token** (Faza C+) | Wymaga agregacji z Drive/notify | >10 klientów retainer |
+| **Alert stuck upload** (>X h) | Brak persystentnego store + cron | Po KV |
+| **Recovery UI** z `_manifest.json` | Rzadki edge case | Pierwszy incydent przerwanego build-structure |
+| **Edycja tokena** (rename, expiry) | Create/revoke/restore wystarcza | Prośba operacyjna |
+| **Audit trail** (kto revoke) | Brak multi-user | NextAuth |
+
+---
+
+### Podsumowanie decyzji (skrót)
+
+| # | Decyzja | Wybór |
+|---|---|---|
+| 1 | Progress store | In-memory, TTL 24h → KV opcjonalnie |
+| 2 | Auth admina | `ADMIN_SECRET` + cookie 24h |
+| 3 | Token w „Active now" | **Wyświetlany** (audit operacyjny) |
+| 4 | Retencja progress | 24h + 2 min po completed |
+| 5 | Registry tokenów | `_uploader_tokens.json` na Drive |
+| 6 | Refresh UI | Polling 5s / 60s |
+| 7 | Historia | Odczyt Drive API |
+| 8 | OAuth test | CLI + panel admina |
+| 9 | Manifest / struktura | `_manifest.json`; recovery UI — backlog |
 
 ---
 

@@ -50,7 +50,7 @@
 | UX: ręczna pauza/wznowienie uploadu | niski |
 | Admin C+: metryki per token, alert stuck upload, edycja tokena | niski |
 | Vercel KV zamiast in-memory progress store | średni (przy wielu workerach) |
-| Refaktor: inline styles, podział `Uploader.js` | niski |
+| ~~Refaktor: inline styles, podział `Uploader.js`~~ | ✅ wdrożone |
 | Admin: ręczne odtworzenie struktury z `_manifest.json` (recovery UI) | niski |
 
 ### ⚠️ Znane ograniczenia produkcyjne

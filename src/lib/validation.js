@@ -1,16 +1,7 @@
-/**
- * Negative validation (blacklist) of file extensions — per kierunki_rozwoju.md.
- * A whitelist would break video-industry workflows (.drp, .prproj, .xml, .json...),
- * so only executable/script formats dangerous to the admin's machine are rejected.
- */
-const BLOCKED_EXTENSIONS = new Set([
-  'exe', 'bat', 'cmd', 'com', 'scr', 'pif', 'msi', 'msp',
-  'vbs', 'vbe', 'ws', 'wsf', 'wsh', 'ps1', 'psm1',
-  'sh', 'bash', 'zsh', 'jar', 'hta', 'cpl', 'lnk', 'reg',
-]);
+import { BLOCKED_EXTENSIONS } from '@/lib/blocklist';
 
 // Per-file size cap, configurable via env (in GB)
-const MAX_FILE_SIZE_GB = parseInt(process.env.MAX_FILE_SIZE_GB || '250');
+const MAX_FILE_SIZE_GB = parseInt(process.env.MAX_FILE_SIZE_GB || '250', 10);
 export const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_GB * 1024 * 1024 * 1024;
 
 /**
