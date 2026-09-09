@@ -185,10 +185,11 @@ export default function AdminDashboard() {
     fetchSessions();
   }, [fetchActive, fetchSessions]);
 
-  // Active uploads: refresh every 5s ONLY when Live Monitor is ON
+  // Active uploads: slow passive poll (60s) always, fast poll (5s) when Live Monitor ON.
+  // Passive poll ensures per-file events (file-started, file-completed) appear automatically.
   useEffect(() => {
-    if (!authenticated || !liveMonitor) return;
-    const interval = setInterval(fetchActive, 5_000);
+    if (!authenticated) return;
+    const interval = setInterval(fetchActive, liveMonitor ? 5_000 : 60_000);
     return () => clearInterval(interval);
   }, [authenticated, liveMonitor, fetchActive]);
 
@@ -279,7 +280,7 @@ export default function AdminDashboard() {
           <p className="admin-meta">
             {liveMonitor
               ? <>🟢 Live Monitor ON · refresh 5s{activeFetchedAt && <> · updated {formatDate(activeFetchedAt)}</>}</>
-              : <>⚫ Live Monitor OFF · per-file events only · history refresh 60s</>}
+              : <>⚫ Live Monitor OFF · passive refresh 60s · history refresh 60s</>}
           </p>
         </div>
         <div className="admin-toolbar-actions">
