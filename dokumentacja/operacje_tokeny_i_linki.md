@@ -158,10 +158,10 @@ Arkusz Google / Notion / plik CSV — cokolwiek wygodne.
 Tak — każdy z linkiem może wgrywać pliki. Token to „klucz do drzwi", nie personalizacja użytkownika. Dla projektów wrażliwych: token jednorazowy + revoke po zakończeniu.
 
 **Czy link wygasa?**  
-Nie — dopóki token jest w `UPLOAD_TOKENS`.
+Nie — dopóki token jest aktywny w rejestrze Drive (`/admin` → Client tokens) lub w `UPLOAD_TOKENS` (fallback).
 
 **Czy muszę redeployować przy każdym nowym kliencie?**  
-Tak — na Vercelu zmiana env wymaga redeploy (lub automatycznego pick-up przy następnym deploy). To naturalny moment na maintenance window.
+**Nie** — użyj `/admin` → **+ New token** → **Copy link**. Redeploy potrzebny tylko przy zmianie env (OAuth, SMTP itd.), nie przy nowym kliencie.
 
 **Co jeśli klient otworzy link bez `?token=`?**  
 Zobaczy ekran „Access link required" — nie będzie mógł nic wgrać.
@@ -173,7 +173,7 @@ Obecnie wszystkie tokeny mają identyczne uprawnienia. Różnicowanie (np. limit
 
 ## Checklist przed wysłaniem linku klientowi
 
-- [ ] Token dodany do `UPLOAD_TOKENS` (lokalnie przetestowany)
+- [ ] Token utworzony w `/admin` (lub dodany do `UPLOAD_TOKENS` przy pierwszym bootstrap)
 - [ ] Link otwarty w przeglądarce incognito — formularz uploadu widoczny
 - [ ] Testowy upload małego pliku przeszedł
 - [ ] Mail admina dotarł po teście

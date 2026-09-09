@@ -1,6 +1,11 @@
 'use client';
 import React, { useState, useRef, useEffect } from 'react';
 import { deriveUploadName, manifestNeedsStructure } from '@/lib/pathManifest';
+import {
+  collectEntriesFromDataTransfer,
+  collectEntriesFromDirectoryPicker,
+  collectEntriesFromFileList,
+} from '@/lib/collectFolderFiles';
 
 const CHUNK_SIZE = 5 * 1024 * 1024; // 5MB
 
@@ -163,40 +168,83 @@ export default function Uploader() {
   const handleDragOver = (e) => { e.preventDefault(); setIsDragging(true); };
   const handleDragLeave = (e) => { e.preventDefault(); setIsDragging(false); };
 
-  const handleDrop = (e) => {
+  const [isScanning, setIsScanning] = useState(false);
+
+  const handleDrop = async (e) => {
     e.preventDefault();
     setIsDragging(false);
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      addFiles(Array.from(e.dataTransfer.files));
+    setIsScanning(true);
+    setErrorMessage('');
+    try {
+      const entries = await collectEntriesFromDataTransfer(e.dataTransfer);
+      if (entries.length > 0) {
+        addFileEntries(entries);
+      } else {
+        setErrorMessage('No files found. Drop a folder or select files to upload.');
+      }
+    } catch (err) {
+      console.error('Drop scan failed:', err);
+      setErrorMessage('Could not read dropped folder. Try “Select Folder” instead.');
+    } finally {
+      setIsScanning(false);
     }
   };
 
   const handleFileSelect = (e) => {
     if (e.target.files && e.target.files.length > 0) {
-      addFiles(Array.from(e.target.files));
+      addFileEntries(collectEntriesFromFileList(e.target.files));
     }
   };
 
-  const addFiles = (newFiles) => {
+  const handleFolderSelect = async () => {
+    if (status === 'uploading' || isScanning) return;
+    setErrorMessage('');
+
+    if (typeof window !== 'undefined' && 'showDirectoryPicker' in window) {
+      setIsScanning(true);
+      try {
+        const entries = await collectEntriesFromDirectoryPicker();
+        if (entries.length > 0) {
+          addFileEntries(entries);
+        } else {
+          setErrorMessage('Selected folder is empty.');
+        }
+      } catch (err) {
+        if (err?.name !== 'AbortError') {
+          console.error('Folder picker failed:', err);
+          setErrorMessage('Could not read folder. Try drag-and-drop instead.');
+        }
+      } finally {
+        setIsScanning(false);
+      }
+      return;
+    }
+
+    if (folderInputRef.current) {
+      folderInputRef.current.value = null;
+      folderInputRef.current.click();
+    }
+  };
+
+  const addFileEntries = (entries) => {
     const accepted = [];
     const rejected = [];
     const usedUploadNames = new Set(
       files.map((f) => f.uploadName).filter(Boolean)
     );
-    for (const f of newFiles) {
-      const relativePath = f.webkitRelativePath ? f.webkitRelativePath : f.name;
+    for (const { file, relativePath } of entries) {
       if (isBlockedFile(relativePath)) {
         rejected.push(relativePath);
       } else {
         const uploadName = deriveUploadName(relativePath, usedUploadNames);
         accepted.push({
           id: crypto.randomUUID(),
-          file: f,
+          file,
           name: relativePath,
           relativePath,
           uploadName,
-          size: f.size,
-          type: f.type || 'application/octet-stream',
+          size: file.size,
+          type: file.type || 'application/octet-stream',
           status: 'pending',
           progress: 0,
           uploadUrl: null
@@ -206,7 +254,9 @@ export default function Uploader() {
     if (rejected.length > 0) {
       setErrorMessage(`Skipped ${rejected.length} file(s) with disallowed type: ${rejected.slice(0, 5).join(', ')}${rejected.length > 5 ? '…' : ''}`);
     }
-    setFiles(prev => [...prev, ...accepted]);
+    if (accepted.length > 0) {
+      setFiles((prev) => [...prev, ...accepted]);
+    }
   };
 
   const removeFile = (idToRemove) => {
@@ -279,6 +329,7 @@ export default function Uploader() {
     tokenStatus === 'valid' &&
     files.length > 0 &&
     status !== 'uploading' &&
+    !isScanning &&
     !!uploaderName.trim() &&
     !!uploaderEmail.trim();
 
@@ -589,31 +640,34 @@ export default function Uploader() {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
         </svg>
         <div className="dropzone-text">
-          <p>Drag and drop files or folders here</p>
+          <p>Drag and drop files or an entire project folder here</p>
+          <p style={{ fontSize: '13px', opacity: 0.65, marginTop: '8px' }}>
+            Nested subfolders are included automatically — select or drop the top-level folder.
+          </p>
+          {isScanning && (
+            <p style={{ fontSize: '13px', color: '#60a5fa', marginTop: '10px' }}>
+              Scanning folder structure…
+            </p>
+          )}
           <div style={{ display: 'flex', gap: '15px', justifyContent: 'center', marginTop: '15px' }}>
             <button 
               className="btn" 
               onClick={() => { 
-                if (status !== 'uploading' && fileInputRef.current) {
+                if (status !== 'uploading' && !isScanning && fileInputRef.current) {
                   fileInputRef.current.value = null;
                   fileInputRef.current.click(); 
                 }
               }}
-              disabled={status === 'uploading'}
-              style={{ padding: '8px 16px', fontSize: '14px', borderRadius: '8px', cursor: status === 'uploading' ? 'not-allowed' : 'pointer' }}
+              disabled={status === 'uploading' || isScanning}
+              style={{ padding: '8px 16px', fontSize: '14px', borderRadius: '8px', cursor: status === 'uploading' || isScanning ? 'not-allowed' : 'pointer' }}
             >
               Select Files
             </button>
             <button 
               className="btn" 
-              onClick={() => { 
-                if (status !== 'uploading' && folderInputRef.current) {
-                  folderInputRef.current.value = null;
-                  folderInputRef.current.click(); 
-                }
-              }}
-              disabled={status === 'uploading'}
-              style={{ padding: '8px 16px', fontSize: '14px', borderRadius: '8px', cursor: status === 'uploading' ? 'not-allowed' : 'pointer', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)' }}
+              onClick={handleFolderSelect}
+              disabled={status === 'uploading' || isScanning}
+              style={{ padding: '8px 16px', fontSize: '14px', borderRadius: '8px', cursor: status === 'uploading' || isScanning ? 'not-allowed' : 'pointer', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)' }}
             >
               Select Folder
             </button>

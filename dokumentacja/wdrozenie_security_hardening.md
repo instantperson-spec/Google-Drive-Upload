@@ -1,18 +1,73 @@
 # Wdrożenie: Security Hardening (branch `security-hardening`)
 
-> Data wdrożenia lokalnego: 2026-09-09  
-> Status produkcji: **oczekuje na maintenance window** — kod gotowy, nie zdeployowany na Vercel  
-> Branch: `security-hardening` (7 commitów ponad `main`)
+> Ostatnia aktualizacja: 2026-09-09  
+> Status produkcji: **oczekuje na maintenance window** — kod gotowy lokalnie, nie zdeployowany na Vercel  
+> Branch: `security-hardening` (**15 commitów** ponad `main`)
+
+---
+
+## Co zostało do wdrożenia
+
+### ✅ Gotowe lokalnie (nie wymaga dalszego kodu przed deployem)
+
+| Obszar | Status |
+|---|---|
+| Security hardening etapy 0–5 (VULN-01–04, 06–07) | ✅ |
+| Konsola admina Faza A/B/C (historia, live progress, token manager) | ✅ |
+| OAuth scope test w `/admin` + `npm run check-oauth-scopes` | ✅ |
+| Token `drive.file` (regeneracja lokalna) | ✅ |
+| Faza 3: flat upload + `/api/build-structure` + `_manifest.json` | ✅ |
+| Walidacja tokena przy ładowaniu strony (revoked link UX) | ✅ |
+| Rekurencyjny wybór zagnieżdżonych folderów (picker + drag-drop) | ✅ |
+
+### 🔴 Wymagane przed deployem na Vercel (operacje, nie kod)
+
+```
+□ Google Cloud → OAuth consent screen → Publish app (In production)
+  → wygeneruj NOWY refresh token PO publikacji (uniknij wygaśnięcia co 7 dni)
+□ Ustaw env na Vercel (patrz tabela poniżej)
+□ Zmerguj security-hardening → main
+□ Deploy na Vercel
+□ /admin → OAuth scope test → Pass
+□ Test uploadu: plik, folder z podfolderami, resume sesji
+□ Utwórz tokeny klientów w /admin → Client tokens
+□ Wyślij klientom linki https://DOMENA/?token=Nazwa
+```
+
+### 🟡 Zalecane tuż po deployu
+
+- Silne `ADMIN_SECRET` produkcyjne (nie dev)
+- `PUBLIC_UPLOAD_URL` = produkcyjna domena (linki w panelu admina)
+- Revoke starych tokenów OAuth w [Third-party apps](https://myaccount.google.com/permissions)
+- Test revoke tokena w `/admin` → stary link pokazuje „Upload link no longer valid"
+
+### ⏳ Backlog — nie blokuje deployu
+
+| Temat | Priorytet |
+|---|---|
+| VULN-08 — weryfikacja emaila klienta | niski |
+| UX: pole Notatki, redirect po sukcesie, alert drobnicy (>500 plików) | niski |
+| UX: ręczna pauza/wznowienie uploadu | niski |
+| Admin C+: metryki per token, alert stuck upload, edycja tokena | niski |
+| Vercel KV zamiast in-memory progress store | średni (przy wielu workerach) |
+| Refaktor: inline styles, podział `Uploader.js` | niski |
+| Admin: ręczne odtworzenie struktury z `_manifest.json` (recovery UI) | niski |
+
+### ⚠️ Znane ograniczenia produkcyjne
+
+- **Progress store in-memory** — sekcja „Active now" może być niepełna przy wielu instancjach Vercel
+- **Rate limit in-memory** — ten sam efekt; przy normalnym ruchu akceptowalne
+- **Token manager** — źródło prawdy: `_uploader_tokens.json` na Drive; `UPLOAD_TOKENS` w env tylko fallback
 
 ---
 
 ## Podsumowanie
 
-Wdrożono etapy 0–5 z analizy bezpieczeństwa i analizy kodu. Wszystkie zmiany przetestowane lokalnie (`npm run dev`, curl, `npm run build`).
+Wdrożono etapy 0–5 z analizy bezpieczeństwa, konsolę admina (A/B/C), diagnostykę OAuth, rekonstrukcję podfolderów (Faza 3) oraz poprawki UX tokenów. Wszystko przetestowane lokalnie (`npm run dev`, curl, `npm run build`).
 
 ---
 
-## Mapa commitów
+## Mapa commitów (security-hardening → main)
 
 | Commit | Opis | Powiązane znaleziska |
 |---|---|---|
@@ -23,6 +78,14 @@ Wdrożono etapy 0–5 z analizy bezpieczeństwa i analizy kodu. Wszystkie zmiany
 | `390170c` | Walidacja plików server-side, weryfikacja folderId, wspólny googleAuth | VULN-05, kierunki: czarna lista |
 | `7692a4f` | Rate limiting per IP | VULN-04 |
 | `ce5aa0e` | Refaktor Uploader + deduplikacja folderów | analiza_kodu |
+| `d4c58cf` | Docs: operacje, plan admina, raport wdrożenia | — |
+| `5c2ee91` | Admin Faza A — historia sesji Drive | plan_konsola_admina |
+| `7114e64` | Admin Faza B — live progress heartbeat | plan_konsola_admina |
+| `8d9a23e` | Admin Faza C — token manager na Drive | plan_konsola_admina |
+| `54f92bf` | CLI `npm run check-oauth-scopes` | VULN-05 |
+| `14f4501` | Walidacja tokena przy ładowaniu strony (revoked UX) | VULN-01 |
+| `003101b` | OAuth scope test w panelu admina | VULN-05 |
+| `fb402fb` | Faza 3 — `/api/build-structure` | kierunki_rozwoju |
 
 ---
 
@@ -51,6 +114,12 @@ Wdrożono etapy 0–5 z analizy bezpieczeństwa i analizy kodu. Wszystkie zmiany
 | `src/lib/pathManifest.js` | Walidacja ścieżek + unikalne flat upload names |
 | `src/lib/buildStructure.js` | Rekonstrukcja podfolderów na Drive (Faza 3) |
 | `src/app/api/build-structure/route.js` | POST — budowa struktury + `_manifest.json` |
+| `src/lib/collectFolderFiles.js` | Rekurencyjny odczyt zagnieżdżonych folderów (picker + DnD) |
+| `src/lib/checkOAuthScopes.js` | Diagnostyka scope OAuth (CLI + admin) |
+| `src/components/AdminOAuthCheck.js` | UI testu OAuth w `/admin` |
+| `src/app/api/admin/check-oauth-scopes/route.js` | POST — uruchomienie testu scope |
+| `src/app/api/validate-token/route.js` | POST — weryfikacja tokena przy ładowaniu strony |
+| `scripts/check-oauth-scopes.mjs` | CLI wrapper diagnostyki OAuth |
 
 ---
 
@@ -90,11 +159,14 @@ Każdy endpoint (`create-folder`, `upload-session`, `check-folder`, `notify`) te
 ### `src/components/Uploader.js`
 
 - Odczyt `?token=` z URL, wysyłanie w nagłówku każdego API call
-- Ekran „Access link required" bez tokena
+- Weryfikacja tokena server-side przy ładowaniu (`/api/validate-token`)
+- Ekrany „Access link required" / „Upload link no longer valid"
 - Lustrzana czarna lista rozszerzeń w UI (server jest authoritative)
-- Jeden warunek `canUpload` zamiast 5 kopii
-- Stabilne klucze React (`crypto.randomUUID()`)
-- Funkcyjny update w `removeFile`
+- Flat upload + manifest → `/api/build-structure` po zakończeniu transferu
+- Ekran „Compiling folder structure…" podczas Fazy 3
+- `showDirectoryPicker` + rekurencyjny drag-and-drop zagnieżdżonych folderów
+- Heartbeat postępu co 10 s (admin Faza B)
+- Jeden warunek `canUpload`, stabilne klucze UUID, dedup folderów sesji
 
 ### `src/app/layout.js`
 
@@ -139,7 +211,7 @@ Wszystkie poprzednie zmienne (`GOOGLE_*`, `SMTP_*`, `NOTIFICATION_EMAIL`, `WEBHO
 | VULN-02 | Open SMTP relay | ✅ Wdrożone — auth gate + escapowanie + walidacja |
 | VULN-03 | Bug SMTP secure | ✅ Wdrożone |
 | VULN-04 | Brak rate limitingu | ✅ Wdrożone — in-memory per IP |
-| VULN-05 | Nadmierny OAuth scope | ⚠️ Częściowo — kod poprawiony (SA fallback), refresh token wymaga regeneracji |
+| VULN-05 | Nadmierny OAuth scope | ✅ Lokalnie (`drive.file` token) · ⏳ Vercel env + Publish app w Google Cloud |
 | VULN-06 | Logowanie PII | ✅ Wdrożone — tylko metadane |
 | VULN-07 | Brak noindex | ✅ Wdrożone |
 | VULN-08 | Nieweryfikowany email | ⏳ Nie wdrożone — długoterminowe |
@@ -166,17 +238,34 @@ Wszystkie poprzednie zmienne (`GOOGLE_*`, `SMTP_*`, `NOTIFICATION_EMAIL`, `WEBHO
 
 ## Checklist deploy (maintenance window)
 
+### Env na Vercel (wszystkie wymagane)
+
+| Zmienna | Uwagi |
+|---|---|
+| `GOOGLE_CLIENT_ID` | bez zmian |
+| `GOOGLE_CLIENT_SECRET` | bez zmian |
+| `GOOGLE_REFRESH_TOKEN` | **nowy** token `drive.file`, wygenerowany PO Publish app |
+| `GOOGLE_DRIVE_FOLDER_ID` | bez zmian |
+| `UPLOAD_TOKENS` | bootstrap — potem `/admin` → Client tokens |
+| `ADMIN_SECRET` | silne hasło produkcyjne |
+| `PUBLIC_UPLOAD_URL` | np. `https://twoja-domena.vercel.app` |
+| `SMTP_*`, `NOTIFICATION_EMAIL` | bez zmian |
+| `MAX_FILE_SIZE_GB` | opcjonalnie (domyślnie 250) |
+
+### Kroki deploy
+
 ```
-□ Ustaw UPLOAD_TOKENS na Vercel (bootstrap przy pierwszym uruchomieniu — potem zarządzaj w /admin)
-□ Ustaw PUBLIC_UPLOAD_URL na Vercel (produkcyjny URL do linków w panelu admina)
-□ Zmerguj security-hardening → main
-□ Deploy na Vercel
-□ Test: otwórz link z tokenem — upload działa
-□ Test: otwórz link bez tokena — ekran „Access link required"
-□ Test: curl bez tokena → 401
-□ Wyślij zaktualizowane linki klientom retainer
-□ Uruchom `npm run check-oauth-scopes` **lub** test w `/admin` → OAuth scope test — jeśli ❌ full `drive`, regeneruj token (patrz `regeneracja_oauth_scope.md`)
+□ Google Cloud → Publish app → nowy refresh token → Vercel env
+□ Merge security-hardening → main → deploy
+□ /admin → OAuth scope test → Pass (tylko drive.file)
+□ Upload: pojedynczy plik + folder z podfolderami → struktura na Drive OK
+□ Upload: link bez ?token= → „Access link required"
+□ Upload: revoke token → „Upload link no longer valid"
+□ /admin → create token → copy link → test incognito
+□ Wyślij linki klientom retainer (?token=...)
 ```
+
+Patrz też: [`regeneracja_oauth_scope.md`](./regeneracja_oauth_scope.md), [`operacje_tokeny_i_linki.md`](./operacje_tokeny_i_linki.md)
 
 ---
 
@@ -192,13 +281,19 @@ Wszystkie poprzednie zmienne (`GOOGLE_*`, `SMTP_*`, `NOTIFICATION_EMAIL`, `WEBHO
 | check-folder z obcym folderId | 403 ✅ |
 | Strona główna zawiera noindex | ✅ |
 | `npm run build` | ✅ bez błędów |
+| OAuth scope test (admin + CLI) | ✅ `drive.file` only |
+| Upload folderu z podfolderami + build-structure | ✅ lokalnie |
+| Revoked token — blokada UI | ✅ |
+| Nested folder picker (showDirectoryPicker) | ✅ |
 
 ---
 
-## Co świadomie pominięto (poza zakresem)
+## Co świadomie pominięto (poza zakresem deployu)
 
 - Weryfikacja własności emaila klienta (VULN-08)
 - Przepisanie inline styles na CSS variables
 - Podział `Uploader.js` na hooki/komponenty
-- Konsola admina (plan w osobnym dokumencie)
-- Funkcje UX z kierunków rozwoju (notatki, redirect, alert drobnicy)
+- Vercel KV dla progress store
+- Admin C+: metryki, stuck alerts, edycja tokenów
+- Funkcje UX: notatki, redirect po sukcesie, alert drobnicy, pauza ręczna
+- Admin UI: ręczne odtworzenie struktury z `_manifest.json`

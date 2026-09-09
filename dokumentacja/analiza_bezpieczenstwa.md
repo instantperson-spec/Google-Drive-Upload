@@ -2,7 +2,7 @@
 
 > Data analizy: 2026-09-09 · Status produktu: Live · Maintenance window: oczekujący
 
-> **Aktualizacja wdrożenia (2026-09-09):** VULN-01–04, VULN-06, VULN-07 naprawione lokalnie (branch `security-hardening`). VULN-05 częściowo. VULN-08 nie wdrożone. Szczegóły: [`wdrozenie_security_hardening.md`](./wdrozenie_security_hardening.md).
+> **Aktualizacja wdrożenia (2026-09-09):** VULN-01–04, VULN-06, VULN-07 naprawione lokalnie. VULN-05 naprawione lokalnie (`drive.file` token) — pozostaje deploy env + Publish app. VULN-08 nie wdrożone. Endpoint `build-structure` wdrożony z auth. Szczegóły: [`wdrozenie_security_hardening.md`](./wdrozenie_security_hardening.md).
 
 ---
 
@@ -294,7 +294,7 @@ Użytkownik może wpisać `prezes@klientfirma.pl` i odebrać oficjalne potwierdz
 | VULN-02 | Open SMTP relay | 🔴 Krytyczny | Niski | Przed kolejnym deployem |
 | VULN-03 | Błąd SMTP secure | 🟡 Średni | Minimalny | Maintenance window |
 | VULN-04 | Brak rate limitingu | 🟡 Średni | Średni | Maintenance window |
-| VULN-05 | Nadmierny OAuth scope | 🟡 Średni | Minimalny | Maintenance window |
+| VULN-05 | Nadmierny OAuth scope | 🟢 Naprawione lokalnie | Minimalny | Deploy env + Publish app |
 | VULN-06 | Logowanie PII | 🟡 Średni (RODO) | Minimalny | Maintenance window |
 | VULN-07 | Brak noindex | 🟢 Niski | Minimalny | Przy okazji |
 | VULN-08 | Nieweryfikowany email | 🟢 Niski | Wysoki | Długoterminowe |
@@ -310,8 +310,8 @@ Użytkownik może wpisać `prezes@klientfirma.pl` i odebrać oficjalne potwierdz
 | **Token URL** (`?token=X`) | ✅ Dobry kierunek — ale token **musi być weryfikowany server-side** w każdym route handlerze. Inaczej to wyłącznie fałszywe poczucie bezpieczeństwa. |
 | **Walidacja czarna lista rozszerzeń** | ⚠️ Musi być zaimplementowana w `/api/upload-session` (server-side), nie tylko w UI. Walidacja po stronie klienta jest trivialna do ominięcia. |
 | **Pole "Notatki"** | ⚠️ Dodatkowe pole tekstowe → większa powierzchnia dla content injection w emailach. Wymaga sanityzacji HTML przed wstawieniem do szablonu maila. |
-| **Endpoint `build-structure`** | 🔴 Nowy endpoint będzie miał te same problemy co obecne — należy zaprojektować auth **przed** dodaniem kolejnych tras. |
-| **Manifest `_manifest.json`** | ⚠️ Plik JSON z mapą ścieżek plików klienta — jeśli dostępny publicznie lub możliwy do nadpisania, może ujawnić strukturę katalogów lub umożliwić manipulację. |
+| **Endpoint `build-structure`** | ✅ Wdrożony — auth token + `isSessionFolder` + rate limit (jak pozostałe API). |
+| **Manifest `_manifest.json`** | ⚠️ Zapis na Drive w folderze sesji (dostępny adminowi OAuth). Backlog: admin recovery UI. |
 
 ---
 

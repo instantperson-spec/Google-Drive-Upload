@@ -7,7 +7,7 @@ A modern, glassmorphism-themed web application built with Next.js that allows us
 - **Direct to Google Drive:** Files are uploaded straight from the user's browser to your Google Drive, bypassing server bandwidth and storage limits.
 - **Resumable Uploads (OAuth2):** Utilizes Google Drive API v3 Resumable Uploads via an OAuth2 Refresh Token. This entirely bypasses the strict upload limits associated with traditional Google Service Accounts.
 - **Session Folders:** Automatically creates a uniquely named subfolder in your Drive for every upload session (formatted with the user's name, email, and timestamp) to keep incoming files organized.
-- **Folder Upload Support:** Users can select entire directories (via `webkitdirectory`), preserving their local file selections.
+- **Folder Upload Support:** Full nested folder trees via `showDirectoryPicker` (Chrome/Edge) or recursive drag-and-drop; subfolder structure is rebuilt on Drive after upload (`/api/build-structure`).
 - **SMTP Notifications:** Sends an automatic email notification to the administrator as soon as an upload session is successfully completed.
 - **Token-based Access:** Per-client upload links (`?token=ClientName`) verified server-side on every API call.
 - **Security Hardening:** Extension blacklist, rate limiting, folder parentage validation, noindex, sanitized email payloads.
@@ -53,6 +53,10 @@ NOTIFICATION_EMAIL="your_destination_email@gmail.com"
 # Per-client access tokens (comma-separated). Clients open: https://your-domain/?token=ClientName
 UPLOAD_TOKENS="ClientA,ClientB"
 
+# Admin console (/admin)
+ADMIN_SECRET="strong-password"
+PUBLIC_UPLOAD_URL="https://your-domain.com"
+
 # Optional: max file size in GB (default 250)
 MAX_FILE_SIZE_GB="250"
 ```
@@ -61,7 +65,7 @@ MAX_FILE_SIZE_GB="250"
 ```bash
 npm run check-oauth-scopes
 ```
-Checks whether your refresh token has the recommended `drive.file` scope only (not full `drive`). See [`dokumentacja/regeneracja_oauth_scope.md`](dokumentacja/regeneracja_oauth_scope.md).
+Checks whether your refresh token has the recommended `drive.file` scope only (not full `drive`). Or use **OAuth scope test** in `/admin`. See [`dokumentacja/regeneracja_oauth_scope.md`](dokumentacja/regeneracja_oauth_scope.md) (includes **Publish app** step to avoid 7-day token expiry).
 
 ### 4. Local Development
 ```bash
@@ -78,10 +82,13 @@ Set `ADMIN_SECRET` in your environment, then open `/admin` to monitor uploads:
 - **Active now** — live progress bars (client heartbeat every 10s, admin refresh every 5s)
 - **History** — completed session folders from Google Drive (refresh every 60s)
 - **Client tokens** — create, copy upload links, revoke/restore tokens (stored in `_uploader_tokens.json` on Drive)
+- **OAuth scope test** — verify `drive.file` token before/after deploy
 
 ## 🌐 Deployment
-This project is optimized for deployment on **Vercel**. 
-Simply run `npx vercel` in the project directory, and don't forget to copy all your environment variables into the Vercel Dashboard under **Settings -> Environment Variables**.
+
+Branch `security-hardening` is ready for merge → deploy on **Vercel**. Full checklist: [`dokumentacja/wdrozenie_security_hardening.md`](dokumentacja/wdrozenie_security_hardening.md).
+
+Copy all environment variables to Vercel **Settings → Environment Variables**. Publish the OAuth app in Google Cloud before production (see regeneracja doc).
 
 ## 🤝 Contributing
 Contributions, issues, and feature requests are welcome! Feel free to check the issues page or fork the repository if you have an idea for an improvement.

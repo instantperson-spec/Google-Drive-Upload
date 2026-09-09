@@ -67,11 +67,26 @@ Checklist ręczny:
 
 ---
 
-## Krok 4: Produkcja (maintenance window)
+## Krok 4: Publish app (uniknij wygaśnięcia tokena co 7 dni)
 
-1. W Vercel → Settings → Environment Variables → zaktualizuj `GOOGLE_REFRESH_TOKEN`
+W trybie **Testing** refresh token wygasa po ~7 dniach. Przed produkcją:
+
+1. [Google Cloud Console](https://console.cloud.google.com/) → **OAuth consent screen**
+2. Uzupełnij wymagane pola (App name, support email)
+3. Scope: **tylko** `https://www.googleapis.com/auth/drive.file`
+4. Kliknij **Publish app** → status **In production**
+5. **Wygeneruj NOWY refresh token** (Krok 2) — stary z Testing nadal może wygasać
+
+Przy użyciu osobistym (<100 użytkowników) pełna weryfikacja Google **nie jest wymagana** dla scope `drive.file`.
+
+---
+
+## Krok 5: Produkcja (maintenance window)
+
+1. W Vercel → Settings → Environment Variables → `GOOGLE_REFRESH_TOKEN` (+ pozostałe env)
 2. Redeploy
-3. Powtórz test uploadu na produkcji
+3. `/admin` → OAuth scope test → **Pass**
+4. Test uploadu na produkcji
 
 Opcjonalnie: [Google Account → Third-party access](https://myaccount.google.com/permissions) → usuń stary dostęp aplikacji.
 

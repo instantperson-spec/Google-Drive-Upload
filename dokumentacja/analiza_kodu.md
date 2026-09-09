@@ -219,8 +219,9 @@ Linia 23/27 (wszystkie trasy): scope `https://www.googleapis.com/auth/drive` to 
 | **Pole "Notatki"** | Doda kolejny parametr do `notify` — wzmocni ryzyko spoofingu jeśli brak autoryzacji |
 | **Przekierowanie po sukcesie** | Trywialne w implementacji, nie rodzi nowych problemów |
 | **Alert o "drobnicach"** | Wymaga dostępu do `webkitRelativePath` — już odczytywany w `addFiles`, można liczyć pliki |
-| **Struktura podfolderów (Faza 3)** | Nowy endpoint `build-structure` będzie miał te same problemy z autoryzacją co pozostałe — należy zaprojektować auth przed tym krokiem |
-| **Manifest `_manifest.json`** | Dobry pomysł — bez niego Faza 3 recovery jest niemożliwa po zamknięciu karty |
+| **Struktura podfolderów (Faza 3)** | ✅ Wdrożone — `/api/build-structure`, flat upload, `_manifest.json` |
+| **Manifest `_manifest.json`** | ✅ Zapisywany po build-structure; recovery UI w adminie — backlog |
+| **Zagnieżdżone foldery w UI** | ✅ `collectFolderFiles.js` — showDirectoryPicker + rekurencyjny DnD |
 
 ---
 

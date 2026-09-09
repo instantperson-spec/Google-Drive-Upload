@@ -15,6 +15,8 @@
 | Konsola admina (Faza A — historia sesji) | ✅ Wdrożone lokalnie — `/admin` |
 | Konsola admina (Faza B — live progress) | ✅ Wdrożone lokalnie — heartbeat 10s |
 | Konsola admina (Faza C — token manager) | ✅ Wdrożone — `/admin` → Client tokens |
+| OAuth scope test w panelu admina | ✅ Wdrożone — `/admin` → OAuth scope test |
+| Rekurencyjny wybór zagnieżdżonych folderów | ✅ Wdrożone — `showDirectoryPicker` + DnD |
 
 ---
 
@@ -36,28 +38,22 @@ Głównym założeniem aplikacji jest ominięcie problemów znanych z platform t
 * **Ręczna pauza / wznowienie:** Aktualny system wznawiania działa świetnie w tle (reaguje na zerwane połączenie). Dodanie fizycznego przycisku "Pauza" przy każdym pliku pozwoliłoby klientowi na świadome, chwilowe zwolnienie swojego łącza internetowego na inne potrzeby, a następnie ręczne wznowienie transferu bez utraty pobranych bajtów.
 * **Ostrzeżenie przed "drobnicą" (dużą ilością małych plików):** Architektura Google Drive API jest zoptymalizowana pod gigantyczne pliki, ale bywa wolna przy wgrywaniu tysięcy bardzo małych plików (np. sekwencji zdjęć po 1 MB), ponieważ każdy plik wymaga oddzielnego nawiązania sesji. Warto dodać alert: *"Wybrałeś ponad 500 plików. Rozważ spakowanie ich do jednego archiwum .ZIP przed wgraniem, aby znacznie przyspieszyć proces"*.
 
-## 4. Architektura: Odtwarzanie struktury podfolderów (Podejście "Ścieżka A")
-Koncept "Upload Flat, Reconstruct Later" rozwiązuje problem spowolnienia przy tworzeniu zagnieżdżonych folderów w locie. 
+## 4. Architektura: Odtwarzanie struktury podfolderów (Podejście "Ścieżka A") — ✅ WDROŻONE
 
-### Plan Wdrożenia (Krok po Kroku)
+Koncept "Upload Flat, Reconstruct Later" — wdrożony lokalnie na branchu `security-hardening`.
 
-**Faza 1: Zbieranie metadanych w przeglądarce**
-1. Podczas wybierania folderów przez użytkownika (Drag & Drop), skrypt odczytuje właściwość `webkitRelativePath` każdego pliku (np. `KameraA/video.mp4`).
-2. Tworzona jest lokalna mapa JSON wiążąca nazwę pliku z jego docelową ścieżką.
+| Faza | Status | Implementacja |
+|---|---|---|
+| **Faza 1** — metadane ścieżek | ✅ | `collectFolderFiles.js` + `relativePath` / `uploadName` w `Uploader.js` |
+| **Faza 2** — flat upload | ✅ | `upload-session` z `uploadName` (basename) do folderu sesji |
+| **Faza 3** — rebuild + manifest | ✅ | `POST /api/build-structure` → `buildStructure.js` → `_manifest.json` |
 
-**Faza 2: Upload "Na płasko" (Obecny system)**
-1. Wszystkie pliki wgrywane są bezpośrednio do głównego katalogu sesji na Dysku Google (np. `Jan Kowalski - jan@test.pl`).
-2. Dzięki brakowi walidacji podfolderów w tej fazie, upload osiąga maksymalną przepustowość.
-3. System wznawiania (Resume) działa bez zmian.
+**Flow użytkownika:**
+1. Wybór folderu (Chrome: `showDirectoryPicker` z pełnym zagnieżdżeniem) lub drag-and-drop całego projektu
+2. Upload płaski — maksymalna prędkość, resume bez zmian
+3. Ekran *„Compiling folder structure…"* → serwer tworzy podfoldery i przenosi pliki
+4. Sukces + powiadomienie email
 
-**Faza 3: Przebudowa struktury (Po osiągnięciu 100%)**
-1. Zamiast natychmiastowego ekranu sukcesu, interfejs zmienia stan na: *"Kompilowanie struktury plików..."*.
-2. Przeglądarka wywołuje nowy endpoint `/api/build-structure` (lub serię endpointów):
-   - Skrypt analizuje zapisaną mapę ścieżek.
-   - Identyfikuje unikalne nazwy podfolderów i wywołuje Google API do ich utworzenia (`mimeType: application/vnd.google-apps.folder`).
-   - Dla każdego pliku wywoływana jest funkcja Google Drive API `files.update`, w której przekazujemy parametry `addParents=NOWY_FOLDER_ID` oraz `removeParents=GLOWNY_FOLDER_ID`.
-3. Przesuwanie plików w chmurze nie wymaga ponownego ich pobierania – operacja na metadanych w Google Drive trwa ułamki sekund.
-
-**Zabezpieczenia / Edge Cases:**
-- Jeśli użytkownik zamknie kartę podczas "Kompilowania", pliki pozostają bezpieczne w głównym folderze sesji. Niczego nie tracimy.
-- Warto dodać plik `_manifest.json` do uploadu, by w razie potrzeby odtworzyć strukturę awaryjnym skryptem po stronie admina (Podejście awaryjne).
+**Edge cases:**
+- Zamknięcie karty podczas kompilacji → pliki bezpieczne płasko w folderze sesji; `_manifest.json` umożliwia ręczne odtworzenie
+- **Nie wdrożono:** UI admina do ponownego uruchomienia build-structure z manifestu (backlog)

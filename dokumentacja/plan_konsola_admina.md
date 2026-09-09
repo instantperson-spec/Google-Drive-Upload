@@ -1,6 +1,7 @@
 # Plan: Konsola Admina — podgląd uploadów
 
-> Status: **Fazy A + B + C wdrożone lokalnie** (branch `security-hardening`)
+> Status: **Fazy A + B + C wdrożone lokalnie** (branch `security-hardening`)  
+> Dodatkowo: OAuth scope test, token validation on page load — patrz [`wdrozenie_security_hardening.md`](./wdrozenie_security_hardening.md)
 
 ---
 
@@ -148,20 +149,23 @@ Upload odbywa się **bezpośrednio z przeglądarki klienta do Google Drive** —
 
 ---
 
-## Proponowana kolejność wdrożenia
+## Kolejność wdrożenia — zrealizowane lokalnie
 
 ```
-Maintenance window (teraz)
-  └── deploy security-hardening (tokeny w env, auth, walidacja)
+✅ Security hardening (VULN-01–07)
+✅ Faza A: /admin — historia sesji Drive
+✅ Faza B: live progress heartbeat (in-memory store)
+✅ Faza C: token manager na Drive (_uploader_tokens.json)
+✅ OAuth scope test w /admin
+✅ Faza 3 uploadu: build-structure + _manifest.json
 
-Następna iteracja (~1 tydzień po deploy)
-  └── Faza A: /admin z listą folderów Drive
+⏳ Następny krok: deploy na Vercel (maintenance window)
+   patrz checklist w wdrozenie_security_hardening.md
 
-Kolejna iteracja (~2 tygodnie)
-  └── Faza B: live progress heartbeat + Vercel KV
-
-Przyszłość (gdy rośnie liczba klientów)
-  └── Faza C: token manager, metryki, revoke bez redeploy
+🔮 Po deployie (opcjonalnie):
+   └── Vercel KV dla progress store
+   └── Admin C+: metryki, stuck alerts, edycja tokenów
+   └── Recovery UI: rebuild z _manifest.json
 ```
 
 ---
@@ -203,12 +207,14 @@ Przyszłość (gdy rośnie liczba klientów)
 
 ---
 
-## Decyzje do podjęcia przed implementacją Fazy B/C
+## Decyzje — stan po wdrożeniu lokalnym
 
-1. **Store na progress:** Vercel KV vs in-memory (tańsze, ale niestabilne na serverless)?
-2. **Hasło admina:** jeden `ADMIN_SECRET` w env vs pełne logowanie (np. NextAuth)?
-3. **Czy token ma być widoczny w panelu admina** przy aktywnym uploadzie (audit trail)?
-4. **Retencja danych progress:** 24h wystarczy, czy potrzebujesz historii tygodniowej?
+| Decyzja | Wybór | Uwagi |
+|---|---|---|
+| Store na progress | **In-memory** (TTL 24h) | Vercel KV — opcjonalnie po deployie |
+| Hasło admina | **`ADMIN_SECRET`** w env | wystarczy na start |
+| Token w active upload | nie logowany w heartbeat | backlog audit trail |
+| Retencja progress | 24h TTL | wystarczy na bieżący monitoring |
 
 ---
 
