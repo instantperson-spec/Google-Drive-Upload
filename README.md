@@ -9,6 +9,8 @@ A modern, glassmorphism-themed web application built with Next.js that allows us
 - **Session Folders:** Automatically creates a uniquely named subfolder in your Drive for every upload session (formatted with the user's name, email, and timestamp) to keep incoming files organized.
 - **Folder Upload Support:** Users can select entire directories (via `webkitdirectory`), preserving their local file selections.
 - **SMTP Notifications:** Sends an automatic email notification to the administrator as soon as an upload session is successfully completed.
+- **Token-based Access:** Per-client upload links (`?token=ClientName`) verified server-side on every API call.
+- **Security Hardening:** Extension blacklist, rate limiting, folder parentage validation, noindex, sanitized email payloads.
 - **Modern UI:** Features a sleek, responsive dark-mode glassmorphism interface.
 
 ## 🛠 Tech Stack
@@ -47,6 +49,12 @@ SMTP_USER="your_email@gmail.com"
 SMTP_PASS="your_app_password"
 SMTP_FROM="your_email@gmail.com"
 NOTIFICATION_EMAIL="your_destination_email@gmail.com"
+
+# Per-client access tokens (comma-separated). Clients open: https://your-domain/?token=ClientName
+UPLOAD_TOKENS="ClientA,ClientB"
+
+# Optional: max file size in GB (default 250)
+MAX_FILE_SIZE_GB="250"
 ```
 
 ### 3. Local Development
@@ -54,7 +62,10 @@ NOTIFICATION_EMAIL="your_destination_email@gmail.com"
 npm install
 npm run dev
 ```
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000/?token=YourToken](http://localhost:3000/?token=YourToken) with your browser (replace `YourToken` with a value from `UPLOAD_TOKENS`).
+
+### 4. Client Links
+Each client receives a dedicated URL: `https://your-domain/?token=ClientToken`. See [`dokumentacja/operacje_tokeny_i_linki.md`](dokumentacja/operacje_tokeny_i_linki.md) for the full operational guide.
 
 ## 🌐 Deployment
 This project is optimized for deployment on **Vercel**. 

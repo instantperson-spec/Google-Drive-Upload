@@ -1,5 +1,21 @@
 # Kierunki Rozwoju Projektu: Direct Drive Uploader
 
+> **Aktualizacja 2026-09-09:** Część punktów z sekcji 1 (bezpieczeństwo) została wdrożona lokalnie na branchu `security-hardening`. Szczegóły: [`wdrozenie_security_hardening.md`](./wdrozenie_security_hardening.md).
+
+| Punkt poniżej | Status |
+|---|---|
+| No-index | ✅ Wdrożone |
+| Token URL (`?token=X`) server-side | ✅ Wdrożone |
+| Czarna lista rozszerzeń (server-side) | ✅ Wdrożone |
+| Pole „Notatki" | ⏳ Planowane |
+| Przekierowanie po sukcesie | ⏳ Planowane |
+| Pauza / wznowienie ręczne | ⏳ Planowane |
+| Alert o drobnicy | ⏳ Planowane |
+| Faza 3: rekonstrukcja podfolderów | ⏳ Planowane |
+| Konsola admina | 📋 Plan: [`plan_konsola_admina.md`](./plan_konsola_admina.md) |
+
+---
+
 Poniżej znajduje się zestawienie potencjalnych funkcji i usprawnień, które mogą zostać wdrożone w przyszłości w celu podniesienia profesjonalizmu, bezpieczeństwa i wygody korzystania z aplikacji dla zastosowań B2B.
 
 ## 1. Bezpieczeństwo i Dostęp (Security - Bez Tzw. "Tarcia")

@@ -2,6 +2,8 @@
 
 > Data analizy: 2026-09-09 · Status produktu: Live · Maintenance window: oczekujący
 
+> **Aktualizacja wdrożenia (2026-09-09):** VULN-01–04, VULN-06, VULN-07 naprawione lokalnie (branch `security-hardening`). VULN-05 częściowo. VULN-08 nie wdrożone. Szczegóły: [`wdrozenie_security_hardening.md`](./wdrozenie_security_hardening.md).
+
 ---
 
 ## Metodologia

@@ -2,6 +2,8 @@
 
 > Produkt live · Okno maintenance oczekuje · Kierunki rozwoju: uwzględnione jako "planowane, nie wdrożone"
 
+> **Aktualizacja 2026-09-09:** Większość problemów P0/P1 z tej analizy naprawiona lokalnie (branch `security-hardening`). Szczegóły: [`wdrozenie_security_hardening.md`](./wdrozenie_security_hardening.md).
+
 ---
 
 ## TL;DR
