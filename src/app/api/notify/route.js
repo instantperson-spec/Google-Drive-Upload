@@ -2,13 +2,51 @@ import { NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
 import { verifyUploadToken, unauthorizedResponse } from '@/lib/auth';
 
+const MAX_FILES_IN_NOTIFICATION = 2000;
+const MAX_NAME_LENGTH = 200;
+
+// Request data is interpolated into email HTML — escape to prevent content injection
+const escapeHtml = (value) =>
+  String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+
+const isValidEmail = (value) =>
+  typeof value === 'string' && value.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+
+const isValidFolderId = (value) =>
+  typeof value === 'string' && /^[a-zA-Z0-9_-]{10,100}$/.test(value);
+
 export async function POST(request) {
   if (!verifyUploadToken(request)) return unauthorizedResponse();
 
   try {
-    const data = await request.json();
+    const raw = await request.json();
 
-    const files = data.files || [];
+    if (!Array.isArray(raw.files) || raw.files.length > MAX_FILES_IN_NOTIFICATION) {
+      return NextResponse.json({ error: 'Invalid files payload' }, { status: 400 });
+    }
+    if (raw.uploaderEmail && !isValidEmail(raw.uploaderEmail)) {
+      return NextResponse.json({ error: 'Invalid uploader email' }, { status: 400 });
+    }
+
+    // Sanitized view of the request used everywhere below
+    const plainName = String(raw.uploaderName || 'Unknown').slice(0, MAX_NAME_LENGTH);
+    const data = {
+      plainName, // for plain-text contexts: subjects, webhook
+      uploaderName: escapeHtml(plainName), // for HTML email bodies
+      uploaderEmail: raw.uploaderEmail || '',
+      folderId: isValidFolderId(raw.folderId) ? raw.folderId : '',
+    };
+    const files = raw.files.map(f => ({
+      name: escapeHtml(String(f?.name || 'unnamed').slice(0, MAX_NAME_LENGTH)),
+      size: Number(f?.size) || 0,
+      status: f?.status === 'completed' ? 'completed' : 'incomplete',
+    }));
+
     // Log diagnostic metadata only — no PII (GDPR)
     console.log(`Notification received: ${files.length} files, folder: ${data.folderId || 'n/a'}`);
     
@@ -24,7 +62,7 @@ export async function POST(request) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          content: `🚀 **New Upload Session!**\nUploader: \`${data.uploaderName}\` (${data.uploaderEmail})\nFiles:\n${filesListText}`
+          content: `🚀 **New Upload Session!**\nUploader: \`${data.plainName}\` (${data.uploaderEmail})\nFiles:\n${filesListText}`
         })
       }).catch(err => console.error('Webhook error:', err));
     }
@@ -46,7 +84,7 @@ export async function POST(request) {
         const mailOptions = {
           from: `Drive Uploader <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
           to: process.env.NOTIFICATION_EMAIL, 
-          subject: `✅ New files uploaded by: ${data.uploaderName}`,
+          subject: `✅ New files uploaded by: ${data.plainName}`,
           html: `
             <div style="font-family: sans-serif; padding: 20px; color: #333;">
               <h2 style="color: #0056b3;">You have received new files!</h2>
