@@ -48,6 +48,9 @@ Wdrożono etapy 0–5 z analizy bezpieczeństwa i analizy kodu. Wszystkie zmiany
 | `src/app/api/admin/tokens/route.js` | CRUD tokenów (lista + tworzenie) |
 | `src/app/api/admin/tokens/[id]/route.js` | Revoke / restore tokena |
 | `src/components/AdminTokenManager.js` | UI token managera |
+| `src/lib/pathManifest.js` | Walidacja ścieżek + unikalne flat upload names |
+| `src/lib/buildStructure.js` | Rekonstrukcja podfolderów na Drive (Faza 3) |
+| `src/app/api/build-structure/route.js` | POST — budowa struktury + `_manifest.json` |
 
 ---
 
@@ -124,6 +127,7 @@ Wszystkie poprzednie zmienne (`GOOGLE_*`, `SMTP_*`, `NOTIFICATION_EMAIL`, `WEBHO
 | `check-folder` | 30 | sprawdzanie duplikatów — umiarkowane |
 | `upload-session` | 300 | bulk folder upload — jedna sesja per plik |
 | `notify` | 5 | wysyłka maili — bardzo rzadkie |
+| `build-structure` | 10 | rekonstrukcja podfolderów — raz na sesję |
 
 ---
 
@@ -153,7 +157,7 @@ Wszystkie poprzednie zmienne (`GOOGLE_*`, `SMTP_*`, `NOTIFICATION_EMAIL`, `WEBHO
 | Przekierowanie po sukcesie | ⏳ Nie wdrożone |
 | Alert o drobnicy (>500 plików) | ⏳ Nie wdrożone |
 | Pauza/wznowienie ręczne | ⏳ Nie wdrożone |
-| Faza 3: rekonstrukcja podfolderów | ⏳ Nie wdrożone |
+| Faza 3: rekonstrukcja podfolderów | ✅ Wdrożone — flat upload + `/api/build-structure` |
 | Konsola admina (Faza A — historia Drive) | ✅ Wdrożone lokalnie — `/admin` |
 | Konsola admina (Faza B — live progress) | ✅ Wdrożone lokalnie — heartbeat 10s |
 | Konsola admina (Faza C — token manager) | ✅ Wdrożone — `/admin` → Client tokens |

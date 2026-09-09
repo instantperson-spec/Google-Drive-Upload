@@ -849,6 +849,23 @@ h1 {
   color: var(--text-secondary);
 }
 
+/* Folder structure compilation (upload Phase 3) */
+.structuring-spinner {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 24px;
+  border: 3px solid rgba(255, 255, 255, 0.15);
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: structuring-spin 0.9s linear infinite;
+}
+
+@keyframes structuring-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .admin-oauth-test-detail {
   color: var(--text-secondary);
   font-size: 0.75rem;

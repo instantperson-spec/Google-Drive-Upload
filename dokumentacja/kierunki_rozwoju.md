@@ -11,7 +11,7 @@
 | Przekierowanie po sukcesie | ⏳ Planowane |
 | Pauza / wznowienie ręczne | ⏳ Planowane |
 | Alert o drobnicy | ⏳ Planowane |
-| Faza 3: rekonstrukcja podfolderów | ⏳ Planowane |
+| Faza 3: rekonstrukcja podfolderów | ✅ Wdrożone — `/api/build-structure` + `_manifest.json` |
 | Konsola admina (Faza A — historia sesji) | ✅ Wdrożone lokalnie — `/admin` |
 | Konsola admina (Faza B — live progress) | ✅ Wdrożone lokalnie — heartbeat 10s |
 | Konsola admina (Faza C — token manager) | ✅ Wdrożone — `/admin` → Client tokens |

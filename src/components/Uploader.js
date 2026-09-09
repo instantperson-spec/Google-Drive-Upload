@@ -1,5 +1,6 @@
 'use client';
 import React, { useState, useRef, useEffect } from 'react';
+import { deriveUploadName, manifestNeedsStructure } from '@/lib/pathManifest';
 
 const CHUNK_SIZE = 5 * 1024 * 1024; // 5MB
 
@@ -36,7 +37,7 @@ async function getApiErrorMessage(res, fallback) {
 export default function Uploader() {
   const [files, setFiles] = useState([]); // { file, name, size, type, status, progress, uploadUrl }
   const [isDragging, setIsDragging] = useState(false);
-  const [status, setStatus] = useState('idle'); // idle, uploading, success, error
+  const [status, setStatus] = useState('idle'); // idle, uploading, structuring, success, error
   const [errorMessage, setErrorMessage] = useState('');
   
   const [uploaderName, setUploaderName] = useState('');
@@ -179,15 +180,21 @@ export default function Uploader() {
   const addFiles = (newFiles) => {
     const accepted = [];
     const rejected = [];
+    const usedUploadNames = new Set(
+      files.map((f) => f.uploadName).filter(Boolean)
+    );
     for (const f of newFiles) {
-      const name = f.webkitRelativePath ? f.webkitRelativePath : f.name;
-      if (isBlockedFile(name)) {
-        rejected.push(name);
+      const relativePath = f.webkitRelativePath ? f.webkitRelativePath : f.name;
+      if (isBlockedFile(relativePath)) {
+        rejected.push(relativePath);
       } else {
+        const uploadName = deriveUploadName(relativePath, usedUploadNames);
         accepted.push({
           id: crypto.randomUUID(),
           file: f,
-          name,
+          name: relativePath,
+          relativePath,
+          uploadName,
           size: f.size,
           type: f.type || 'application/octet-stream',
           status: 'pending',
@@ -330,13 +337,15 @@ export default function Uploader() {
         updateFileState(i, { status: 'uploading' });
 
         // Check if fully uploaded on Drive
-        const exists = existingDriveFiles.find(df => df.name === fObj.name && Number(df.size) === fObj.size);
+        const exists = existingDriveFiles.find(
+          (df) => df.name === fObj.uploadName && Number(df.size) === fObj.size
+        );
         if (exists) {
           updateFileState(i, { status: 'completed', progress: 100 });
           continue;
         }
 
-        let uploadUrl = sessionFiles[fObj.name];
+        let uploadUrl = sessionFiles[fObj.uploadName];
         let nextByte = 0;
 
         if (uploadUrl) {
@@ -357,7 +366,7 @@ export default function Uploader() {
             method: 'POST',
             headers: apiHeaders(),
             body: JSON.stringify({
-              name: fObj.name,
+              name: fObj.uploadName,
               mimeType: fObj.type,
               size: fObj.size,
               folderId: currentFolderId,
@@ -369,7 +378,7 @@ export default function Uploader() {
           const data = await initRes.json();
           uploadUrl = data.uploadUrl;
           
-          sessionFiles[fObj.name] = uploadUrl;
+          sessionFiles[fObj.uploadName] = uploadUrl;
           saveSession({ uploaderName, uploaderEmail, folderId: currentFolderId, files: sessionFiles });
         }
 
@@ -401,17 +410,42 @@ export default function Uploader() {
         updateFileState(i, { status: 'completed', progress: 100 });
       }
 
-      // 4. Final progress ping for admin console
+      // 4. Rebuild nested folder structure (Phase 3) + write _manifest.json
+      const manifestEntries = files.map((f) => ({
+        uploadName: f.uploadName,
+        relativePath: f.relativePath,
+        size: f.size,
+      }));
+
+      const hasNestedPaths = manifestNeedsStructure(manifestEntries);
+      if (hasNestedPaths) {
+        setStatus('structuring');
+      }
+
+      const structureRes = await fetch('/api/build-structure', {
+        method: 'POST',
+        headers: apiHeaders(),
+        body: JSON.stringify({ folderId: currentFolderId, entries: manifestEntries }),
+      });
+      if (!structureRes.ok) {
+        throw new Error(await getApiErrorMessage(structureRes, 'Failed to compile folder structure on Drive.'));
+      }
+
+      // 5. Final progress ping for admin console
       const completedFiles = files.map((f) => ({
-        name: f.name,
+        name: f.relativePath,
         size: f.size,
         progress: 100,
         status: 'completed',
       }));
       await sendProgressHeartbeat('completed', completedFiles);
 
-      // 5. Trigger Final Notification
-      const uploadedFilesInfo = files.map(f => ({ name: f.name, size: f.size, status: 'completed' }));
+      // 6. Trigger Final Notification
+      const uploadedFilesInfo = files.map((f) => ({
+        name: f.relativePath,
+        size: f.size,
+        status: 'completed',
+      }));
       fetch('/api/notify', {
         method: 'POST',
         headers: apiHeaders(),
@@ -463,6 +497,20 @@ export default function Uploader() {
             {isRevoked
               ? 'This link has been revoked or has expired. Please contact the studio to receive a new upload link.'
               : 'This page can only be used with a dedicated upload link. Please open the exact link you received from the studio, or contact us to get one.'}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (status === 'structuring') {
+    return (
+      <div className="uploader-container">
+        <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+          <div className="structuring-spinner" aria-hidden="true" />
+          <h2 style={{ color: 'white', marginBottom: '10px' }}>Compiling folder structure…</h2>
+          <p style={{ color: 'rgba(255,255,255,0.7)' }}>
+            Upload finished. Reorganizing files into subfolders on Google Drive — please keep this tab open.
           </p>
         </div>
       </div>
