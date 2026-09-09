@@ -4,9 +4,10 @@ import nodemailer from 'nodemailer';
 export async function POST(request) {
   try {
     const data = await request.json();
-    console.log('Received notification data:', data);
 
     const files = data.files || [];
+    // Log diagnostic metadata only — no PII (GDPR)
+    console.log(`Notification received: ${files.length} files, folder: ${data.folderId || 'n/a'}`);
     
     // For webhook / admin email text
     const filesListText = files.map(f => `- \`${f.name}\` (${(f.size / 1024 / 1024).toFixed(2)} MB)`).join('\n');
@@ -26,10 +27,11 @@ export async function POST(request) {
     }
 
     if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+      const smtpPort = parseInt(process.env.SMTP_PORT || '465');
       const transporter = nodemailer.createTransport({
         host: process.env.SMTP_HOST,
-        port: parseInt(process.env.SMTP_PORT || '465'),
-        secure: process.env.SMTP_PORT === '465', 
+        port: smtpPort,
+        secure: smtpPort === 465, // native SSL on 465, STARTTLS on 587
         auth: {
           user: process.env.SMTP_USER,
           pass: process.env.SMTP_PASS,

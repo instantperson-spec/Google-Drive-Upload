@@ -183,7 +183,7 @@ export default function Uploader() {
         updateFileState(i, { status: 'uploading' });
 
         // Check if fully uploaded on Drive
-        const exists = existingDriveFiles.find(df => df.name === fObj.name && parseInt(df.size) === fObj.size);
+        const exists = existingDriveFiles.find(df => df.name === fObj.name && Number(df.size) === fObj.size);
         if (exists) {
           updateFileState(i, { status: 'completed', progress: 100 });
           continue;
