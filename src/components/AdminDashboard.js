@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import AdminTokenManager from '@/components/AdminTokenManager';
+import AdminOAuthCheck from '@/components/AdminOAuthCheck';
 
 function formatDate(iso) {
   if (!iso) return '—';
@@ -338,6 +339,9 @@ export default function AdminDashboard() {
 
       {/* Phase C: Token manager */}
       <AdminTokenManager />
+
+      {/* System: OAuth scope diagnostic */}
+      <AdminOAuthCheck />
     </div>
   );
 }

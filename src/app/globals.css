@@ -690,3 +690,167 @@ h1 {
 .admin-restore-btn:hover {
   background: rgba(16, 185, 129, 0.1);
 }
+
+/* OAuth scope test (admin) */
+.admin-oauth-report {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.admin-oauth-banner {
+  padding: 1rem;
+  border-radius: 10px;
+  border: 1px solid var(--glass-border);
+}
+
+.admin-oauth-banner strong {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.admin-oauth-banner p {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.admin-oauth-banner-ok {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.3);
+  color: var(--success-color);
+}
+
+.admin-oauth-banner-warn {
+  background: rgba(251, 191, 36, 0.1);
+  border-color: rgba(251, 191, 36, 0.3);
+  color: #fbbf24;
+}
+
+.admin-oauth-banner-error {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: var(--error-color);
+}
+
+.admin-oauth-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+.admin-oauth-block {
+  border: 1px solid var(--glass-border);
+  border-radius: 10px;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.admin-oauth-block h4 {
+  margin: 0 0 0.75rem 0;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+}
+
+.admin-oauth-meta {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.admin-oauth-ok-text {
+  color: var(--success-color);
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+.admin-oauth-err-text {
+  color: var(--error-color);
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+.admin-oauth-meta-line {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin: 0.5rem 0 0 0;
+}
+
+.admin-oauth-scope-list,
+.admin-oauth-test-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.admin-oauth-scope-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  font-size: 0.8rem;
+}
+
+.admin-oauth-scope-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.admin-oauth-scope-ok .admin-oauth-scope-label {
+  background: rgba(16, 185, 129, 0.2);
+  color: var(--success-color);
+}
+
+.admin-oauth-scope-error .admin-oauth-scope-label {
+  background: rgba(239, 68, 68, 0.2);
+  color: var(--error-color);
+}
+
+.admin-oauth-scope-neutral .admin-oauth-scope-label {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-secondary);
+}
+
+.admin-oauth-test-list li {
+  font-size: 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.admin-oauth-test-pass {
+  color: var(--success-color);
+}
+
+.admin-oauth-test-fail {
+  color: var(--error-color);
+}
+
+.admin-oauth-test-optional {
+  color: var(--text-secondary);
+}
+
+.admin-oauth-test-detail {
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  padding-left: 1.25rem;
+}

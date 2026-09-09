@@ -1,6 +1,6 @@
 # Regeneracja OAuth — zawężenie scope do `drive.file` (VULN-05)
 
-> Uruchom diagnostykę: `npm run check-oauth-scopes`
+> Uruchom diagnostykę: `npm run check-oauth-scopes` **lub** `/admin` → sekcja **OAuth scope test** → **Run test**
 
 ---
 
@@ -79,15 +79,26 @@ Opcjonalnie: [Google Account → Third-party access](https://myaccount.google.co
 
 ## Co jeśli testy Drive failują po zawężeniu?
 
-`drive.file` daje dostęp do plików **utworzonych przez aplikację** oraz folderu, do którego konto OAuth ma właścicielstwo.
+`drive.file` daje dostęp do plików **utworzonych lub otwartych przez aplikację** — nie do metadanych dowolnego folderu przez `files.get`.
 
-Typowe przyczyny błędów:
-- Folder `GOOGLE_DRIVE_FOLDER_ID` należy do **innego** konta Google niż OAuth
-- Folder istnieje, ale aplikacja nigdy go nie „otworzyła”
+### Normalne (nie blokuje uploadu)
+
+Test **„Main folder metadata via files.get”** może pokazać `File not found`, podczas gdy pozostałe testy przechodzą:
+- ✓ Verify main upload folder access
+- ✓ List session folders / files
+- ✓ Read `_uploader_tokens.json`
+
+To **oczekiwane** przy `drive.file`, gdy folder główny istniał przed aplikacją. Upload tworzy podfoldery przez `files.create` — i to działa.
+
+### Prawdziwy problem (blokuje upload)
+
+Jeśli **krytyczne** testy failują (brak listy plików, brak tworzenia folderów):
+- Folder `GOOGLE_DRIVE_FOLDER_ID` należy do **innego** konta niż OAuth
+- Folder nie jest udostępniony kontu OAuth z rolą **Edytor**
 
 Rozwiązania:
 1. Utwórz folder uploadów na **tym samym** koncie co OAuth
-2. Albo udostępnij folder kontu OAuth z rolą **Edytor** i upewnij się, że upload działa (czasem wymaga to jednorazowego utworzenia pliku przez aplikację w tym folderze)
+2. Albo udostępnij folder kontu OAuth z rolą **Edytor** i przetestuj upload ręcznie
 
 W ostateczności (mniej bezpieczne): `drive.readonly` + `drive.file` — nadal bez pełnego `drive`.
 
