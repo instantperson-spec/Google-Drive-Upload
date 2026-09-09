@@ -7,7 +7,7 @@ import { rateLimit } from '@/lib/rateLimit';
 export async function POST(request) {
   const limited = rateLimit(request, 'check-folder', 30);
   if (limited) return limited;
-  if (!verifyUploadToken(request)) return unauthorizedResponse();
+  if (!(await verifyUploadToken(request))) return unauthorizedResponse();
 
   try {
     const { folderId } = await request.json();

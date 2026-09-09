@@ -126,9 +126,22 @@ Jeśli chcesz jeden folder per firma — to wymaga przyszłej funkcji (mapowanie
 
 ---
 
-## Zarządzanie tokenami — rejestr (poza aplikacją)
+## Zarządzanie tokenami — panel admina (zalecane)
 
-Aplikacja **nie ma jeszcze panelu admina do tokenów**. Prowadź prosty rejestr poza systemem:
+Tokeny zarządzasz w **`/admin` → sekcja „Client tokens"**:
+
+- **+ New token** — tworzy token, kopiuje link do schowka
+- **Copy link** — kopiuje gotowy URL `?token=...`
+- **Revoke** — natychmiast blokuje dostęp (bez redeploy)
+- **Restore** — przywraca revoke'owany token
+
+Tokeny są przechowywane w pliku `_uploader_tokens.json` na Twoim Google Drive (w głównym folderze uploadów). Przy pierwszym uruchomieniu importowane są z `UPLOAD_TOKENS` w env.
+
+### Ręczne zarządzanie (legacy / backup)
+
+Alternatywnie możesz nadal edytować `UPLOAD_TOKENS` w env — działa **tylko gdy Drive store jest niedostępny**. Po utworzeniu pliku na Drive **panel admina jest źródłem prawdy**.
+
+Prowadź też rejestr poza systemem (opcjonalnie):
 
 | Token | Klient / projekt | Typ | Data utworzenia | Data revoke | Link |
 |---|---|---|---|---|---|

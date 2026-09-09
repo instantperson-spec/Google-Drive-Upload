@@ -1,33 +1,30 @@
 import { NextResponse } from 'next/server';
+import { isTokenActive, isTokenActiveInEnv } from '@/lib/tokenStore';
 
 /**
  * Server-side verification of the per-project upload token.
  *
- * Valid tokens are defined in the UPLOAD_TOKENS env variable as a
- * comma-separated list (e.g. UPLOAD_TOKENS="ProjectAlpha,ClientBeta2026").
- * The client obtains its token from the URL (?token=X) and sends it
- * with every API request in the "x-upload-token" header.
+ * Primary source: `_uploader_tokens.json` on Google Drive (managed via /admin).
+ * Fallback: UPLOAD_TOKENS env (comma-separated) if Drive store is unreachable.
  *
- * Fail-closed: if UPLOAD_TOKENS is not configured, every request is rejected.
+ * Fail-closed when neither source accepts the token.
  *
- * @returns {string|null} the valid token, or null if unauthorized
+ * @returns {Promise<string|null>} the valid token, or null if unauthorized
  */
-export function verifyUploadToken(request) {
-  const configured = (process.env.UPLOAD_TOKENS || '')
-    .split(',')
-    .map(t => t.trim())
-    .filter(Boolean);
-
-  if (configured.length === 0) {
-    console.error('UPLOAD_TOKENS is not configured — rejecting all API requests.');
-    return null;
-  }
-
+export async function verifyUploadToken(request) {
   const provided = request.headers.get('x-upload-token');
-  if (!provided || !configured.includes(provided)) {
+  if (!provided) return null;
+
+  try {
+    // Drive store is authoritative — revoke in /admin takes effect immediately
+    if (await isTokenActive(provided)) return provided;
+    return null;
+  } catch (err) {
+    // Fallback only when Drive is unreachable (e.g. misconfigured credentials)
+    console.error('Token store unavailable, falling back to UPLOAD_TOKENS env:', err.message);
+    if (isTokenActiveInEnv(provided)) return provided;
     return null;
   }
-  return provided;
 }
 
 /** Standard 401 response for unauthorized API requests. */

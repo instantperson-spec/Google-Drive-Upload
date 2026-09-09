@@ -8,7 +8,7 @@ export async function POST(request) {
   // Generous limit: bulk folder uploads legitimately open one session per file
   const limited = rateLimit(request, 'upload-session', 300);
   if (limited) return limited;
-  if (!verifyUploadToken(request)) return unauthorizedResponse();
+  if (!(await verifyUploadToken(request))) return unauthorizedResponse();
 
   try {
     const { name, mimeType, size, folderId } = await request.json();

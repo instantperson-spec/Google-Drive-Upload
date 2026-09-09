@@ -24,7 +24,7 @@ const isValidFolderId = (value) =>
 export async function POST(request) {
   const limited = rateLimit(request, 'notify', 5);
   if (limited) return limited;
-  if (!verifyUploadToken(request)) return unauthorizedResponse();
+  if (!(await verifyUploadToken(request))) return unauthorizedResponse();
 
   try {
     const raw = await request.json();

@@ -71,6 +71,7 @@ Each client receives a dedicated URL: `https://your-domain/?token=ClientToken`. 
 Set `ADMIN_SECRET` in your environment, then open `/admin` to monitor uploads:
 - **Active now** — live progress bars (client heartbeat every 10s, admin refresh every 5s)
 - **History** — completed session folders from Google Drive (refresh every 60s)
+- **Client tokens** — create, copy upload links, revoke/restore tokens (stored in `_uploader_tokens.json` on Drive)
 
 ## 🌐 Deployment
 This project is optimized for deployment on **Vercel**. 

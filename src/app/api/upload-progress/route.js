@@ -29,7 +29,7 @@ function sanitizeFiles(rawFiles) {
 }
 
 export async function POST(request) {
-  const token = verifyUploadToken(request);
+  const token = await verifyUploadToken(request);
   if (!token) return unauthorizedResponse();
 
   try {
@@ -82,7 +82,7 @@ export async function POST(request) {
 
 /** Optional: client may DELETE session after successful upload cleanup. */
 export async function DELETE(request) {
-  if (!verifyUploadToken(request)) return unauthorizedResponse();
+  if (!(await verifyUploadToken(request))) return unauthorizedResponse();
 
   try {
     const { sessionId } = await request.json();

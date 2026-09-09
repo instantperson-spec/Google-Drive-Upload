@@ -575,3 +575,118 @@ h1 {
   font-size: 0.75rem;
   color: var(--text-secondary);
 }
+
+.admin-section-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.admin-section-header-row .admin-section-title {
+  margin-bottom: 0;
+}
+
+.admin-code {
+  font-family: ui-monospace, monospace;
+  font-size: 0.8rem;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+}
+
+.admin-token-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.admin-token-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  text-align: left;
+}
+
+.admin-token-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+}
+
+.admin-token-form .admin-btn {
+  width: auto;
+  align-self: flex-start;
+}
+
+.admin-token-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+}
+
+.admin-token-badge-active {
+  background: rgba(16, 185, 129, 0.2);
+  color: var(--success-color);
+}
+
+.admin-token-badge-revoked {
+  background: rgba(239, 68, 68, 0.2);
+  color: var(--error-color);
+}
+
+.admin-token-badge-expired {
+  background: rgba(251, 191, 36, 0.2);
+  color: #fbbf24;
+}
+
+.admin-token-row-inactive {
+  opacity: 0.55;
+}
+
+.admin-copy-btn,
+.admin-revoke-btn,
+.admin-restore-btn {
+  background: transparent;
+  border: 1px solid var(--glass-border);
+  color: var(--text-primary);
+  padding: 0.25rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.admin-copy-btn:hover {
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+}
+
+.admin-revoke-btn {
+  border-color: rgba(239, 68, 68, 0.4);
+  color: var(--error-color);
+}
+
+.admin-revoke-btn:hover {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.admin-restore-btn {
+  border-color: rgba(16, 185, 129, 0.4);
+  color: var(--success-color);
+}
+
+.admin-restore-btn:hover {
+  background: rgba(16, 185, 129, 0.1);
+}

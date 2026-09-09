@@ -1,6 +1,6 @@
 # Plan: Konsola Admina — podgląd uploadów
 
-> Status: **Fazy A + B wdrożone lokalnie** (branch `security-hardening`) · Faza C planowana
+> Status: **Fazy A + B + C wdrożone lokalnie** (branch `security-hardening`)
 
 ---
 
@@ -129,20 +129,22 @@ Upload odbywa się **bezpośrednio z przeglądarki klienta do Google Drive** —
 
 ---
 
-### Faza C: „Token Manager + metryki" (~3–5 dni)
+### Faza C: „Token Manager" ✅ Wdrożone lokalnie
 
-**Idea:** Pełna konsola operacyjna — zarządzanie klientami bez edycji env.
+**Idea:** Zarządzanie klientami bez edycji env — store w `_uploader_tokens.json` na Google Drive.
 
-**Nowe elementy:**
-- CRUD tokenów w UI (zapis w Vercel KV / pliku JSON na Drive / Neon Postgres)
-- mapowanie `token → nazwa klienta, typ (retainer/jednorazowy), data ważności`
-- revoke tokena jednym kliknięciem (natychmiastowy, bez redeploy)
-- statystyki: uploady per klient, łączny wolumen, ostatnia aktywność
-- opcjonalnie: alert email gdy upload przekroczy X godzin (stuck detection)
+**Wdrożone:**
+- `src/lib/tokenStore.js` — registry na Drive + cache 30s
+- `src/app/api/admin/tokens/route.js` — GET lista, POST tworzenie
+- `src/app/api/admin/tokens/[id]/route.js` — PATCH revoke / restore
+- `src/components/AdminTokenManager.js` — UI w `/admin`
+- `verifyUploadToken()` czyta ze store (env tylko gdy Drive niedostępny)
+- Bootstrap: pierwsze uruchomienie importuje `UPLOAD_TOKENS` → plik na Drive
 
-**Migracja z env:**
-- przy pierwszym uruchomieniu: import istniejących tokenów z `UPLOAD_TOKENS`
-- `verifyUploadToken()` czyta z store zamiast env (env jako fallback)
+**Jeszcze nie wdrożone (Faza C+):**
+- statystyki per klient (wolumen, ostatnia aktywność)
+- alert stuck upload > X godzin
+- edycja istniejącego tokena (nazwa, data ważności) — tylko create/revoke/restore
 
 ---
 

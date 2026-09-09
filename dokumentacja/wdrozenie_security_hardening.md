@@ -44,6 +44,10 @@ Wdrożono etapy 0–5 z analizy bezpieczeństwa i analizy kodu. Wszystkie zmiany
 | `src/lib/progressStore.js` | In-memory store live progress (TTL 24h) |
 | `src/app/api/upload-progress/route.js` | Heartbeat postępu uploadu od klienta |
 | `src/app/api/admin/active/route.js` | Aktywne uploady dla konsoli admina |
+| `src/lib/tokenStore.js` | Registry tokenów w `_uploader_tokens.json` na Drive |
+| `src/app/api/admin/tokens/route.js` | CRUD tokenów (lista + tworzenie) |
+| `src/app/api/admin/tokens/[id]/route.js` | Revoke / restore tokena |
+| `src/components/AdminTokenManager.js` | UI token managera |
 
 ---
 
@@ -106,6 +110,7 @@ Każdy endpoint (`create-folder`, `upload-session`, `check-folder`, `notify`) te
 | `UPLOAD_TOKENS` | **TAK** (fail-closed) | Lista tokenów dostępu, comma-separated | `"StudioAlfa,ProjektBeta"` |
 | `MAX_FILE_SIZE_GB` | nie | Limit rozmiaru pliku w GB | `250` (domyślnie) |
 | `ADMIN_SECRET` | tak (dla `/admin`) | Hasło do konsoli admina | `"silne-haslo"` |
+| `PUBLIC_UPLOAD_URL` | nie | URL produkcyjny do linków w adminie | `"https://twoja-domena.pl"` |
 
 Wszystkie poprzednie zmienne (`GOOGLE_*`, `SMTP_*`, `NOTIFICATION_EMAIL`, `WEBHOOK_URL`) bez zmian.
 
@@ -151,14 +156,15 @@ Wszystkie poprzednie zmienne (`GOOGLE_*`, `SMTP_*`, `NOTIFICATION_EMAIL`, `WEBHO
 | Faza 3: rekonstrukcja podfolderów | ⏳ Nie wdrożone |
 | Konsola admina (Faza A — historia Drive) | ✅ Wdrożone lokalnie — `/admin` |
 | Konsola admina (Faza B — live progress) | ✅ Wdrożone lokalnie — heartbeat 10s |
-| Konsola admina (Faza C — token manager) | 📋 Plan — `plan_konsola_admina.md` |
+| Konsola admina (Faza C — token manager) | ✅ Wdrożone — `/admin` → Client tokens |
 
 ---
 
 ## Checklist deploy (maintenance window)
 
 ```
-□ Ustaw UPLOAD_TOKENS na Vercel (wszystkie aktywne tokeny klientów)
+□ Ustaw UPLOAD_TOKENS na Vercel (bootstrap przy pierwszym uruchomieniu — potem zarządzaj w /admin)
+□ Ustaw PUBLIC_UPLOAD_URL na Vercel (produkcyjny URL do linków w panelu admina)
 □ Zmerguj security-hardening → main
 □ Deploy na Vercel
 □ Test: otwórz link z tokenem — upload działa

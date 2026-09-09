@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import AdminTokenManager from '@/components/AdminTokenManager';
 
 function formatDate(iso) {
   if (!iso) return '—';
@@ -334,6 +335,9 @@ export default function AdminDashboard() {
           <p className="admin-footnote">Drive history updated {formatDate(fetchedAt)}</p>
         )}
       </section>
+
+      {/* Phase C: Token manager */}
+      <AdminTokenManager />
     </div>
   );
 }
