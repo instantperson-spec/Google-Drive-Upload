@@ -24,6 +24,7 @@ function formatBytes(bytes) {
 const MAX_FILES_SHOWN = 8;
 
 function ActiveSessionCard({ session }) {
+  const [showLogs, setShowLogs] = useState(false);
   const isDone = session.sessionStatus === 'completed';
   const visibleFiles = session.files.slice(0, MAX_FILES_SHOWN);
   const hiddenCount = session.files.length - visibleFiles.length;
@@ -84,6 +85,35 @@ function ActiveSessionCard({ session }) {
 
       {hiddenCount > 0 && (
         <p className="admin-active-more">+ {hiddenCount} more file{hiddenCount !== 1 ? 's' : ''}</p>
+      )}
+
+      <div style={{ marginTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '0.5rem' }}>
+        <button 
+          className="btn admin-btn-secondary" 
+          onClick={() => setShowLogs(!showLogs)}
+          style={{ fontSize: '0.75rem', padding: '4px 8px' }}
+        >
+          {showLogs ? 'Hide Terminal' : `Show Terminal Logs (${session.logs?.length || 0})`}
+        </button>
+      </div>
+
+      {showLogs && (
+        <div className="admin-terminal" style={{ 
+          marginTop: '0.5rem', 
+          background: 'rgba(0,0,0,0.8)', 
+          color: '#4af626', 
+          fontFamily: 'monospace', 
+          padding: '10px', 
+          fontSize: '0.75rem',
+          maxHeight: '200px',
+          overflowY: 'auto',
+          borderRadius: '4px',
+          border: '1px solid #333'
+        }}>
+          {(!session.logs || session.logs.length === 0) ? 'No logs recorded...' : session.logs.map((log, i) => (
+            <div key={i}>{log}</div>
+          ))}
+        </div>
       )}
     </div>
   );
