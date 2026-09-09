@@ -28,6 +28,7 @@ export function upsertProgressSession(data) {
     folderId: data.folderId,
     files: data.files,
     sessionStatus: data.sessionStatus || 'uploading',
+    logs: data.logs || [],
     updatedAt: new Date().toISOString(),
   });
   pruneExpired();
@@ -35,6 +36,10 @@ export function upsertProgressSession(data) {
 
 export function removeProgressSession(sessionId) {
   sessions.delete(sessionId);
+}
+
+export function getSession(sessionId) {
+  return sessions.get(sessionId);
 }
 
 /**

@@ -69,6 +69,7 @@ export async function POST(request) {
       folderId: raw.folderId,
       files,
       sessionStatus,
+      logs: Array.isArray(raw.logs) ? raw.logs.slice(-200).map(String) : [],
     };
 
     upsertProgressSession(payload);

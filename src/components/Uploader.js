@@ -67,7 +67,7 @@ export default function Uploader() {
     openFilePicker,
   } = useFileQueue({ uploadStatus: status, setErrorMessage });
 
-  const { uploadSessionIdRef, uploadFolderIdRef, sendProgressHeartbeat } = useUploadHeartbeat({
+  const { uploadSessionIdRef, uploadFolderIdRef, sendProgressHeartbeat, pushLog } = useUploadHeartbeat({
     accessToken,
     status,
     uploaderName,
@@ -93,6 +93,7 @@ export default function Uploader() {
     setErrorMessage,
     setTokenStatus,
     onDeltaScan: setDeltaScan,
+    pushLog,
   });
 
   const canUpload =

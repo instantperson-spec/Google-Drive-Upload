@@ -48,8 +48,10 @@ export function useUploadRunner({
   setErrorMessage,
   setTokenStatus,
   onDeltaScan,
+  pushLog,
 }) {
   const startUpload = useCallback(async () => {
+    pushLog('Rozpoczynam sesję uploadu...');
     setStatus('uploading');
     setErrorMessage('');
 
@@ -204,9 +206,12 @@ export function useUploadRunner({
             console.error(chunkErr);
             retries += 1;
             if (retries > MAX_RETRIES) {
-              throw new Error(`Failed to upload ${fObj.name} after multiple retries.`);
+              const errMsg = `Failed to upload ${fObj.name} after multiple retries.`;
+              pushLog(`Błąd krytyczny: ${errMsg}`);
+              throw new Error(errMsg);
             }
             const delay = Math.min(2000 * Math.pow(2, retries - 1), 60000); // 2s, 4s, 8s... up to 60s
+            pushLog(`Rate limit or error. Retrying in ${delay/1000}s (Attempt ${retries}/${MAX_RETRIES})`);
             console.log(`Rate limit or error. Retrying in ${delay/1000}s (Attempt ${retries}/${MAX_RETRIES})`);
             await new Promise((res) => setTimeout(res, delay));
             const statusCheck = await queryUploadStatusWithRetry(uploadUrl);
@@ -295,6 +300,21 @@ export function useUploadRunner({
         return;
       }
 
+      pushLog(`Sesja przerwana z błędem: ${error.message}`);
+      
+      // Dump crash log to Google Drive
+      if (uploadFolderIdRef.current) {
+        fetch('/api/upload-log', {
+          method: 'POST',
+          headers: apiHeaders(),
+          body: JSON.stringify({
+            sessionId: uploadSessionIdRef.current,
+            folderId: uploadFolderIdRef.current,
+            errorMessage: error.message,
+          }),
+        }).catch(() => {});
+      }
+
       setStatus('error');
       setErrorMessage(error.message || 'An error occurred during upload. You can retry safely.');
     }
@@ -315,6 +335,7 @@ export function useUploadRunner({
     setErrorMessage,
     setTokenStatus,
     onDeltaScan,
+    pushLog,
   ]);
 
   return { startUpload };

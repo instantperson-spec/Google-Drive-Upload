@@ -13,6 +13,16 @@ export function useUploadHeartbeat({
   const uploadSessionIdRef = useRef(null);
   const uploadFolderIdRef = useRef(null);
   const filesRef = useRef(files);
+  const logsRef = useRef([]);
+
+  const pushLog = useCallback((message) => {
+    const timestamp = new Date().toISOString();
+    logsRef.current.push(`[${timestamp}] ${message}`);
+    // Keep max 200 logs to prevent memory/payload bloat
+    if (logsRef.current.length > 200) {
+      logsRef.current = logsRef.current.slice(-200);
+    }
+  }, []);
 
   useEffect(() => {
     filesRef.current = files;
@@ -41,6 +51,7 @@ export function useUploadHeartbeat({
           folderId,
           files: fileList,
           sessionStatus,
+          logs: logsRef.current,
         }),
       }).catch(() => {});
     },
@@ -55,5 +66,5 @@ export function useUploadHeartbeat({
     return () => clearInterval(interval);
   }, [status, accessToken, sendProgressHeartbeat]);
 
-  return { uploadSessionIdRef, uploadFolderIdRef, sendProgressHeartbeat };
+  return { uploadSessionIdRef, uploadFolderIdRef, sendProgressHeartbeat, pushLog };
 }

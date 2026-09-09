@@ -1,0 +1,870 @@
+{
+  "generatedAt": "2026-09-09T18:55:16.614Z",
+  "stats": {
+    "missing": 63,
+    "totalMissingBytes": 433191900000,
+    "wrongPath": 96
+  },
+  "missing": [
+    {
+      "relativePath": "Woodweb (Day02).mp4",
+      "basename": "Woodweb (Day02).mp4",
+      "size": 15700000000,
+      "sizeLabel": "15.7 GB"
+    },
+    {
+      "relativePath": "Woodweb (Master)/Day 2/Footage/A006C0029_260806_21DC54.MOV",
+      "basename": "A006C0029_260806_21DC54.MOV",
+      "size": 5890000000,
+      "sizeLabel": "5.89 GB"
+    },
+    {
+      "relativePath": "Woodweb (Master)/Day 2/Footage/A006C0030_260806_21DC54.MOV",
+      "basename": "A006C0030_260806_21DC54.MOV",
+      "size": 4630000000,
+      "sizeLabel": "4.63 GB"
+    },
+    {
+      "relativePath": "Woodweb (Master)/Day 2/Footage/A006C0031_260806_21DC54.MOV",
+      "basename": "A006C0031_260806_21DC54.MOV",
+      "size": 2900000000,
+      "sizeLabel": "2.9 GB"
+    },
+    {
+      "relativePath": "Woodweb (Master)/Day 2/Footage/A006C0032_260806_21DC54.MOV",
+      "basename": "A006C0032_260806_21DC54.MOV",
+      "size": 5590000000,
+      "sizeLabel": "5.59 GB"
+    },
+    {
+      "relativePath": "Woodweb (Master)/Day 2/Footage/A006C0033_260806_21DC54.MOV",
+      "basename": "A006C0033_260806_21DC54.MOV",
+      "size": 11270000000,
+      "sizeLabel": "11.27 GB"
+    },
+    {
+      "relativePath": "Woodweb (Master)/Day 2/Footage/A006C0034_260806_21DC54.MOV",
+      "basename": "A006C0034_260806_21DC54.MOV",
+      "size": 8210000000,
+      "sizeLabel": "8.21 GB"
+    },
+    {
+      "relativePath": "Woodweb (Master)/Day 2/Footage/A006C0035_260806_21DC54.MOV",
+      "basename": "A006C0035_260806_21DC54.MOV",
+      "size": 717300000,
+      "sizeLabel": "717.3 MB"
+    },
+    {
+      "relativePath": "Woodweb (Master)/Day 2/Footage/A006C0036_260806_21DC54.MOV",
+      "basename": "A006C0036_260806_21DC54.MOV",
+      "size": 7730000000,
+      "sizeLabel": "7.73 GB"
+    },
+    {
+      "relativePath": "Woodweb (Master)/Day 2/Footage/A006C0037_260806_21DC54.MOV",
+      "basename": "A006C0037_260806_21DC54.MOV",
+      "size": 7080000000,
+      "sizeLabel": "7.08 GB"
+    },
+    {
+      "relativePath": "Woodweb (Master)/Day 2/Footage/A006C0038_260806_21DC54.MOV",
+      "basename": "A006C0038_260806_21DC54.MOV",
+      "size": 7850000000,
+      "sizeLabel": "7.85 GB"
+    },
+    {
+      "relativePath": "Woodweb (Master)/Day 2/Footage/A006C0045_260806_21DC54.MOV",
+      "basename": "A006C0045_260806_21DC54.MOV",
+      "size": 14730000000,
+      "sizeLabel": "14.73 GB"
+    },
+    {
+      "relativePath": "Woodweb (Master)/Day 2/Footage/A006C0047_260806_21DC54.MOV",
+      "basename": "A006C0047_260806_21DC54.MOV",
+      "size": 18940000000,
+      "sizeLabel": "18.94 GB"
+    },
+    {
+      "relativePath": "Woodweb (Master)/Day 2/Footage/A006C0048_260806_21DC54.MOV",
+      "basename": "A006C0048_260806_21DC54.MOV",
+      "size": 9650000000,
+      "sizeLabel": "9.65 GB"
+    },
+    {
+      "relativePath": "Woodweb (Master)/Day 2/Footage/A006C0049_260806_21DC54.MOV",
+      "basename": "A006C0049_260806_21DC54.MOV",
+      "size": 12830000000,
+      "sizeLabel": "12.83 GB"
+    },
+    {
+      "relativePath": "Woodweb (Master)/Day 2/Footage/A006C0050_260806_21DC54.MOV",
+      "basename": "A006C0050_260806_21DC54.MOV",
+      "size": 13090000000,
+      "sizeLabel": "13.09 GB"
+    },
+    {
+      "relativePath": "Woodweb (Master)/Day 2/Footage/A006C0051_260806_21DC54.MOV",
+      "basename": "A006C0051_260806_21DC54.MOV",
+      "size": 5290000000,
+      "sizeLabel": "5.29 GB"
+    },
+    {
+      "relativePath": "Woodweb (Master)/Day 2/Footage/A006C0052_260806_21DC54.MOV",
+      "basename": "A006C0052_260806_21DC54.MOV",
+      "size": 9270000000,
+      "sizeLabel": "9.27 GB"
+    },
+    {
+      "relativePath": "Woodweb (Master)/Day 2/Footage/A006C0053_260806_21DC54.MOV",
+      "basename": "A006C0053_260806_21DC54.MOV",
+      "size": 15810000000,
+      "sizeLabel": "15.81 GB"
+    },
+    {
+      "relativePath": "Woodweb (Master)/Day 2/Footage/A006C0054_260806_21DC54.MOV",
+      "basename": "A006C0054_260806_21DC54.MOV",
+      "size": 12440000000,
+      "sizeLabel": "12.44 GB"
+    },
+    {
+      "relativePath": "Woodweb (Master)/Day 2/Footage/A006C0055_260806_21DC54.MOV",
+      "basename": "A006C0055_260806_21DC54.MOV",
+      "size": 12160000000,
+      "sizeLabel": "12.16 GB"
+    },
+    {
+      "relativePath": "Woodweb (Master)/Day 2/Footage/A006C0056_260806_21DC54.MOV",
+      "basename": "A006C0056_260806_21DC54.MOV",
+      "size": 7580000000,
+      "sizeLabel": "7.58 GB"
+    },
+    {
+      "relativePath": "Woodweb (Master)/Day 2/Footage/A006C0057_260806_21DC54.MOV",
+      "basename": "A006C0057_260806_21DC54.MOV",
+      "size": 9060000000,
+      "sizeLabel": "9.06 GB"
+    },
+    {
+      "relativePath": "Woodweb (Master)/Day 2/Footage/A006C0060_260806_21DC54.MOV",
+      "basename": "A006C0060_260806_21DC54.MOV",
+      "size": 6160000000,
+      "sizeLabel": "6.16 GB"
+    },
+    {
+      "relativePath": "Woodweb (Master)/Day 2/Footage/A006C0061_260806_21DC54.MOV",
+      "basename": "A006C0061_260806_21DC54.MOV",
+      "size": 4250000000,
+      "sizeLabel": "4.25 GB"
+    },
+    {
+      "relativePath": "Woodweb (Master)/Day 2/Footage/A006C0062_260806_21DC54.MOV",
+      "basename": "A006C0062_260806_21DC54.MOV",
+      "size": 4790000000,
+      "sizeLabel": "4.79 GB"
+    },
+    {
+      "relativePath": "Woodweb (Master)/Day 2/Footage/A006C0063_260806_21DC54.MOV",
+      "basename": "A006C0063_260806_21DC54.MOV",
+      "size": 5050000000,
+      "sizeLabel": "5.05 GB"
+    },
+    {
+      "relativePath": "Woodweb (Master)/Day 2/Footage/A006C0064_260806_21DC54.MOV",
+      "basename": "A006C0064_260806_21DC54.MOV",
+      "size": 5590000000,
+      "sizeLabel": "5.59 GB"
+    },
+    {
+      "relativePath": "Woodweb (Master)/Day 2/Footage/A006C0065_260806_21DC54.MOV",
+      "basename": "A006C0065_260806_21DC54.MOV",
+      "size": 4470000000,
+      "sizeLabel": "4.47 GB"
+    },
+    {
+      "relativePath": "Woodweb (Master)/Day 2/Footage/A006C0066_260806_21DC54.MOV",
+      "basename": "A006C0066_260806_21DC54.MOV",
+      "size": 4120000000,
+      "sizeLabel": "4.12 GB"
+    },
+    {
+      "relativePath": "Woodweb (Master)/Day 2/Footage/A007C0001_260806_21DC55.MOV",
+      "basename": "A007C0001_260806_21DC55.MOV",
+      "size": 8590000000,
+      "sizeLabel": "8.59 GB"
+    },
+    {
+      "relativePath": "Woodweb (Master)/Day 2/Footage/A007C0002_260806_21DC55.MOV",
+      "basename": "A007C0002_260806_21DC55.MOV",
+      "size": 8630000000,
+      "sizeLabel": "8.63 GB"
+    },
+    {
+      "relativePath": "Woodweb (Master)/Day 2/Footage/A007C0003_260806_21DC55.MOV",
+      "basename": "A007C0003_260806_21DC55.MOV",
+      "size": 7840000000,
+      "sizeLabel": "7.84 GB"
+    },
+    {
+      "relativePath": "Woodweb (Master)/Day 2/Footage/A007C0004_260806_21DC55.MOV",
+      "basename": "A007C0004_260806_21DC55.MOV",
+      "size": 9820000000,
+      "sizeLabel": "9.82 GB"
+    },
+    {
+      "relativePath": "Woodweb (Master)/Day 2/Footage/A007C0005_260806_21DC55.MOV",
+      "basename": "A007C0005_260806_21DC55.MOV",
+      "size": 8360000000,
+      "sizeLabel": "8.36 GB"
+    },
+    {
+      "relativePath": "Woodweb (Master)/Day 2/Footage/A007C0006_260806_21DC55.MOV",
+      "basename": "A007C0006_260806_21DC55.MOV",
+      "size": 8150000000,
+      "sizeLabel": "8.15 GB"
+    },
+    {
+      "relativePath": "Woodweb (Master)/Day 2/Footage/A007C0007_260806_21DC55.MOV",
+      "basename": "A007C0007_260806_21DC55.MOV",
+      "size": 4960000000,
+      "sizeLabel": "4.96 GB"
+    },
+    {
+      "relativePath": "Woodweb (Master)/Day 2/Footage/A007C0012_260806_21DC55.MOV",
+      "basename": "A007C0012_260806_21DC55.MOV",
+      "size": 8020000000,
+      "sizeLabel": "8.02 GB"
+    },
+    {
+      "relativePath": "Woodweb (Master)/Day 2/Footage/A007C0016_260806_21DC55.MOV",
+      "basename": "A007C0016_260806_21DC55.MOV",
+      "size": 4590000000,
+      "sizeLabel": "4.59 GB"
+    },
+    {
+      "relativePath": "Woodweb (Master)/Day 2/Footage/A007C0018_260806_21DC55.MOV",
+      "basename": "A007C0018_260806_21DC55.MOV",
+      "size": 4660000000,
+      "sizeLabel": "4.66 GB"
+    },
+    {
+      "relativePath": "Woodweb (Master)/Day 2/Footage/A007C0019_260806_21DC55.MOV",
+      "basename": "A007C0019_260806_21DC55.MOV",
+      "size": 6470000000,
+      "sizeLabel": "6.47 GB"
+    },
+    {
+      "relativePath": "Woodweb (Master)/Day 2/Footage/A007C0022_260806_21DC55.MOV",
+      "basename": "A007C0022_260806_21DC55.MOV",
+      "size": 13310000000,
+      "sizeLabel": "13.31 GB"
+    },
+    {
+      "relativePath": "Woodweb (Master)/Day 2/Footage/A007C0026_260806_21DC55.MOV",
+      "basename": "A007C0026_260806_21DC55.MOV",
+      "size": 1520000000,
+      "sizeLabel": "1.52 GB"
+    },
+    {
+      "relativePath": "Woodweb (Master)/Day 2/Footage/A007C0027_260806_21DC55.MOV",
+      "basename": "A007C0027_260806_21DC55.MOV",
+      "size": 2780000000,
+      "sizeLabel": "2.78 GB"
+    },
+    {
+      "relativePath": "Woodweb (Master)/Day 2/Footage/A007C0028_260806_21DC55.MOV",
+      "basename": "A007C0028_260806_21DC55.MOV",
+      "size": 6110000000,
+      "sizeLabel": "6.11 GB"
+    },
+    {
+      "relativePath": "Woodweb (Master)/Day 2/Footage/A007C0029_260806_21DC55.MOV",
+      "basename": "A007C0029_260806_21DC55.MOV",
+      "size": 3840000000,
+      "sizeLabel": "3.84 GB"
+    },
+    {
+      "relativePath": "Woodweb (Master)/Day 2/Footage/A007C0030_260806_21DC55.MOV",
+      "basename": "A007C0030_260806_21DC55.MOV",
+      "size": 2490000000,
+      "sizeLabel": "2.49 GB"
+    },
+    {
+      "relativePath": "Woodweb (Master)/Day 2/Footage/A007C0031_260806_21DC55.MOV",
+      "basename": "A007C0031_260806_21DC55.MOV",
+      "size": 2610000000,
+      "sizeLabel": "2.61 GB"
+    },
+    {
+      "relativePath": "Woodweb (Master)/Day 2/Footage/A007C0032_260806_21DC55.MOV",
+      "basename": "A007C0032_260806_21DC55.MOV",
+      "size": 3360000000,
+      "sizeLabel": "3.36 GB"
+    },
+    {
+      "relativePath": "Woodweb (Master)/Day 2/Footage/A007C0033_260806_21DC55.MOV",
+      "basename": "A007C0033_260806_21DC55.MOV",
+      "size": 1030000000,
+      "sizeLabel": "1.03 GB"
+    },
+    {
+      "relativePath": "Woodweb (Master)/Day 2/Footage/A007C0034_260806_21DC55.MOV",
+      "basename": "A007C0034_260806_21DC55.MOV",
+      "size": 4610000000,
+      "sizeLabel": "4.61 GB"
+    },
+    {
+      "relativePath": "Woodweb (Master)/Day 2/Footage/A007C0035_260806_21DC55.MOV",
+      "basename": "A007C0035_260806_21DC55.MOV",
+      "size": 4780000000,
+      "sizeLabel": "4.78 GB"
+    },
+    {
+      "relativePath": "Woodweb (Master)/Day 2/Footage/A007C0036_260806_21DC55.MOV",
+      "basename": "A007C0036_260806_21DC55.MOV",
+      "size": 3880000000,
+      "sizeLabel": "3.88 GB"
+    },
+    {
+      "relativePath": "Woodweb (Master)/Day 2/Footage/A007C0037_260806_21DC55.MOV",
+      "basename": "A007C0037_260806_21DC55.MOV",
+      "size": 3980000000,
+      "sizeLabel": "3.98 GB"
+    },
+    {
+      "relativePath": "Woodweb (Master)/Day 2/Footage/A007C0040_260806_21DC55.MOV",
+      "basename": "A007C0040_260806_21DC55.MOV",
+      "size": 12050000000,
+      "sizeLabel": "12.05 GB"
+    },
+    {
+      "relativePath": "Woodweb (Master)/Day 2/Footage/A007C0041_260806_21DC55.MOV",
+      "basename": "A007C0041_260806_21DC55.MOV",
+      "size": 606700000,
+      "sizeLabel": "606.7 MB"
+    },
+    {
+      "relativePath": "Woodweb (Master)/Day 2/Footage/A007C0044_260806_21DC55.MOV",
+      "basename": "A007C0044_260806_21DC55.MOV",
+      "size": 1520000000,
+      "sizeLabel": "1.52 GB"
+    },
+    {
+      "relativePath": "Woodweb (Master)/Day 2/Footage/A007C0048_260806_21DC55.MOV",
+      "basename": "A007C0048_260806_21DC55.MOV",
+      "size": 3510000000,
+      "sizeLabel": "3.51 GB"
+    },
+    {
+      "relativePath": "Woodweb (Master)/Day 2/Footage/A007C0049_260806_21DC55.MOV",
+      "basename": "A007C0049_260806_21DC55.MOV",
+      "size": 11050000000,
+      "sizeLabel": "11.05 GB"
+    },
+    {
+      "relativePath": "Woodweb (Master)/Day 2/Footage/A007C0050_260806_21DC55.MOV",
+      "basename": "A007C0050_260806_21DC55.MOV",
+      "size": 10630000000,
+      "sizeLabel": "10.63 GB"
+    },
+    {
+      "relativePath": "Woodweb (Master)/Day 2/Footage/A007C0051_260806_21DC55.MOV",
+      "basename": "A007C0051_260806_21DC55.MOV",
+      "size": 5960000000,
+      "sizeLabel": "5.96 GB"
+    },
+    {
+      "relativePath": "Woodweb Test Relight 02.mov",
+      "basename": "Woodweb Test Relight 02.mov",
+      "size": 194600000,
+      "sizeLabel": "194.6 MB"
+    },
+    {
+      "relativePath": "Woodweb Test Relight.mov",
+      "basename": "Woodweb Test Relight.mov",
+      "size": 433300000,
+      "sizeLabel": "433.3 MB"
+    }
+  ],
+  "wrongPath": [
+    {
+      "expected": "Woodweb (Master)/Project/Adobe Premiere Pro Video Previews/Woodweb.PRV/Woodweb (v3).xml",
+      "actual": "Woodweb (Master)/Project/Woodweb (v3).xml",
+      "size": "910 KB"
+    },
+    {
+      "expected": "Woodweb (Master)/Project/Woodweb Masks/Woodweb.prproj",
+      "actual": "Woodweb (Master)/Project/Woodweb.prproj",
+      "size": "4 MB"
+    },
+    {
+      "expected": "Woodweb (Master)/Project/Adobe Premiere Pro Auto-Save/RecoveryProjects/Woodweb--b8e27400-1d33-4aa7-6058-f0eb5848ac6b-2026-09-02_23-37-24.prproj",
+      "actual": "Woodweb (Master)/Project/Adobe Premiere Pro Auto-Save/Woodweb--b8e27400-1d33-4aa7-6058-f0eb5848ac6b-2026-09-02_23-37-24.prproj",
+      "size": "2.6 MB"
+    },
+    {
+      "expected": "Woodweb (Master)/Project/Adobe Premiere Pro Auto-Save/RecoveryProjects/Woodweb--8ce05f26-581e-866d-5fec-7273fb0ef558-2026-08-13_15-19-48.prproj",
+      "actual": "Woodweb (Master)/Project/Adobe Premiere Pro Auto-Save/Woodweb--8ce05f26-581e-866d-5fec-7273fb0ef558-2026-08-13_15-19-48.prproj",
+      "size": "1.2 MB"
+    },
+    {
+      "expected": "Woodweb (Master)/Project/Adobe Premiere Pro Auto-Save/RecoveryProjects/Woodweb--b8e27400-1d33-4aa7-6058-f0eb5848ac6b-2026-09-07_18-21-36.prproj",
+      "actual": "Woodweb (Master)/Project/Adobe Premiere Pro Auto-Save/Woodweb--b8e27400-1d33-4aa7-6058-f0eb5848ac6b-2026-09-07_18-21-36.prproj",
+      "size": "3.9 MB"
+    },
+    {
+      "expected": "Woodweb (Master)/Project/Adobe Premiere Pro Auto-Save/RecoveryProjects/Woodweb--b8e27400-1d33-4aa7-6058-f0eb5848ac6b-2026-09-06_15-09-48.prproj",
+      "actual": "Woodweb (Master)/Project/Adobe Premiere Pro Auto-Save/Woodweb--b8e27400-1d33-4aa7-6058-f0eb5848ac6b-2026-09-06_15-09-48.prproj",
+      "size": "3.9 MB"
+    },
+    {
+      "expected": "Woodweb (Master)/Project/Adobe Premiere Pro Auto-Save/RecoveryProjects/Woodweb--8ce05f26-581e-866d-5fec-7273fb0ef558-2026-08-13_15-36-06.prproj",
+      "actual": "Woodweb (Master)/Project/Adobe Premiere Pro Auto-Save/Woodweb--8ce05f26-581e-866d-5fec-7273fb0ef558-2026-08-13_15-36-06.prproj",
+      "size": "1.2 MB"
+    },
+    {
+      "expected": "Woodweb (Master)/Project/Adobe Premiere Pro Auto-Save/RecoveryProjects/Woodweb--8ce05f26-581e-866d-5fec-7273fb0ef558-2026-08-13_10-46-23.prproj",
+      "actual": "Woodweb (Master)/Project/Adobe Premiere Pro Auto-Save/Woodweb--8ce05f26-581e-866d-5fec-7273fb0ef558-2026-08-13_10-46-23.prproj",
+      "size": "1.1 MB"
+    },
+    {
+      "expected": "Woodweb (Master)/Project/Adobe Premiere Pro Auto-Save/RecoveryProjects/Woodweb--8ce05f26-581e-866d-5fec-7273fb0ef558-2026-08-13_11-02-23.prproj",
+      "actual": "Woodweb (Master)/Project/Adobe Premiere Pro Auto-Save/Woodweb--8ce05f26-581e-866d-5fec-7273fb0ef558-2026-08-13_11-02-23.prproj",
+      "size": "1.1 MB"
+    },
+    {
+      "expected": "Woodweb (Master)/Project/Adobe Premiere Pro Auto-Save/RecoveryProjects/Woodweb--8ce05f26-581e-866d-5fec-7273fb0ef558-2026-08-13_12-38-37.prproj",
+      "actual": "Woodweb (Master)/Project/Adobe Premiere Pro Auto-Save/Woodweb--8ce05f26-581e-866d-5fec-7273fb0ef558-2026-08-13_12-38-37.prproj",
+      "size": "1.1 MB"
+    },
+    {
+      "expected": "Woodweb (Master)/Project/Adobe Premiere Pro Auto-Save/RecoveryProjects/Woodweb--b8e27400-1d33-4aa7-6058-f0eb5848ac6b-2026-08-23_19-42-05.prproj",
+      "actual": "Woodweb (Master)/Project/Adobe Premiere Pro Auto-Save/Woodweb--b8e27400-1d33-4aa7-6058-f0eb5848ac6b-2026-08-23_19-42-05.prproj",
+      "size": "1.4 MB"
+    },
+    {
+      "expected": "Woodweb (Master)/Project/Adobe Premiere Pro Auto-Save/RecoveryProjects/Woodweb--8ce05f26-581e-866d-5fec-7273fb0ef558-2026-08-13_14-07-49.prproj",
+      "actual": "Woodweb (Master)/Project/Adobe Premiere Pro Auto-Save/Woodweb--8ce05f26-581e-866d-5fec-7273fb0ef558-2026-08-13_14-07-49.prproj",
+      "size": "1.2 MB"
+    },
+    {
+      "expected": "Woodweb (Master)/Project/Adobe Premiere Pro Auto-Save/RecoveryProjects/Woodweb--b8e27400-1d33-4aa7-6058-f0eb5848ac6b-2026-09-06_14-02-51.prproj",
+      "actual": "Woodweb (Master)/Project/Adobe Premiere Pro Auto-Save/Woodweb--b8e27400-1d33-4aa7-6058-f0eb5848ac6b-2026-09-06_14-02-51.prproj",
+      "size": "3.9 MB"
+    },
+    {
+      "expected": "Woodweb (Master)/Project/Adobe Premiere Pro Auto-Save/RecoveryProjects/Woodweb--8ce05f26-581e-866d-5fec-7273fb0ef558-2026-08-13_13-51-49.prproj",
+      "actual": "Woodweb (Master)/Project/Adobe Premiere Pro Auto-Save/Woodweb--8ce05f26-581e-866d-5fec-7273fb0ef558-2026-08-13_13-51-49.prproj",
+      "size": "1.2 MB"
+    },
+    {
+      "expected": "Woodweb (Master)/Project/Adobe Premiere Pro Auto-Save/RecoveryProjects/Woodweb--b8e27400-1d33-4aa7-6058-f0eb5848ac6b-2026-09-07_20-48-12.prproj",
+      "actual": "Woodweb (Master)/Project/Adobe Premiere Pro Auto-Save/Woodweb--b8e27400-1d33-4aa7-6058-f0eb5848ac6b-2026-09-07_20-48-12.prproj",
+      "size": "3.9 MB"
+    },
+    {
+      "expected": "Woodweb (Master)/Project/Adobe Premiere Pro Auto-Save/RecoveryProjects/Woodweb--b8e27400-1d33-4aa7-6058-f0eb5848ac6b-2026-08-23_19-58-05.prproj",
+      "actual": "Woodweb (Master)/Project/Adobe Premiere Pro Auto-Save/Woodweb--b8e27400-1d33-4aa7-6058-f0eb5848ac6b-2026-08-23_19-58-05.prproj",
+      "size": "1.4 MB"
+    },
+    {
+      "expected": "Woodweb (Master)/Project/Adobe Premiere Pro Auto-Save/RecoveryProjects/Woodweb--8ce05f26-581e-866d-5fec-7273fb0ef558-2026-08-13_11-18-23.prproj",
+      "actual": "Woodweb (Master)/Project/Adobe Premiere Pro Auto-Save/Woodweb--8ce05f26-581e-866d-5fec-7273fb0ef558-2026-08-13_11-18-23.prproj",
+      "size": "1.1 MB"
+    },
+    {
+      "expected": "Woodweb (Master)/Project/Adobe Premiere Pro Auto-Save/RecoveryProjects/Woodweb--8ce05f26-581e-866d-5fec-7273fb0ef558-2026-08-13_11-34-23.prproj",
+      "actual": "Woodweb (Master)/Project/Adobe Premiere Pro Auto-Save/Woodweb--8ce05f26-581e-866d-5fec-7273fb0ef558-2026-08-13_11-34-23.prproj",
+      "size": "1.1 MB"
+    },
+    {
+      "expected": "Woodweb (Master)/Project/Adobe Premiere Pro Auto-Save/RecoveryProjects/Woodweb--b8e27400-1d33-4aa7-6058-f0eb5848ac6b-2026-09-06_14-52-16.prproj",
+      "actual": "Woodweb (Master)/Project/Adobe Premiere Pro Auto-Save/Woodweb--b8e27400-1d33-4aa7-6058-f0eb5848ac6b-2026-09-06_14-52-16.prproj",
+      "size": "3.9 MB"
+    },
+    {
+      "expected": "Woodweb (Master)/Project/Adobe Premiere Pro Auto-Save/RecoveryProjects/Woodweb--b8e27400-1d33-4aa7-6058-f0eb5848ac6b-2026-09-08_22-59-49.prproj",
+      "actual": "Woodweb (Master)/Project/Adobe Premiere Pro Auto-Save/Woodweb--b8e27400-1d33-4aa7-6058-f0eb5848ac6b-2026-09-08_22-59-49.prproj",
+      "size": "4 MB"
+    },
+    {
+      "expected": "Woodweb (Master)/Project/Adobe Premiere Pro Auto-Save/RecoveryProjects/Woodweb--b8e27400-1d33-4aa7-6058-f0eb5848ac6b-2026-09-06_13-46-51.prproj",
+      "actual": "Woodweb (Master)/Project/Adobe Premiere Pro Auto-Save/Woodweb--b8e27400-1d33-4aa7-6058-f0eb5848ac6b-2026-09-06_13-46-51.prproj",
+      "size": "3.9 MB"
+    },
+    {
+      "expected": "Woodweb (Master)/Project/Adobe Premiere Pro Auto-Save/RecoveryProjects/Woodweb--8ce05f26-581e-866d-5fec-7273fb0ef558-2026-08-13_11-50-23.prproj",
+      "actual": "Woodweb (Master)/Project/Adobe Premiere Pro Auto-Save/Woodweb--8ce05f26-581e-866d-5fec-7273fb0ef558-2026-08-13_11-50-23.prproj",
+      "size": "1.1 MB"
+    },
+    {
+      "expected": "Woodweb (Master)/Project/Adobe Premiere Pro Auto-Save/RecoveryProjects/Woodweb--b8e27400-1d33-4aa7-6058-f0eb5848ac6b-2026-08-23_19-10-05.prproj",
+      "actual": "Woodweb (Master)/Project/Adobe Premiere Pro Auto-Save/Woodweb--b8e27400-1d33-4aa7-6058-f0eb5848ac6b-2026-08-23_19-10-05.prproj",
+      "size": "1.4 MB"
+    },
+    {
+      "expected": "Woodweb (Master)/Project/Adobe Premiere Pro Auto-Save/RecoveryProjects/Woodweb--8ce05f26-581e-866d-5fec-7273fb0ef558-2026-08-11_15-22-38.prproj",
+      "actual": "Woodweb (Master)/Project/Adobe Premiere Pro Auto-Save/Woodweb--8ce05f26-581e-866d-5fec-7273fb0ef558-2026-08-11_15-22-38.prproj",
+      "size": "593 KB"
+    },
+    {
+      "expected": "Woodweb (Master)/Project/Adobe Premiere Pro Auto-Save/RecoveryProjects/Woodweb--b8e27400-1d33-4aa7-6058-f0eb5848ac6b-2026-09-04_17-49-13.prproj",
+      "actual": "Woodweb (Master)/Project/Adobe Premiere Pro Auto-Save/Woodweb--b8e27400-1d33-4aa7-6058-f0eb5848ac6b-2026-09-04_17-49-13.prproj",
+      "size": "3.9 MB"
+    },
+    {
+      "expected": "Woodweb (Master)/Project/Adobe Premiere Pro Auto-Save/RecoveryProjects/Woodweb--8ce05f26-581e-866d-5fec-7273fb0ef558-2026-08-13_13-10-37.prproj",
+      "actual": "Woodweb (Master)/Project/Adobe Premiere Pro Auto-Save/Woodweb--8ce05f26-581e-866d-5fec-7273fb0ef558-2026-08-13_13-10-37.prproj",
+      "size": "1.1 MB"
+    },
+    {
+      "expected": "Woodweb (Master)/Project/Adobe Premiere Pro Auto-Save/RecoveryProjects/Woodweb--8ce05f26-581e-866d-5fec-7273fb0ef558-2026-08-13_13-35-49.prproj",
+      "actual": "Woodweb (Master)/Project/Adobe Premiere Pro Auto-Save/Woodweb--8ce05f26-581e-866d-5fec-7273fb0ef558-2026-08-13_13-35-49.prproj",
+      "size": "1.1 MB"
+    },
+    {
+      "expected": "Woodweb (Master)/Project/Adobe Premiere Pro Auto-Save/RecoveryProjects/Woodweb--b8e27400-1d33-4aa7-6058-f0eb5848ac6b-2026-09-06_13-30-51.prproj",
+      "actual": "Woodweb (Master)/Project/Adobe Premiere Pro Auto-Save/Woodweb--b8e27400-1d33-4aa7-6058-f0eb5848ac6b-2026-09-06_13-30-51.prproj",
+      "size": "3.9 MB"
+    },
+    {
+      "expected": "Woodweb (Master)/Project/Adobe Premiere Pro Auto-Save/RecoveryProjects/Woodweb--8ce05f26-581e-866d-5fec-7273fb0ef558-2026-08-13_14-36-50.prproj",
+      "actual": "Woodweb (Master)/Project/Adobe Premiere Pro Auto-Save/Woodweb--8ce05f26-581e-866d-5fec-7273fb0ef558-2026-08-13_14-36-50.prproj",
+      "size": "1.2 MB"
+    },
+    {
+      "expected": "Woodweb (Master)/Project/Adobe Premiere Pro Auto-Save/RecoveryProjects/Woodweb--b8e27400-1d33-4aa7-6058-f0eb5848ac6b-2026-09-02_16-29-00.prproj",
+      "actual": "Woodweb (Master)/Project/Adobe Premiere Pro Auto-Save/Woodweb--b8e27400-1d33-4aa7-6058-f0eb5848ac6b-2026-09-02_16-29-00.prproj",
+      "size": "1.8 MB"
+    },
+    {
+      "expected": "Woodweb (Master)/Project/Adobe Premiere Pro Auto-Save/RecoveryProjects/Woodweb--8ce05f26-581e-866d-5fec-7273fb0ef558-2026-08-13_12-22-23.prproj",
+      "actual": "Woodweb (Master)/Project/Adobe Premiere Pro Auto-Save/Woodweb--8ce05f26-581e-866d-5fec-7273fb0ef558-2026-08-13_12-22-23.prproj",
+      "size": "1.1 MB"
+    },
+    {
+      "expected": "Woodweb (Master)/Project/Adobe Premiere Pro Auto-Save/RecoveryProjects/Woodweb--8ce05f26-581e-866d-5fec-7273fb0ef558-2026-08-13_12-54-37.prproj",
+      "actual": "Woodweb (Master)/Project/Adobe Premiere Pro Auto-Save/Woodweb--8ce05f26-581e-866d-5fec-7273fb0ef558-2026-08-13_12-54-37.prproj",
+      "size": "1.1 MB"
+    },
+    {
+      "expected": "Woodweb (Master)/Project/Adobe Premiere Pro Auto-Save/RecoveryProjects/Woodweb--b8e27400-1d33-4aa7-6058-f0eb5848ac6b-2026-09-06_14-18-52.prproj",
+      "actual": "Woodweb (Master)/Project/Adobe Premiere Pro Auto-Save/Woodweb--b8e27400-1d33-4aa7-6058-f0eb5848ac6b-2026-09-06_14-18-52.prproj",
+      "size": "3.9 MB"
+    },
+    {
+      "expected": "Woodweb (Master)/Day 1/Footage/DJI/A006_21DC54/XMP Data/A006C0007_260805_21DC54.MOV",
+      "actual": "Woodweb (Master)/Day 1/Footage/DJI/A006_21DC54/A006C0007_260805_21DC54.MOV",
+      "size": "11.01 GB"
+    },
+    {
+      "expected": "Woodweb (Master)/Day 1/Footage/DJI/A006_21DC54/XMP Data/A006C0001_260805_21DC54.MOV",
+      "actual": "Woodweb (Master)/Day 1/Footage/DJI/A006_21DC54/A006C0001_260805_21DC54.MOV",
+      "size": "8.8 GB"
+    },
+    {
+      "expected": "Woodweb (Master)/Day 1/Footage/DJI/A006_21DC54/XMP Data/A006C0004_260805_21DC54.MOV",
+      "actual": "Woodweb (Master)/Day 1/Footage/DJI/A006_21DC54/A006C0004_260805_21DC54.MOV",
+      "size": "4.08 GB"
+    },
+    {
+      "expected": "Woodweb (Master)/Day 1/Footage/DJI/A006_21DC54/XMP Data/A006C0018_260805_21DC54.MOV",
+      "actual": "Woodweb (Master)/Day 1/Footage/DJI/A006_21DC54/A006C0018_260805_21DC54.MOV",
+      "size": "5.8 GB"
+    },
+    {
+      "expected": "Woodweb (Master)/Day 1/Footage/DJI/A006_21DC54/XMP Data/A006C0028_260805_21DC54.MOV",
+      "actual": "Woodweb (Master)/Day 1/Footage/DJI/A006_21DC54/A006C0028_260805_21DC54.MOV",
+      "size": "1.86 GB"
+    },
+    {
+      "expected": "Woodweb (Master)/Day 1/Footage/DJI/A006_21DC54/XMP Data/A006C0005_260805_21DC54.MOV",
+      "actual": "Woodweb (Master)/Day 1/Footage/DJI/A006_21DC54/A006C0005_260805_21DC54.MOV",
+      "size": "3.48 GB"
+    },
+    {
+      "expected": "Woodweb (Master)/Day 1/Footage/DJI/A006_21DC54/XMP Data/A006C0019_260805_21DC54.MOV",
+      "actual": "Woodweb (Master)/Day 1/Footage/DJI/A006_21DC54/A006C0019_260805_21DC54.MOV",
+      "size": "9.8 GB"
+    },
+    {
+      "expected": "Woodweb (Master)/Day 1/Footage/DJI/A006_21DC54/XMP Data/A006C0024_260805_21DC54.MOV",
+      "actual": "Woodweb (Master)/Day 1/Footage/DJI/A006_21DC54/A006C0024_260805_21DC54.MOV",
+      "size": "1.33 GB"
+    },
+    {
+      "expected": "Woodweb (Master)/Day 1/Footage/DJI/A006_21DC54/XMP Data/A006C0010_260805_21DC54.MOV",
+      "actual": "Woodweb (Master)/Day 1/Footage/DJI/A006_21DC54/A006C0010_260805_21DC54.MOV",
+      "size": "16.48 GB"
+    },
+    {
+      "expected": "Woodweb (Master)/Day 1/Footage/DJI/A006_21DC54/XMP Data/A006C0021_260805_21DC54.MOV",
+      "actual": "Woodweb (Master)/Day 1/Footage/DJI/A006_21DC54/A006C0021_260805_21DC54.MOV",
+      "size": "33.9 GB"
+    },
+    {
+      "expected": "Woodweb (Master)/Day 1/Footage/DJI/A006_21DC54/XMP Data/A006C0009_260805_21DC54.MOV",
+      "actual": "Woodweb (Master)/Day 1/Footage/DJI/A006_21DC54/A006C0009_260805_21DC54.MOV",
+      "size": "12.94 GB"
+    },
+    {
+      "expected": "Woodweb (Master)/Day 1/Footage/DJI/A006_21DC54/XMP Data/A006C0015_260805_21DC54.MOV",
+      "actual": "Woodweb (Master)/Day 1/Footage/DJI/A006_21DC54/A006C0015_260805_21DC54.MOV",
+      "size": "6.75 GB"
+    },
+    {
+      "expected": "Woodweb (Master)/Day 1/Footage/DJI/A006_21DC54/XMP Data/A006C0025_260805_21DC54.MOV",
+      "actual": "Woodweb (Master)/Day 1/Footage/DJI/A006_21DC54/A006C0025_260805_21DC54.MOV",
+      "size": "230.2 MB"
+    },
+    {
+      "expected": "Woodweb (Master)/Day 1/Footage/DJI/A006_21DC54/XMP Data/A006C0011_260805_21DC54.MOV",
+      "actual": "Woodweb (Master)/Day 1/Footage/DJI/A006_21DC54/A006C0011_260805_21DC54.MOV",
+      "size": "29.38 GB"
+    },
+    {
+      "expected": "Woodweb (Master)/Day 1/Footage/DJI/A006_21DC54/XMP Data/A006C0020_260805_21DC54.MOV",
+      "actual": "Woodweb (Master)/Day 1/Footage/DJI/A006_21DC54/A006C0020_260805_21DC54.MOV",
+      "size": "7.63 GB"
+    },
+    {
+      "expected": "Woodweb (Master)/Day 1/Footage/DJI/A006_21DC54/XMP Data/A006C0008_260805_21DC54.MOV",
+      "actual": "Woodweb (Master)/Day 1/Footage/DJI/A006_21DC54/A006C0008_260805_21DC54.MOV",
+      "size": "16.02 GB"
+    },
+    {
+      "expected": "Woodweb (Master)/Day 1/Footage/DJI/A006_21DC54/XMP Data/A006C0014_260805_21DC54.MOV",
+      "actual": "Woodweb (Master)/Day 1/Footage/DJI/A006_21DC54/A006C0014_260805_21DC54.MOV",
+      "size": "5.3 GB"
+    },
+    {
+      "expected": "Woodweb (Master)/Day 1/Footage/DJI/A006_21DC54/XMP Data/A006C0026_260805_21DC54.MOV",
+      "actual": "Woodweb (Master)/Day 1/Footage/DJI/A006_21DC54/A006C0026_260805_21DC54.MOV",
+      "size": "15.4 GB"
+    },
+    {
+      "expected": "Woodweb (Master)/Day 1/Footage/DJI/A006_21DC54/XMP Data/A006C0012_260805_21DC54.MOV",
+      "actual": "Woodweb (Master)/Day 1/Footage/DJI/A006_21DC54/A006C0012_260805_21DC54.MOV",
+      "size": "8.68 GB"
+    },
+    {
+      "expected": "Woodweb (Master)/Day 1/Footage/DJI/A006_21DC54/XMP Data/A006C0023_260805_21DC54.MOV",
+      "actual": "Woodweb (Master)/Day 1/Footage/DJI/A006_21DC54/A006C0023_260805_21DC54.MOV",
+      "size": "8.85 GB"
+    },
+    {
+      "expected": "Woodweb (Master)/Day 1/Footage/DJI/A006_21DC54/XMP Data/A006C0017_260805_21DC54.MOV",
+      "actual": "Woodweb (Master)/Day 1/Footage/DJI/A006_21DC54/A006C0017_260805_21DC54.MOV",
+      "size": "7.68 GB"
+    },
+    {
+      "expected": "Woodweb (Master)/Day 1/Footage/DJI/A006_21DC54/XMP Data/A006C0027_260805_21DC54.MOV",
+      "actual": "Woodweb (Master)/Day 1/Footage/DJI/A006_21DC54/A006C0027_260805_21DC54.MOV",
+      "size": "10.37 GB"
+    },
+    {
+      "expected": "Woodweb (Master)/Day 1/Footage/DJI/A006_21DC54/XMP Data/A006C0013_260805_21DC54.MOV",
+      "actual": "Woodweb (Master)/Day 1/Footage/DJI/A006_21DC54/A006C0013_260805_21DC54.MOV",
+      "size": "7.31 GB"
+    },
+    {
+      "expected": "Woodweb (Master)/Day 1/Footage/DJI/A006_21DC54/XMP Data/A006C0022_260805_21DC54.MOV",
+      "actual": "Woodweb (Master)/Day 1/Footage/DJI/A006_21DC54/A006C0022_260805_21DC54.MOV",
+      "size": "10.18 GB"
+    },
+    {
+      "expected": "Woodweb (Master)/Day 1/Footage/DJI/A006_21DC54/XMP Data/A006C0016_260805_21DC54.MOV",
+      "actual": "Woodweb (Master)/Day 1/Footage/DJI/A006_21DC54/A006C0016_260805_21DC54.MOV",
+      "size": "4.62 GB"
+    },
+    {
+      "expected": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/XMP Data/A005C0007_260805_21DC53.MOV",
+      "actual": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/A005C0007_260805_21DC53.MOV",
+      "size": "6.21 GB"
+    },
+    {
+      "expected": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/XMP Data/A005C0036_260805_21DC53.MOV",
+      "actual": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/A005C0036_260805_21DC53.MOV",
+      "size": "4.7 GB"
+    },
+    {
+      "expected": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/XMP Data/A005C0002_260805_21DC53.MOV",
+      "actual": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/A005C0002_260805_21DC53.MOV",
+      "size": "3.37 GB"
+    },
+    {
+      "expected": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/XMP Data/A005C0030_260805_21DC53.MOV",
+      "actual": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/A005C0030_260805_21DC53.MOV",
+      "size": "5.34 GB"
+    },
+    {
+      "expected": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/XMP Data/A005C0018_260805_21DC53.MOV",
+      "actual": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/A005C0018_260805_21DC53.MOV",
+      "size": "8.06 GB"
+    },
+    {
+      "expected": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/XMP Data/A005C0004_260805_21DC53.MOV",
+      "actual": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/A005C0004_260805_21DC53.MOV",
+      "size": "4.11 GB"
+    },
+    {
+      "expected": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/XMP Data/A005C0035_260805_21DC53.MOV",
+      "actual": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/A005C0035_260805_21DC53.MOV",
+      "size": "5.58 GB"
+    },
+    {
+      "expected": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/XMP Data/A005C0001_260805_21DC53.MOV",
+      "actual": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/A005C0001_260805_21DC53.MOV",
+      "size": "5.84 GB"
+    },
+    {
+      "expected": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/XMP Data/A005C0029_260805_21DC53.MOV",
+      "actual": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/A005C0029_260805_21DC53.MOV",
+      "size": "5.31 GB"
+    },
+    {
+      "expected": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/XMP Data/A005C0031_260805_21DC53.MOV",
+      "actual": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/A005C0031_260805_21DC53.MOV",
+      "size": "4.58 GB"
+    },
+    {
+      "expected": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/XMP Data/A005C0019_260805_21DC53.MOV",
+      "actual": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/A005C0019_260805_21DC53.MOV",
+      "size": "5.67 GB"
+    },
+    {
+      "expected": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/XMP Data/A005C0005_260805_21DC53.MOV",
+      "actual": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/A005C0005_260805_21DC53.MOV",
+      "size": "4.02 GB"
+    },
+    {
+      "expected": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/XMP Data/A005C0034_260805_21DC53.MOV",
+      "actual": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/A005C0034_260805_21DC53.MOV",
+      "size": "5.85 GB"
+    },
+    {
+      "expected": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/XMP Data/A005C0028_260805_21DC53.MOV",
+      "actual": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/A005C0028_260805_21DC53.MOV",
+      "size": "11.71 GB"
+    },
+    {
+      "expected": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/XMP Data/A005C0015_260805_21DC53.MOV",
+      "actual": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/A005C0015_260805_21DC53.MOV",
+      "size": "8.62 GB"
+    },
+    {
+      "expected": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/XMP Data/A005C0021_260805_21DC53.MOV",
+      "actual": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/A005C0021_260805_21DC53.MOV",
+      "size": "1.85 GB"
+    },
+    {
+      "expected": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/XMP Data/A005C0009_260805_21DC53.MOV",
+      "actual": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/A005C0009_260805_21DC53.MOV",
+      "size": "3.32 GB"
+    },
+    {
+      "expected": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/XMP Data/A005C0010_260805_21DC53.MOV",
+      "actual": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/A005C0010_260805_21DC53.MOV",
+      "size": "2.38 GB"
+    },
+    {
+      "expected": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/XMP Data/A005C0038_260805_21DC53.MOV",
+      "actual": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/A005C0038_260805_21DC53.MOV",
+      "size": "624.9 MB"
+    },
+    {
+      "expected": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/XMP Data/A005C0024_260805_21DC53.MOV",
+      "actual": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/A005C0024_260805_21DC53.MOV",
+      "size": "1.63 GB"
+    },
+    {
+      "expected": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/XMP Data/A005C0042_260805_21DC53.MOV",
+      "actual": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/A005C0042_260805_21DC53.MOV",
+      "size": "3.76 GB"
+    },
+    {
+      "expected": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/XMP Data/A005C0014_260805_21DC53.MOV",
+      "actual": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/A005C0014_260805_21DC53.MOV",
+      "size": "14.41 GB"
+    },
+    {
+      "expected": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/XMP Data/A005C0020_260805_21DC53.MOV",
+      "actual": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/A005C0020_260805_21DC53.MOV",
+      "size": "5.67 GB"
+    },
+    {
+      "expected": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/XMP Data/A005C0008_260805_21DC53.MOV",
+      "actual": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/A005C0008_260805_21DC53.MOV",
+      "size": "2.81 GB"
+    },
+    {
+      "expected": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/XMP Data/A005C0011_260805_21DC53.MOV",
+      "actual": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/A005C0011_260805_21DC53.MOV",
+      "size": "3.04 GB"
+    },
+    {
+      "expected": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/XMP Data/A005C0039_260805_21DC53.MOV",
+      "actual": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/A005C0039_260805_21DC53.MOV",
+      "size": "4.89 GB"
+    },
+    {
+      "expected": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/XMP Data/A005C0025_260805_21DC53.MOV",
+      "actual": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/A005C0025_260805_21DC53.MOV",
+      "size": "12.9 GB"
+    },
+    {
+      "expected": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/XMP Data/A005C0017_260805_21DC53.MOV",
+      "actual": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/A005C0017_260805_21DC53.MOV",
+      "size": "9.94 GB"
+    },
+    {
+      "expected": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/XMP Data/A005C0023_260805_21DC53.MOV",
+      "actual": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/A005C0023_260805_21DC53.MOV",
+      "size": "4.02 GB"
+    },
+    {
+      "expected": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/XMP Data/A005C0012_260805_21DC53.MOV",
+      "actual": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/A005C0012_260805_21DC53.MOV",
+      "size": "23.5 GB"
+    },
+    {
+      "expected": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/XMP Data/A005C0026_260805_21DC53.MOV",
+      "actual": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/A005C0026_260805_21DC53.MOV",
+      "size": "10.81 GB"
+    },
+    {
+      "expected": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/XMP Data/A005C0040_260805_21DC53.MOV",
+      "actual": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/A005C0040_260805_21DC53.MOV",
+      "size": "10.34 GB"
+    },
+    {
+      "expected": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/XMP Data/A005C0016_260805_21DC53.MOV",
+      "actual": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/A005C0016_260805_21DC53.MOV",
+      "size": "7.99 GB"
+    },
+    {
+      "expected": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/XMP Data/A005C0022_260805_21DC53.MOV",
+      "actual": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/A005C0022_260805_21DC53.MOV",
+      "size": "7.3 GB"
+    },
+    {
+      "expected": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/XMP Data/A005C0013_260805_21DC53.MOV",
+      "actual": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/A005C0013_260805_21DC53.MOV",
+      "size": "2.93 GB"
+    },
+    {
+      "expected": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/XMP Data/A005C0027_260805_21DC53.MOV",
+      "actual": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/A005C0027_260805_21DC53.MOV",
+      "size": "7.63 GB"
+    },
+    {
+      "expected": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/XMP Data/A005C0041_260805_21DC53.MOV",
+      "actual": "Woodweb (Master)/Day 1/Footage/DJI/A005_21DC53/A005C0041_260805_21DC53.MOV",
+      "size": "3.94 GB"
+    },
+    {
+      "expected": "Woodweb (Master)/XMP Data/ChatGPT Image Aug 13, 2026, 02_14_05 PM.png.xmp",
+      "actual": "Woodweb (Master)/Graphics/XMP Data/ChatGPT Image Aug 13, 2026, 02_14_05 PM.png.xmp",
+      "size": "9 KB"
+    }
+  ]
+}
