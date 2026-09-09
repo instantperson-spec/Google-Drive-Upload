@@ -7,7 +7,7 @@ import { rateLimit } from '@/lib/rateLimit';
 const MAX_FILES = 2000;
 const MAX_NAME_LENGTH = 500;
 const VALID_STATUSES = new Set(['pending', 'uploading', 'completed', 'error']);
-const VALID_SESSION_STATUSES = new Set(['uploading', 'completed', 'error']);
+const VALID_SESSION_STATUSES = new Set(['uploading', 'completed', 'error', 'file-started', 'file-completed']);
 
 const isUuid = (v) =>
   typeof v === 'string' &&
@@ -39,7 +39,10 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Invalid sessionId.' }, { status: 400 });
     }
 
-    const limited = rateLimit(request, `upload-progress:${raw.sessionId}`, 8);
+    // Per-file events (file-started, file-completed) can burst quickly for sessions
+    // with many small files. 500/min allows up to 250 files completing per minute
+    // while still blocking obvious abuse (bot spam would need >500 req/min).
+    const limited = rateLimit(request, `upload-progress:${raw.sessionId}`, 500);
     if (limited) return limited;
 
     if (!isValidFolderId(raw.folderId)) {
