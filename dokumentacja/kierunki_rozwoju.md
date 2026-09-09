@@ -34,9 +34,10 @@ Głównym założeniem aplikacji jest ominięcie problemów znanych z platform t
 * **Dodatkowe pole "Notatki / Numer Projektu":** Wzbogacenie formularza początkowego o opcjonalne pole tekstowe na wiadomości od klienta (np. *"To są te poprawione ujęcia z drona"*). Aplikacja mogłaby na tej podstawie generować mały plik tekstowy `wiadomosc_od_klienta.txt` i wgrywać go na Dysk Google obok materiałów wideo.
 * **Przekierowanie po sukcesie:** Zamiast pozostawiania użytkownika na statycznym, zielonym ekranie sukcesu, po kilku sekundach aplikacja mogłaby automatycznie przekierowywać klienta z powrotem na główną stronę firmową studia lub profil portfolio (np. na Instagramie/Vimeo).
 
-## 3. Zaawansowany User Experience (UX)
+## 3. Optymalizacja i Zaawansowany UX
+* **Zwiększenie CHUNK_SIZE do 256 MB:** W celu optymalizacji przesyłania ogromnych sesji (tzw. "1 TB monster sessions"), rozmiar pojedynczej paczki zostanie zwiększony z 64 MB do 256 MB. Drastycznie zmniejszy to ilość zapytań do API Google (np. 4-krotnie mniej zapytań dla pliku wideo) i niemal całkowicie zlikwiduje ryzyko zablokowania transferu (błąd 429 Rate Limit) przy wielkich plikach.
 * **Ręczna pauza / wznowienie:** Aktualny system wznawiania działa świetnie w tle (reaguje na zerwane połączenie). Dodanie fizycznego przycisku "Pauza" przy każdym pliku pozwoliłoby klientowi na świadome, chwilowe zwolnienie swojego łącza internetowego na inne potrzeby, a następnie ręczne wznowienie transferu bez utraty pobranych bajtów.
-* **Ostrzeżenie przed "drobnicą" (dużą ilością małych plików):** Architektura Google Drive API jest zoptymalizowana pod gigantyczne pliki, ale bywa wolna przy wgrywaniu tysięcy bardzo małych plików (np. sekwencji zdjęć po 1 MB), ponieważ każdy plik wymaga oddzielnego nawiązania sesji. Warto dodać alert: *"Wybrałeś ponad 500 plików. Rozważ spakowanie ich do jednego archiwum .ZIP przed wgraniem, aby znacznie przyspieszyć proces"*.
+*(Uwaga: Problem wgrywania tysięcy małych plików tzw. "drobnicy" został celowo pominięty, ponieważ w obecnym workflow postprodukcyjnym jest on bardzo mało prawdopodobny. Jeśli kiedykolwiek wystąpi, zostanie dołożona obsługa archiwizacji w przeglądarce).*
 
 ## 4. Architektura: Odtwarzanie struktury podfolderów (Podejście "Ścieżka A") — ✅ WDROŻONE
 
