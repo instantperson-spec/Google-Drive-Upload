@@ -132,7 +132,7 @@ export function useUploadRunner({
 
         updateFileState(i, { status: 'uploading', progress: 0 });
         await new Promise((r) => setTimeout(r, 0));
-        await sendProgressHeartbeat('uploading');
+        await sendProgressHeartbeat('file-started');
 
         let uploadUrl = sessionFiles[fObj.uploadName];
         let nextByte = 0;
@@ -228,7 +228,7 @@ export function useUploadRunner({
         delete sessionFiles[fObj.uploadName];
         saveSession({ uploaderName, uploaderEmail, folderId: currentFolderId, files: sessionFiles });
         updateFileState(i, { status: 'completed', progress: 100 });
-        await sendProgressHeartbeat('uploading');
+        await sendProgressHeartbeat('file-completed');
         await new Promise((r) => setTimeout(r, 50));
       }
 

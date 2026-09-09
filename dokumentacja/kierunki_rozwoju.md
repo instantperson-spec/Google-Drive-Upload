@@ -13,10 +13,12 @@
 | Alert o drobnicy | ⏳ Planowane |
 | Faza 3: rekonstrukcja podfolderów | ✅ Wdrożone — `/api/build-structure` + `_manifest.json` |
 | Konsola admina (Faza A — historia sesji) | ✅ Wdrożone lokalnie — `/admin` |
-| Konsola admina (Faza B — live progress) | ✅ Wdrożone lokalnie — heartbeat 10s |
+| Konsola admina (Faza B — live progress) | ✅ Przeprojektowane — Live Monitor toggle + per-plik eventy |
 | Konsola admina (Faza C — token manager) | ✅ Wdrożone — `/admin` → Client tokens |
 | OAuth scope test w panelu admina | ✅ Wdrożone — `/admin` → OAuth scope test |
 | Rekurencyjny wybór zagnieżdżonych folderów | ✅ Wdrożone — `showDirectoryPicker` + DnD |
+| Zabezpieczenie heartbeatu Vercel | ✅ Wdrożone lokalnie — branch `security-fixes` |
+| Email whitelist (notify open relay) | ✅ Wdrożone lokalnie — branch `security-fixes` |
 
 ---
 
@@ -58,3 +60,33 @@ Koncept "Upload Flat, Reconstruct Later" — wdrożony lokalnie na branchu `secu
 **Edge cases:**
 - Zamknięcie karty podczas kompilacji → pliki bezpieczne płasko w folderze sesji; `_manifest.json` umożliwia ręczne odtworzenie
 - **Nie wdrożono:** UI admina do ponownego uruchomienia build-structure z manifestu (backlog)
+
+## 5. Optymalizacja Vercel — Live Monitor (branch `security-fixes`) — ✅ WDROŻONE LOKALNIE
+
+Problem: stary heartbeat co 10s + polling admina co 5s generował ~150 000 wywołań Vercel/miesiąc przy jednej sesji 4-dniowej (limit: 100 000).
+
+**Nowa architektura (wzorzec „Patrz i Oszczędzaj"):**
+
+| Zdarzenie | Wywołania Vercela |
+|---|---|
+| Klient: start każdego pliku (`file-started`) | 1 / plik |
+| Klient: koniec każdego pliku (`file-completed`) | 1 / plik |
+| Klient: błąd lub zakończenie sesji | 1 |
+| Admin: Live Monitor OFF (domyślnie) | **0** |
+| Admin: Live Monitor ON (polling 5s, 2h oglądania) | ~1 440 |
+
+**Kosztorys dla sesji 450 plików (Wood Web):**
+- Bez oglądania: ~900 wywołań / całą sesję
+- Z 2h oglądania: ~2 580 wywołań / całą sesję
+- Miesięczna przepustowość przy 2h oglądania/sesję: **~38 sesji** (vs. 0 bez zmian)
+
+**Przełącznik w panelu CMS:**
+- Przycisk `⚫ Live Monitor OFF` / `🟢 Live Monitor ON` w toolbarze panelu admina
+- OFF: zero auto-pollingu, widok odświeża się tylko przy ręcznym kliknięciu „Refresh all"
+- ON: polling co 5s aktywny dopóki masz otwarty panel
+- Oba tryby zawsze pokazują eventy `file-completed` i `error` od klienta
+
+**Bezpieczeństwo email (open relay fix):**
+- Endpoint `/api/notify` weryfikuje `uploaderEmail` z requestu względem `prefillEmail` zapisanego w rejestrze tokenów na Google Drive
+- Tokeny bez `prefillEmail` (retainerowe) przepuszczają dowolny email jak poprzednio
+- Zapobiega użyciu skradzionego tokenu do wysyłki emaili do arbitralnych adresatów

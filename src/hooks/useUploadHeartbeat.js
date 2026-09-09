@@ -41,9 +41,10 @@ export function useUploadHeartbeat({
       if (!sessionId || !folderId || !accessToken) return;
 
       // In normal mode (heartbeat OFF), skip routine 'uploading' pings.
-      // Always send terminal states: 'completed', 'error' — these are critical.
+      // Always send terminal states and per-file events — these are critical.
       const isTerminal = sessionStatus === 'completed' || sessionStatus === 'error';
-      if (!HEARTBEAT_ENABLED && !isTerminal) return;
+      const isPerFile = sessionStatus === 'file-started' || sessionStatus === 'file-completed';
+      if (!HEARTBEAT_ENABLED && !isTerminal && !isPerFile) return;
 
       const fileList = (filesSnapshot ?? filesRef.current).map((f) => ({
         name: f.name,

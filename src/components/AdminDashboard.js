@@ -129,6 +129,7 @@ export default function AdminDashboard() {
   const [activeSessions, setActiveSessions] = useState([]);
   const [activeFetchedAt, setActiveFetchedAt] = useState(null);
   const [activeLoading, setActiveLoading] = useState(false);
+  const [liveMonitor, setLiveMonitor] = useState(false);
 
   const [sessions, setSessions] = useState([]);
   const [fetchedAt, setFetchedAt] = useState(null);
@@ -184,12 +185,17 @@ export default function AdminDashboard() {
     fetchSessions();
   }, [fetchActive, fetchSessions]);
 
-  // Active uploads: refresh every 5s
+  // Active uploads: refresh every 5s ONLY when Live Monitor is ON
   useEffect(() => {
-    if (!authenticated) return;
+    if (!authenticated || !liveMonitor) return;
     const interval = setInterval(fetchActive, 5_000);
     return () => clearInterval(interval);
-  }, [authenticated, fetchActive]);
+  }, [authenticated, liveMonitor, fetchActive]);
+
+  // When Live Monitor is turned ON, immediately fetch fresh data
+  useEffect(() => {
+    if (authenticated && liveMonitor) fetchActive();
+  }, [liveMonitor]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Drive history: refresh every 60s
   useEffect(() => {
@@ -271,11 +277,20 @@ export default function AdminDashboard() {
         <div>
           <h2>Admin Console</h2>
           <p className="admin-meta">
-            live refresh 5s · history refresh 60s
-            {activeFetchedAt && <> · live updated {formatDate(activeFetchedAt)}</>}
+            {liveMonitor
+              ? <>🟢 Live Monitor ON · refresh 5s{activeFetchedAt && <> · updated {formatDate(activeFetchedAt)}</>}</>
+              : <>⚫ Live Monitor OFF · per-file events only · history refresh 60s</>}
           </p>
         </div>
         <div className="admin-toolbar-actions">
+          <button
+            type="button"
+            className={`btn ${liveMonitor ? 'admin-btn' : 'admin-btn-secondary'}`}
+            onClick={() => setLiveMonitor((v) => !v)}
+            title={liveMonitor ? 'Turn off live polling (saves Vercel invocations)' : 'Turn on live polling (5s refresh)'}
+          >
+            {liveMonitor ? '🟢 Live Monitor ON' : '⚫ Live Monitor OFF'}
+          </button>
           <button
             type="button"
             className="btn admin-btn-secondary"
