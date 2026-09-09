@@ -30,6 +30,11 @@ body {
   overflow: hidden;
 }
 
+body:has(.admin-container) {
+  align-items: flex-start;
+  overflow: auto;
+}
+
 .container {
   width: 100%;
   max-width: 600px;
@@ -227,4 +232,185 @@ h1 {
 .btn:hover {
   background: var(--accent-hover);
   transform: translateY(-1px);
+}
+
+/* ── Admin console ── */
+.admin-container {
+  width: 100%;
+  max-width: 1100px;
+  padding: 2rem;
+  margin: 0 auto;
+}
+
+.admin-panel {
+  text-align: left;
+  padding: 2rem;
+}
+
+.admin-subtitle {
+  margin-bottom: 1.5rem;
+}
+
+.admin-loading,
+.admin-empty {
+  color: var(--text-secondary);
+  text-align: center;
+  padding: 2rem 0;
+}
+
+.admin-login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: 360px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.admin-login-hint {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+.admin-input {
+  padding: 0.875rem 1rem;
+  border-radius: 10px;
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-primary);
+  font-size: 1rem;
+  outline: none;
+  width: 100%;
+}
+
+.admin-btn {
+  margin-top: 0;
+}
+
+.admin-btn-secondary {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--glass-border);
+  margin-top: 0;
+  width: auto;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+}
+
+.admin-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.admin-error {
+  color: var(--error-color);
+  font-size: 0.875rem;
+}
+
+.admin-error-banner {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.admin-dashboard {
+  animation: fadeIn 0.4s ease;
+}
+
+.admin-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.admin-toolbar h2 {
+  font-size: 1.25rem;
+  margin-bottom: 0.25rem;
+}
+
+.admin-meta {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+}
+
+.admin-toolbar-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.admin-table-wrap {
+  overflow-x: auto;
+  border-radius: 12px;
+  border: 1px solid var(--glass-border);
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.admin-table th {
+  text-align: left;
+  padding: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.admin-table td {
+  padding: 0.75rem 1rem;
+  border-top: 1px solid var(--glass-border);
+  vertical-align: middle;
+}
+
+.admin-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.admin-cell-name {
+  font-weight: 500;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-cell-email {
+  color: var(--text-secondary);
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-cell-date {
+  white-space: nowrap;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+}
+
+.admin-drive-link {
+  color: var(--accent-color);
+  text-decoration: none;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.admin-drive-link:hover {
+  text-decoration: underline;
+}
+
+.admin-footnote {
+  margin-top: 1.25rem;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  text-align: center;
 }

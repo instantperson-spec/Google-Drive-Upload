@@ -67,6 +67,9 @@ Open [http://localhost:3000/?token=YourToken](http://localhost:3000/?token=YourT
 ### 4. Client Links
 Each client receives a dedicated URL: `https://your-domain/?token=ClientToken`. See [`dokumentacja/operacje_tokeny_i_linki.md`](dokumentacja/operacje_tokeny_i_linki.md) for the full operational guide.
 
+### 5. Admin Console
+Set `ADMIN_SECRET` in your environment, then open `/admin` to view upload session history from Google Drive (file counts, sizes, direct links to session folders). Auto-refreshes every 60 seconds.
+
 ## 🌐 Deployment
 This project is optimized for deployment on **Vercel**. 
 Simply run `npx vercel` in the project directory, and don't forget to copy all your environment variables into the Vercel Dashboard under **Settings -> Environment Variables**.

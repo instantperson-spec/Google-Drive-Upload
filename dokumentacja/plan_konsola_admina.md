@@ -1,6 +1,6 @@
 # Plan: Konsola Admina — podgląd uploadów
 
-> Status: **plan** (nie wdrożone) · Priorytet: po deploy security-hardening w maintenance window
+> Status: **Faza A wdrożona lokalnie** (branch `security-hardening`) · Fazy B/C planowane
 
 ---
 
@@ -27,9 +27,20 @@ Upload odbywa się **bezpośrednio z przeglądarki klienta do Google Drive** —
 
 ## Architektura — 3 fazy
 
-### Faza A: „Drive Mirror" (najmniej inwazyjna, ~1–2 dni)
+### Faza A: „Drive Mirror" ✅ Wdrożone lokalnie
 
 **Idea:** Admin panel tylko **odczytuje Google Drive** — bez zmian w flow klienta.
+
+**Wdrożone pliki:**
+- `src/app/admin/page.js` — dashboard
+- `src/components/AdminDashboard.js` — UI (login, tabela, auto-refresh 60s)
+- `src/app/api/admin/login/route.js` — logowanie (cookie httpOnly, 24h)
+- `src/app/api/admin/logout/route.js` — wylogowanie
+- `src/app/api/admin/sessions/route.js` — lista folderów sesji z Drive
+- `src/lib/adminAuth.js` — weryfikacja `ADMIN_SECRET`
+- Env: `ADMIN_SECRET`
+
+**Dostęp:** `http://localhost:3000/admin` (lokalnie) · hasło z `ADMIN_SECRET`
 
 ```
 [Admin /admin]  →  GET /api/admin/sessions  →  Google Drive API

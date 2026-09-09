@@ -34,6 +34,13 @@ Wdrożono etapy 0–5 z analizy bezpieczeństwa i analizy kodu. Wszystkie zmiany
 | `src/lib/googleAuth.js` | Wspólny klient Google OAuth/SA (wcześniej 3× duplikat) |
 | `src/lib/validation.js` | Czarna lista rozszerzeń, limit rozmiaru pliku |
 | `src/lib/rateLimit.js` | In-memory rate limiter per IP + route |
+| `src/lib/adminAuth.js` | Autoryzacja konsoli admina (`ADMIN_SECRET`, cookie) |
+| `src/lib/formatBytes.js` | Formatowanie rozmiaru plików |
+| `src/components/AdminDashboard.js` | UI konsoli admina |
+| `src/app/admin/page.js` | Strona `/admin` |
+| `src/app/api/admin/login/route.js` | Logowanie admina |
+| `src/app/api/admin/logout/route.js` | Wylogowanie admina |
+| `src/app/api/admin/sessions/route.js` | Lista sesji upload z Drive |
 
 ---
 
@@ -95,6 +102,7 @@ Każdy endpoint (`create-folder`, `upload-session`, `check-folder`, `notify`) te
 |---|---|---|---|
 | `UPLOAD_TOKENS` | **TAK** (fail-closed) | Lista tokenów dostępu, comma-separated | `"StudioAlfa,ProjektBeta"` |
 | `MAX_FILE_SIZE_GB` | nie | Limit rozmiaru pliku w GB | `250` (domyślnie) |
+| `ADMIN_SECRET` | tak (dla `/admin`) | Hasło do konsoli admina | `"silne-haslo"` |
 
 Wszystkie poprzednie zmienne (`GOOGLE_*`, `SMTP_*`, `NOTIFICATION_EMAIL`, `WEBHOOK_URL`) bez zmian.
 
@@ -138,7 +146,8 @@ Wszystkie poprzednie zmienne (`GOOGLE_*`, `SMTP_*`, `NOTIFICATION_EMAIL`, `WEBHO
 | Alert o drobnicy (>500 plików) | ⏳ Nie wdrożone |
 | Pauza/wznowienie ręczne | ⏳ Nie wdrożone |
 | Faza 3: rekonstrukcja podfolderów | ⏳ Nie wdrożone |
-| Konsola admina | 📋 Zaplanowane — `plan_konsola_admina.md` |
+| Konsola admina (Faza A) | ✅ Wdrożone lokalnie — `/admin` |
+| Konsola admina (Faza B/C) | 📋 Plan — `plan_konsola_admina.md` |
 
 ---
 
