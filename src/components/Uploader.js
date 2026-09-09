@@ -12,9 +12,22 @@ export default function Uploader() {
   const [uploaderName, setUploaderName] = useState('');
   const [uploaderEmail, setUploaderEmail] = useState('');
   const [sessionData, setSessionData] = useState(null);
+  // undefined = not yet read from URL, '' = missing, string = present
+  const [accessToken, setAccessToken] = useState(undefined);
 
   const fileInputRef = useRef(null);
   const folderInputRef = useRef(null);
+
+  // Read the per-project access token from the URL (?token=X)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setAccessToken(params.get('token') || '');
+  }, []);
+
+  const apiHeaders = () => ({
+    'Content-Type': 'application/json',
+    'x-upload-token': accessToken || '',
+  });
 
   // Load session on mount
   useEffect(() => {
@@ -152,7 +165,7 @@ export default function Uploader() {
       if (!currentFolderId) {
         const folderRes = await fetch('/api/create-folder', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: apiHeaders(),
           body: JSON.stringify({ uploaderName, uploaderEmail }),
         });
         if (!folderRes.ok) throw new Error('Failed to create wrapper folder');
@@ -170,7 +183,7 @@ export default function Uploader() {
       // 2. Check existing files in folder to silently skip duplicates
       const checkRes = await fetch('/api/check-folder', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: apiHeaders(),
         body: JSON.stringify({ folderId: currentFolderId })
       });
       const { files: existingDriveFiles = [] } = await checkRes.json();
@@ -208,7 +221,7 @@ export default function Uploader() {
         if (!uploadUrl) {
           const initRes = await fetch('/api/upload-session', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: apiHeaders(),
             body: JSON.stringify({
               name: fObj.name,
               mimeType: fObj.type,
@@ -256,7 +269,7 @@ export default function Uploader() {
       const uploadedFilesInfo = files.map(f => ({ name: f.name, size: f.size, status: 'completed' }));
       fetch('/api/notify', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: apiHeaders(),
         body: JSON.stringify({ files: uploadedFilesInfo, uploaderName, uploaderEmail, folderId: currentFolderId })
       }).catch(err => console.error('Notification failed:', err));
 
@@ -269,6 +282,25 @@ export default function Uploader() {
       setErrorMessage(error.message || 'An error occurred during upload. You can retry safely.');
     }
   };
+
+  // Token not yet read from URL — avoid flashing the wrong screen
+  if (accessToken === undefined) {
+    return null;
+  }
+
+  if (accessToken === '') {
+    return (
+      <div className="uploader-container">
+        <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+          <h2 style={{ color: 'white', marginBottom: '10px' }}>Access link required</h2>
+          <p style={{ color: 'rgba(255,255,255,0.7)' }}>
+            This page can only be used with a dedicated upload link.
+            Please open the exact link you received from the studio, or contact us to get one.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   if (status === 'success') {
     return (

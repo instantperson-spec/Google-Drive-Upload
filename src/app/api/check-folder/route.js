@@ -1,5 +1,6 @@
 import { google } from 'googleapis';
 import { NextResponse } from 'next/server';
+import { verifyUploadToken, unauthorizedResponse } from '@/lib/auth';
 
 const getAuthClient = async () => {
   if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET && process.env.GOOGLE_REFRESH_TOKEN) {
@@ -31,6 +32,8 @@ const getAuthClient = async () => {
 };
 
 export async function POST(request) {
+  if (!verifyUploadToken(request)) return unauthorizedResponse();
+
   try {
     const { folderId } = await request.json();
 

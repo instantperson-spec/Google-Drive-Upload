@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
+import { verifyUploadToken, unauthorizedResponse } from '@/lib/auth';
 
 export async function POST(request) {
+  if (!verifyUploadToken(request)) return unauthorizedResponse();
+
   try {
     const data = await request.json();
 
