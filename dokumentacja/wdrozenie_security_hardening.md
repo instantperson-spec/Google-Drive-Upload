@@ -41,6 +41,9 @@ Wdrożono etapy 0–5 z analizy bezpieczeństwa i analizy kodu. Wszystkie zmiany
 | `src/app/api/admin/login/route.js` | Logowanie admina |
 | `src/app/api/admin/logout/route.js` | Wylogowanie admina |
 | `src/app/api/admin/sessions/route.js` | Lista sesji upload z Drive |
+| `src/lib/progressStore.js` | In-memory store live progress (TTL 24h) |
+| `src/app/api/upload-progress/route.js` | Heartbeat postępu uploadu od klienta |
+| `src/app/api/admin/active/route.js` | Aktywne uploady dla konsoli admina |
 
 ---
 
@@ -146,8 +149,9 @@ Wszystkie poprzednie zmienne (`GOOGLE_*`, `SMTP_*`, `NOTIFICATION_EMAIL`, `WEBHO
 | Alert o drobnicy (>500 plików) | ⏳ Nie wdrożone |
 | Pauza/wznowienie ręczne | ⏳ Nie wdrożone |
 | Faza 3: rekonstrukcja podfolderów | ⏳ Nie wdrożone |
-| Konsola admina (Faza A) | ✅ Wdrożone lokalnie — `/admin` |
-| Konsola admina (Faza B/C) | 📋 Plan — `plan_konsola_admina.md` |
+| Konsola admina (Faza A — historia Drive) | ✅ Wdrożone lokalnie — `/admin` |
+| Konsola admina (Faza B — live progress) | ✅ Wdrożone lokalnie — heartbeat 10s |
+| Konsola admina (Faza C — token manager) | 📋 Plan — `plan_konsola_admina.md` |
 
 ---
 

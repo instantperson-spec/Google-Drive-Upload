@@ -30,6 +30,9 @@ export default function Uploader() {
 
   const fileInputRef = useRef(null);
   const folderInputRef = useRef(null);
+  const uploadSessionIdRef = useRef(null);
+  const uploadFolderIdRef = useRef(null);
+  const filesRef = useRef(files);
 
   // Read the per-project access token from the URL (?token=X)
   useEffect(() => {
@@ -41,6 +44,45 @@ export default function Uploader() {
     'Content-Type': 'application/json',
     'x-upload-token': accessToken || '',
   });
+
+  const sendProgressHeartbeat = async (sessionStatus = 'uploading', filesSnapshot = null) => {
+    const sessionId = uploadSessionIdRef.current;
+    const folderId = uploadFolderIdRef.current;
+    if (!sessionId || !folderId || !accessToken) return;
+
+    const fileList = (filesSnapshot ?? files).map((f) => ({
+      name: f.name,
+      size: f.size,
+      progress: f.progress ?? 0,
+      status: f.status || 'pending',
+    }));
+
+    await fetch('/api/upload-progress', {
+      method: 'POST',
+      headers: apiHeaders(),
+      body: JSON.stringify({
+        sessionId,
+        uploaderName,
+        uploaderEmail,
+        folderId,
+        files: fileList,
+        sessionStatus,
+      }),
+    }).catch(() => {});
+  };
+
+  useEffect(() => {
+    filesRef.current = files;
+  }, [files]);
+
+  // Live progress heartbeat for admin console (every 10s while uploading)
+  useEffect(() => {
+    if (status !== 'uploading' || !accessToken) return;
+    const tick = () => sendProgressHeartbeat('uploading', filesRef.current);
+    tick();
+    const interval = setInterval(tick, 10_000);
+    return () => clearInterval(interval);
+  }, [status, accessToken, uploaderName, uploaderEmail]);
 
   // Load session on mount
   useEffect(() => {
@@ -186,6 +228,9 @@ export default function Uploader() {
     setStatus('uploading');
     setErrorMessage('');
 
+    uploadSessionIdRef.current = crypto.randomUUID();
+    uploadFolderIdRef.current = null;
+
     try {
       let currentFolderId = sessionData?.folderId;
       let sessionFiles = sessionData?.files || {};
@@ -201,6 +246,8 @@ export default function Uploader() {
         const { folderId } = await folderRes.json();
         currentFolderId = folderId;
       }
+
+      uploadFolderIdRef.current = currentFolderId;
 
       saveSession({
         uploaderName,
@@ -294,7 +341,16 @@ export default function Uploader() {
         updateFileState(i, { status: 'completed', progress: 100 });
       }
 
-      // 4. Trigger Final Notification
+      // 4. Final progress ping for admin console
+      const completedFiles = files.map((f) => ({
+        name: f.name,
+        size: f.size,
+        progress: 100,
+        status: 'completed',
+      }));
+      await sendProgressHeartbeat('completed', completedFiles);
+
+      // 5. Trigger Final Notification
       const uploadedFilesInfo = files.map(f => ({ name: f.name, size: f.size, status: 'completed' }));
       fetch('/api/notify', {
         method: 'POST',
@@ -303,10 +359,15 @@ export default function Uploader() {
       }).catch(err => console.error('Notification failed:', err));
 
       setStatus('success');
+      uploadSessionIdRef.current = null;
+      uploadFolderIdRef.current = null;
       clearSession();
 
     } catch (error) {
       console.error('Upload Error:', error);
+      await sendProgressHeartbeat('error');
+      uploadSessionIdRef.current = null;
+      uploadFolderIdRef.current = null;
       setStatus('error');
       setErrorMessage(error.message || 'An error occurred during upload. You can retry safely.');
     }

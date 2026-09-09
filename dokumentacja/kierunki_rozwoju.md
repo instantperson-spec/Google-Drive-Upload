@@ -13,7 +13,8 @@
 | Alert o drobnicy | ⏳ Planowane |
 | Faza 3: rekonstrukcja podfolderów | ⏳ Planowane |
 | Konsola admina (Faza A — historia sesji) | ✅ Wdrożone lokalnie — `/admin` |
-| Konsola admina (Faza B/C — live progress, tokeny) | 📋 Plan: [`plan_konsola_admina.md`](./plan_konsola_admina.md) |
+| Konsola admina (Faza B — live progress) | ✅ Wdrożone lokalnie — heartbeat 10s |
+| Konsola admina (Faza C — token manager) | 📋 Plan: [`plan_konsola_admina.md`](./plan_konsola_admina.md) |
 
 ---
 

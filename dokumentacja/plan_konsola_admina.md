@@ -1,6 +1,6 @@
 # Plan: Konsola Admina — podgląd uploadów
 
-> Status: **Faza A wdrożona lokalnie** (branch `security-hardening`) · Fazy B/C planowane
+> Status: **Fazy A + B wdrożone lokalnie** (branch `security-hardening`) · Faza C planowana
 
 ---
 
@@ -70,9 +70,16 @@ Upload odbywa się **bezpośrednio z przeglądarki klienta do Google Drive** —
 
 ---
 
-### Faza B: „Progress Heartbeat" (live progress, ~2–3 dni)
+### Faza B: „Progress Heartbeat" ✅ Wdrożone lokalnie
 
 **Idea:** Klient co ~10 s wysyła snapshot postępu na serwer. Admin odpytuje te dane.
+
+**Wdrożone pliki:**
+- `src/lib/progressStore.js` — in-memory store (TTL 24h, active = heartbeat < 30s)
+- `src/app/api/upload-progress/route.js` — POST heartbeat (auth token + folder validation)
+- `src/app/api/admin/active/route.js` — GET aktywne sesje dla admina
+- `src/components/Uploader.js` — heartbeat co 10s podczas uploadu
+- `src/components/AdminDashboard.js` — sekcja „Active now", refresh 5s
 
 ```
 [Uploader.js]  --POST /api/upload-progress-->  [Store: Vercel KV lub plik JSON]

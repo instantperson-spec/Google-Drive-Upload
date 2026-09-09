@@ -68,7 +68,9 @@ Open [http://localhost:3000/?token=YourToken](http://localhost:3000/?token=YourT
 Each client receives a dedicated URL: `https://your-domain/?token=ClientToken`. See [`dokumentacja/operacje_tokeny_i_linki.md`](dokumentacja/operacje_tokeny_i_linki.md) for the full operational guide.
 
 ### 5. Admin Console
-Set `ADMIN_SECRET` in your environment, then open `/admin` to view upload session history from Google Drive (file counts, sizes, direct links to session folders). Auto-refreshes every 60 seconds.
+Set `ADMIN_SECRET` in your environment, then open `/admin` to monitor uploads:
+- **Active now** — live progress bars (client heartbeat every 10s, admin refresh every 5s)
+- **History** — completed session folders from Google Drive (refresh every 60s)
 
 ## 🌐 Deployment
 This project is optimized for deployment on **Vercel**. 
