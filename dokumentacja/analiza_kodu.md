@@ -1,8 +1,10 @@
 # Analiza Kodu — Drive Uploader
 
-> Produkt live · Okno maintenance oczekuje · Kierunki rozwoju: uwzględnione jako "planowane, nie wdrożone"
+> Produkt live · branch `security-fixes` gotowy do merge · Ostatnia analiza: 2026-09-09
 
-> **Aktualizacja 2026-09-09:** Większość problemów P0/P1 z tej analizy naprawiona lokalnie (branch `security-hardening`). Szczegóły: [`wdrozenie_security_hardening.md`](./wdrozenie_security_hardening.md).
+> **Status wdrożeń:**
+> - `security-hardening` — naprawione P0/P1 (auth, rate limit, SMTP, OAuth scope, noindex, PII logging)
+> - `security-fixes` — optymalizacja Vercela (Live Monitor, per-plik heartbeat, email whitelist, rate limit upload-progress)
 
 ---
 
@@ -12,88 +14,61 @@ Projekt jest **mały, ale dobrze przemyślany koncepcyjnie**. Główne problemy 
 
 ---
 
-## 1. Duplikacja Kodu — Krytyczna
+## 1. Duplikacja Kodu — Aktualna
 
-### `getAuthClient()` — skopiowana 3 razy
+### `formatDate()` — zdefiniowana 2× w komponentach
 
-Identyczna (z drobnymi różnicami) funkcja `getAuthClient` pojawia się w każdym z trzech plików API:
-
-| Plik | Różnica |
+| Plik | Status |
 |---|---|
-| [`create-folder/route.js`](file:///Volumes/ENV/Google%20Drive/drive-uploader/src/app/api/create-folder/route.js) | Brak walidacji pustych credentials (cicha awaria) |
-| [`upload-session/route.js`](file:///Volumes/ENV/Google%20Drive/drive-uploader/src/app/api/upload-session/route.js) | Ma walidację credentials — rzuca błąd |
-| [`check-folder/route.js`](file:///Volumes/ENV/Google%20Drive/drive-uploader/src/app/api/check-folder/route.js) | Ma walidację credentials — rzuca błąd |
+| [`AdminDashboard.js`](file:///Volumes/ENV/Google%20Drive/drive-uploader/src/components/AdminDashboard.js#L7) | Lokalna kopia |
+| [`AdminTokenManager.js`](file:///Volumes/ENV/Google%20Drive/drive-uploader/src/components/AdminTokenManager.js#L5) | Lokalna kopia |
 
-**Konsekwencja praktyczna:** Zmiana logiki autoryzacji (np. odświeżanie tokena, obsługa expiry) wymaga edycji trzech niezależnych miejsc. Historia pokazuje, że takie sytuacje kończą się niespójnymi poprawkami — jedna trasa zaskakuje niezrozumiałym błędem, gdy inne działają.
-
-**Rozwiązanie:** Wyodrębnić `lib/googleAuth.js` jako współdzielony moduł.
+Istnieje `lib/formatBytes.js` (shared) — brakuje analogicznego `lib/formatDate.js`. Obydwa komponenty definiują identyczną funkcję.
 
 ---
 
-### Warunki wyłączenia przycisku — skopiowane 4 razy
+### `formatBytes()` — zdefiniowana lokalnie + importowana z lib
 
-W [`Uploader.js`](file:///Volumes/ENV/Google%20Drive/drive-uploader/src/components/Uploader.js) warunek:
-
-```js
-files.length === 0 || status === 'uploading' || !uploaderName.trim() || !uploaderEmail.trim()
-```
-
-pojawia się w linii 142 (`startUpload`), 431 (`disabled`), 438 (styl tła) i 439 (kolor tekstu), 442 (kursor). Łącznie **5 razy** ten sam warunek logiczny — rozsynchronizowanie przy zmianie reguł (np. dodanie walidacji emaila) grozi niespójnością UX.
+`AdminDashboard.js` L15 definiuje lokalną kopię zamiast importować z `@/lib/formatBytes`. Serwer API (`admin/sessions`, `admin/active`) poprawnie importuje z lib.
 
 ---
 
-## 2. Bezpieczeństwo
+### Email regex — powielony 3×
 
-### 🔴 KRYTYCZNE: Brak jakiejkolwiek autoryzacji endpointów API
+Identyczny wzorzec `/^[^\s@]+@[^\s@]+\.[^\s@]+$/` w:
+- `notify/route.js` L20
+- `create-folder/route.js` L25  
+- `tokenStore.js` L247
 
-Każdy z 4 endpointów (`/api/create-folder`, `/api/upload-session`, `/api/check-folder`, `/api/notify`) jest w pełni publiczny. Nie istnieje żaden mechanizm weryfikacji wywołującego.
-
-**Skutki:**
-
-- **`/api/create-folder`** — ktokolwiek może tworzyć dowolną liczbę folderów na cudzym Google Drive, zaśmiecając przestrzeń dyskową lub wyczerpując limit API.
-- **`/api/upload-session`** — można zainicjować sesję upload dla dowolnego pliku do dowolnego folderId (jeśli tylko zna się ID), a serwer podpisze to tokenem Google OAuth.
-- **`/api/check-folder`** — po podaniu dowolnego `folderId` (nie tylko własnego folderu użytkownika) API zwróci listę plików z tego folderu. Jeśli atakujący odgadnie/wycieknie ID głównego folderu, zobaczy metadane wszystkich uploadów.
-- **`/api/notify`** — bezwarunkowe wywołanie z fałszywymi danymi (inne imię, email, lista plików) wyśle fałszywe powiadomienie do admina i email phishingowy do ofiary.
-
-> [!CAUTION]
-> Endpoint `/api/notify` przyjmuje dowolny email jako `uploaderEmail` i wysyła na niego maila. To otwarta brama do **email spoofing / spam relay** przez cudzy serwer SMTP.
-
-**Kontekst z kierunków rozwoju:** Planowane tokeny URL (`?token=NazwaProjektu`) są opisane jako środek bezpieczeństwa — ale bez weryfikacji tego tokena po stronie API całe zabezpieczenie istnieje tylko po stronie frontendu (co jest trivialne do obejścia przez bezpośrednie wywołanie API).
+Istnieje `lib/validation.js` — naturalne miejsce dla `isValidEmail()`. Funkcja z `notify/route.js` ma dodatkowo limit długości 254 (RFC) — ta wersja powinna być kanoniczna.
 
 ---
 
-### 🟡 ŚREDNIE: Brak walidacji plików po stronie serwera
+### ~~`getAuthClient()` — skopiowana 3 razy~~ ✅ Naprawione
 
-Kierunki rozwoju słusznie proponują "czarną listę" rozszerzeń. Aktualnie — nie istnieje żadna walidacja. Endpoint `/api/upload-session` inicjuje sesję dla absolutnie dowolnego typu pliku (`.exe`, `.sh`, `.bat`, `.php`). Wprawdzie pliki lądują na Google Drive (nie na serwerze aplikacji), ale:
-
-1. Możliwe jest wgranie złośliwego pliku do folderu, z którego admin może go następnie pobrać.
-2. Brak ograniczenia na `size` — można zainicjować upload pliku o rozmiarze np. 1 TB, wyczerpując limit Drive.
+Wyodrębniony wspólny `lib/googleAuth.js`.
 
 ---
 
-### 🟡 ŚREDNIE: Brak rate limitingu
+## 2. Bezpieczeństwo — Stan Po Naprawach
 
-Żaden endpoint nie ma ograniczenia liczby wywołań. Możliwy scenariusz: bot wysyła 1000 requestów do `/api/create-folder` → tysiąc folderów na Google Drive + wyczerpanie limitu Google API (10,000 req/day w domyślnym projekcie). Vercel nie zapewnia rate limitingu out of the box dla serverless functions.
+| VULN | Problem | Status |
+|---|---|---|
+| VULN-01 | Brak auth na API | ✅ Naprawione — token server-side |
+| VULN-02 | Open SMTP relay | ✅ Naprawione — email whitelist vs. `prefillEmail` |
+| VULN-03 | Błąd SMTP `secure` | ✅ Naprawione — `smtpPort === 465` |
+| VULN-04 | Brak rate limitingu | ✅ Naprawione — wszystkie endpointy |
+| VULN-05 | Nadmierny OAuth scope | ✅ Naprawione — tylko `drive.file`, potwierdzone skanem |
+| VULN-06 | Logowanie PII | ✅ Naprawione — tylko metadane diagnostyczne |
+| VULN-07 | Brak noindex | ✅ Naprawione — metadata Next.js |
+| VULN-08 | Nieweryfikowany email klienta | ⚠️ Celowo pominięte — akceptowane ryzyko dla narzędzia B2B |
 
----
-
-### 🟡 ŚREDNIE: `uploaderEmail` jako klucz sesji bez weryfikacji
-
-Klient wprowadza email w formularzu — ten email trafia do nazwy folderu Drive i jest adresem docelowym powiadomienia. Nie ma żadnej weryfikacji, że użytkownik faktycznie jest właścicielem podanego adresu. Każdy może wpisać `admin@klient.pl` i odebrać powiadomienie potwierdzające upload.
-
----
-
-### 🟢 DOBRE: `.env.local` w `.gitignore`
-
-`.gitignore` prawidłowo wyklucza `.env*` (z wyjątkiem `.env.example`). Klucze nie trafią do repozytorium.
-
----
-
-### 🟢 DOBRE: Klucz prywatny tylko po stronie serwera
-
-`GOOGLE_PRIVATE_KEY` / `GOOGLE_REFRESH_TOKEN` używane są wyłącznie w route handlerach (Next.js API Routes = server-side). Nie ma ryzyka wycieku do bundla klienta.
+Szczegóły każdego VULN: [`analiza_bezpieczenstwa.md`](./analiza_bezpieczenstwa.md)
 
 ---
+
+
+## 3. Jakość Kodu i Drogi na Skróty
 
 ## 3. Jakość Kodu i Drogi na Skróty
 
@@ -101,7 +76,19 @@ Klient wprowadza email w formularzu — ten email trafia do nazwy folderu Drive 
 
 [`Uploader.js`](file:///Volumes/ENV/Google%20Drive/drive-uploader/src/components/Uploader.js) rozbity na hooki + komponenty w `src/components/upload/`; style przeniesione do `globals.css` (klasy `.upload-*`, `.glass-input`). Jedyny pozostały inline: dynamiczna szerokość paska postępu (`width: N%`).
 
-**Skutki:** Zmiana koloru "sukcesu" z `#4ade80` wymaga edycji min. 5 niezależnych miejsc w jednym pliku. W CSS byłoby to zmienne `--success-color` (już zdefiniowane w globals.css, ale nieużywane w Uploader).
+### Inline styles pozostałe — AdminDashboard.js
+
+Komponent admina zawiera kilka bloków inline, które powinny być klasami CSS:
+
+| Linia | Styl | Problem |
+|---|---|---|
+| L74 | `maxHeight: '250px', overflowY: 'auto'` | Powinno być klasą `.admin-active-files` |
+| L93 | `borderTop: '1px solid rgba(255,255,255,0.1)'` | Hardcoded design token — powinien być CSS var |
+| L104-113 | Cały blok `.admin-terminal` | 8 properties inline, naturalny kandydat na klasę |
+| L123 | `color: 'rgba(255,255,255,0.35)'` | Hardcoded opacity bez CSS var |
+| L86 | `width: ${f.progress}%` | ✅ Uzasadniony — dynamiczna wartość |
+
+`AdminTokenManager.js` L259: `display: 'flex', gap: '5px'` na `<td>` — powinno być klasą.
 
 ---
 
@@ -225,17 +212,20 @@ Linia 23/27 (wszystkie trasy): scope `https://www.googleapis.com/auth/drive` to 
 
 ---
 
-## Podsumowanie Priorytetów (przed maintenance window)
+## Podsumowanie Priorytetów — Stan Aktualny
 
-| Priorytet | Problem | Ryzyko |
+| Priorytet | Problem | Status |
 |---|---|---|
-| 🔴 P0 | Brak auth na endpointach API (spoofing maili, spam, waste API quota) | Produkcyjne |
-| 🔴 P0 | Błąd logiki SMTP `secure` — maile mogą nie działać | Produkcyjne |
-| 🟡 P1 | `getAuthClient` powielony 3× — przed rozbudową o nowe endpointy | Maintenance |
-| 🟡 P1 | Brak sprawdzania duplikatów folderów w `create-folder` | UX / Data |
-| 🟡 P1 | `console.log` danych osobowych w produkcji | RODO |
-| 🟢 P2 | `key={index}` w liście plików | UX (rzadki bug) |
-| 🟢 P2 | Inline styles vs CSS variables | Maintainability |
-| 🟢 P2 | `noindex` meta tag | SEO / Security |
-| 🟢 P3 | Scope OAuth zbyt szeroki | Hardening |
-| 🟢 P3 | `removeFile` bez functional update | Poprawność |
+| ~~🔴 P0~~ | Brak auth na endpointach API | ✅ Naprawione |
+| ~~🔴 P0~~ | Błąd logiki SMTP `secure` | ✅ Naprawione |
+| ~~🟡 P1~~ | `getAuthClient` powielony 3× | ✅ Naprawione — `lib/googleAuth.js` |
+| 🟡 P1 | `formatDate` / `formatBytes` powielone w komponentach | ⏳ Backlog — przenieść do `lib/` |
+| 🟡 P1 | Email regex powielony 3× | ⏳ Backlog — `lib/validation.js` → `isValidEmail()` |
+| ~~🟡 P1~~ | `console.log` danych osobowych w produkcji | ✅ Naprawione |
+| 🟢 P2 | `key={index}` w liście plików | ⏳ Backlog |
+| 🟢 P2 | Inline styles w AdminDashboard / AdminTokenManager | ⏳ Backlog |
+| ~~🟢 P2~~ | `noindex` meta tag | ✅ Naprawione |
+| ~~🟢 P3~~ | Scope OAuth zbyt szeroki | ✅ Naprawione — `drive.file` only |
+| 🟢 P3 | `removeFile` bez functional update | ⏳ Backlog |
+| 🟢 P3 | Rate limit upload-progress zbyt ciasny (429 przy burst) | ✅ Naprawione — 500/min |
+| 🟢 P3 | Heartbeat Vercel invocations — przekraczał limit | ✅ Naprawione — Live Monitor + per-plik |

@@ -1,8 +1,12 @@
 # Analiza Bezpieczeństwa — Drive Uploader
 
-> Data analizy: 2026-09-09 · Status produktu: Live · Maintenance window: oczekujący
+> Data analizy: 2026-09-09 · Status produktu: Live · branch `security-fixes` gotowy do merge
 
-> **Aktualizacja wdrożenia (2026-09-09):** VULN-01–04, VULN-06, VULN-07 naprawione lokalnie. VULN-05 naprawione lokalnie (`drive.file` token) — pozostaje deploy env + Publish app. VULN-08 nie wdrożone. Endpoint `build-structure` wdrożony z auth. Szczegóły: [`wdrozenie_security_hardening.md`](./wdrozenie_security_hardening.md).
+> **Status wdrożeń (2026-09-09):**
+> - VULN-01–04, 06, 07 — ✅ Naprawione w `security-hardening`
+> - VULN-05 — ✅ Naprawione (token `drive.file`, potwierdzone skanem live)
+> - VULN-02 (email relay) — ✅ Wzmocnione w `security-fixes` (whitelist `prefillEmail`)
+> - VULN-08 — ⚠️ Celowo pominięte, akceptowane ryzyko
 
 ---
 
@@ -12,7 +16,7 @@ Analiza obejmuje przegląd statyczny kodu źródłowego (Next.js 16 / React 19) 
 
 ---
 
-## Mapa Powierzchni Ataku
+## Mapa Powierzchni Ataku — Stan Aktualny
 
 ```
 [Publiczny Internet]
@@ -21,19 +25,18 @@ Analiza obejmuje przegląd statyczny kodu źródłowego (Next.js 16 / React 19) 
 ┌───────────────────────────────────────┐
 │  Vercel Edge / Serverless             │
 │                                       │
-│  /api/create-folder  ← BRAK AUTH      │
-│  /api/upload-session ← BRAK AUTH      │
-│  /api/check-folder   ← BRAK AUTH      │
-│  /api/notify         ← BRAK AUTH      │
-└──────────────┬────────────────────────┘
+│  /api/create-folder  ← ✅ TOKEN AUTH   │
+│  /api/upload-session ← ✅ TOKEN AUTH   │
+│  /api/check-folder   ← ✅ TOKEN AUTH   │
+│  /api/notify         ← ✅ TOKEN + WHITELIST EMAIL │
+│  /api/admin/*        ← ✅ ADMIN PASSWORD (HttpOnly cookie) │
+└──────────────┴────────────────────────┐
                │
                ▼
-    Google Drive API (OAuth2)
-    SMTP Server (nodemailer)
+    Google Drive API (OAuth2 — drive.file scope only)
+    SMTP Server (nodemailer — email whitelist)
     Discord/Slack Webhook
 ```
-
-Żaden z czterech endpointów nie weryfikuje tożsamości wywołującego.
 
 ---
 
@@ -286,18 +289,18 @@ Użytkownik może wpisać `prezes@klientfirma.pl` i odebrać oficjalne potwierdz
 
 ---
 
-## Tabela Priorytetów Naprawy
+## Tabela Priorytetów Naprawy — Stan Aktualny
 
-| ID | Podatność | Ryzyko | Nakład | Pilność |
-|---|---|---|---|---|
-| VULN-01 | Brak auth na API | 🔴 Krytyczny | Średni | Przed kolejnym deployem |
-| VULN-02 | Open SMTP relay | 🔴 Krytyczny | Niski | Przed kolejnym deployem |
-| VULN-03 | Błąd SMTP secure | 🟡 Średni | Minimalny | Maintenance window |
-| VULN-04 | Brak rate limitingu | 🟡 Średni | Średni | Maintenance window |
-| VULN-05 | Nadmierny OAuth scope | 🟢 Naprawione lokalnie | Minimalny | Deploy env + Publish app |
-| VULN-06 | Logowanie PII | 🟡 Średni (RODO) | Minimalny | Maintenance window |
-| VULN-07 | Brak noindex | 🟢 Niski | Minimalny | Przy okazji |
-| VULN-08 | Nieweryfikowany email | 🟢 Niski | Wysoki | Długoterminowe |
+| ID | Podatność | Ryzyko | Status |
+|---|---|---|---|
+| VULN-01 | Brak auth na API | 🔴 Krytyczny | ✅ Naprawione — token server-side |
+| VULN-02 | Open SMTP relay | 🔴 Krytyczny | ✅ Wzmocnione — whitelist `prefillEmail` |
+| VULN-03 | Błąd SMTP secure | 🟡 Średnni | ✅ Naprawione |
+| VULN-04 | Brak rate limitingu | 🟡 Średni | ✅ Naprawione — wszystkie endpointy |
+| VULN-05 | Nadmierny OAuth scope | 🟡 Średni | ✅ Naprawione — `drive.file` only, skan live potwierdził |
+| VULN-06 | Logowanie PII | 🟡 Średni (RODO) | ✅ Naprawione — tylko metadane |
+| VULN-07 | Brak noindex | 🟢 Niski | ✅ Naprawione — metadata Next.js |
+| VULN-08 | Nieweryfikowany email | 🟢 Niski | ⚠️ Celowo pominięte — akceptowane ryzyko B2B |
 
 ---
 
