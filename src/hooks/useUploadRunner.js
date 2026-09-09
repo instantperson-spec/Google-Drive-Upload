@@ -2,12 +2,39 @@
 
 import { useCallback } from 'react';
 import { getApiErrorMessage } from '@/lib/apiErrors';
-import { CHUNK_SIZE, queryUploadStatus, uploadChunk } from '@/lib/chunkUpload';
+import {
+  CHUNK_SIZE,
+  queryUploadStatusWithRetry,
+  shouldDiscardUploadUrl,
+  uploadChunk,
+  UPLOAD_STATUS,
+} from '@/lib/chunkUpload';
+import { isFileOnDrive } from '@/lib/deltaMatch';
 import { manifestNeedsStructure } from '@/lib/pathManifest';
+import { createProgressThrottle } from '@/lib/progressThrottle';
+import { readStoredUploadSession } from '@/hooks/useUploadSession';
+
+const API_TIMEOUT_MS = 60_000;
+
+async function fetchWithTimeout(url, options, timeoutMs = API_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } catch (err) {
+    if (err?.name === 'AbortError') {
+      throw new Error('Request timed out — check your connection and retry.');
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 export function useUploadRunner({
   files,
   updateFileState,
+  markFilesComplete,
   sessionData,
   saveSession,
   clearSession,
@@ -20,6 +47,7 @@ export function useUploadRunner({
   setStatus,
   setErrorMessage,
   setTokenStatus,
+  onDeltaScan,
 }) {
   const startUpload = useCallback(async () => {
     setStatus('uploading');
@@ -29,8 +57,9 @@ export function useUploadRunner({
     uploadFolderIdRef.current = null;
 
     try {
-      let currentFolderId = sessionData?.folderId;
-      let sessionFiles = sessionData?.files || {};
+      const storedSession = readStoredUploadSession();
+      let currentFolderId = storedSession?.folderId || sessionData?.folderId;
+      let sessionFiles = storedSession?.files || sessionData?.files || {};
 
       if (!currentFolderId) {
         const folderRes = await fetch('/api/create-folder', {
@@ -56,45 +85,76 @@ export function useUploadRunner({
       const checkRes = await fetch('/api/check-folder', {
         method: 'POST',
         headers: apiHeaders(),
-        body: JSON.stringify({ folderId: currentFolderId }),
+        body: JSON.stringify({
+          folderId: currentFolderId,
+          pending: files.map((f) => ({
+            relativePath: f.relativePath,
+            uploadName: f.uploadName,
+            size: f.size,
+          })),
+        }),
       });
       if (!checkRes.ok) {
         throw new Error(await getApiErrorMessage(checkRes, 'Failed to verify upload folder.'));
       }
-      const { files: existingDriveFiles = [] } = await checkRes.json();
+      const { files: existingDriveFiles = [], delta } = await checkRes.json();
 
-      for (let i = 0; i < files.length; i++) {
-        const fObj = files[i];
+      if (delta && onDeltaScan) {
+        onDeltaScan(delta);
+      }
+
+      const fileSnapshot = files;
+      const skipIndices = [];
+      const uploadIndices = [];
+
+      for (let i = 0; i < fileSnapshot.length; i++) {
+        const fObj = fileSnapshot[i];
         if (fObj.status === 'completed') continue;
-
-        updateFileState(i, { status: 'uploading' });
-
-        const exists = existingDriveFiles.find(
-          (df) => df.name === fObj.uploadName && Number(df.size) === fObj.size
-        );
-        if (exists) {
-          updateFileState(i, { status: 'completed', progress: 100 });
-          continue;
+        if (isFileOnDrive(fObj, existingDriveFiles)) {
+          skipIndices.push(i);
+        } else {
+          uploadIndices.push(i);
         }
+      }
+
+      markFilesComplete(skipIndices);
+      // Let React paint skipped state before heavy uploads begin
+      await new Promise((r) => setTimeout(r, 0));
+
+      const totalToUpload = uploadIndices.length;
+      let uploadedCount = 0;
+
+      for (const i of uploadIndices) {
+        const fObj = fileSnapshot[i];
+        uploadedCount += 1;
+
+        updateFileState(i, { status: 'uploading', progress: 0 });
+        await new Promise((r) => setTimeout(r, 0));
+        await sendProgressHeartbeat('uploading');
 
         let uploadUrl = sessionFiles[fObj.uploadName];
         let nextByte = 0;
 
         if (uploadUrl) {
-          const statusCheck = await queryUploadStatus(uploadUrl);
-          if (statusCheck.status === 'completed') {
+          const statusCheck = await queryUploadStatusWithRetry(uploadUrl);
+          if (statusCheck.status === UPLOAD_STATUS.COMPLETED) {
+            delete sessionFiles[fObj.uploadName];
+            saveSession({ uploaderName, uploaderEmail, folderId: currentFolderId, files: sessionFiles });
             updateFileState(i, { status: 'completed', progress: 100 });
             continue;
           }
-          if (statusCheck.status === 'incomplete') {
+          if (statusCheck.status === UPLOAD_STATUS.INCOMPLETE) {
             nextByte = statusCheck.nextByte;
-          } else {
+            updateFileState(i, { progress: Math.round((nextByte / fObj.size) * 100) });
+          } else if (shouldDiscardUploadUrl(statusCheck.status)) {
             uploadUrl = null;
+            delete sessionFiles[fObj.uploadName];
           }
+          // network_error: keep uploadUrl — chunk upload will 308 to correct offset
         }
 
         if (!uploadUrl) {
-          const initRes = await fetch('/api/upload-session', {
+          const initRes = await fetchWithTimeout('/api/upload-session', {
             method: 'POST',
             headers: apiHeaders(),
             body: JSON.stringify({
@@ -105,7 +165,12 @@ export function useUploadRunner({
             }),
           });
           if (!initRes.ok) {
-            throw new Error(await getApiErrorMessage(initRes, `Failed to init upload for ${fObj.name}`));
+            throw new Error(
+              await getApiErrorMessage(
+                initRes,
+                `Failed to init upload for ${fObj.name} (${uploadedCount}/${totalToUpload})`
+              )
+            );
           }
           const data = await initRes.json();
           uploadUrl = data.uploadUrl;
@@ -114,6 +179,11 @@ export function useUploadRunner({
         }
 
         updateFileState(i, { uploadUrl });
+
+        const reportProgress = createProgressThrottle(
+          (progress) => updateFileState(i, { progress }),
+          1000
+        );
 
         let retries = 3;
         while (nextByte < fObj.size) {
@@ -124,9 +194,10 @@ export function useUploadRunner({
               file: fObj.file,
               start: nextByte,
               end: endByte,
-              onProgress: (progress) => updateFileState(i, { progress }),
+              onProgress: reportProgress,
             });
             nextByte = endByte;
+            reportProgress(Math.round((nextByte / fObj.size) * 100));
             retries = 3;
           } catch (chunkErr) {
             console.error(chunkErr);
@@ -135,13 +206,22 @@ export function useUploadRunner({
               throw new Error(`Failed to upload ${fObj.name} after multiple retries.`);
             }
             await new Promise((res) => setTimeout(res, 2000));
-            const statusCheck = await queryUploadStatus(uploadUrl);
-            if (statusCheck.status === 'incomplete') nextByte = statusCheck.nextByte;
-            if (statusCheck.status === 'completed') break;
+            const statusCheck = await queryUploadStatusWithRetry(uploadUrl);
+            if (statusCheck.status === UPLOAD_STATUS.INCOMPLETE) {
+              nextByte = statusCheck.nextByte;
+            }
+            if (statusCheck.status === UPLOAD_STATUS.COMPLETED) break;
+            if (shouldDiscardUploadUrl(statusCheck.status)) {
+              throw new Error(`Upload session expired for ${fObj.name}. Retry to start a new session.`);
+            }
           }
         }
 
+        delete sessionFiles[fObj.uploadName];
+        saveSession({ uploaderName, uploaderEmail, folderId: currentFolderId, files: sessionFiles });
         updateFileState(i, { status: 'completed', progress: 100 });
+        await sendProgressHeartbeat('uploading');
+        await new Promise((r) => setTimeout(r, 50));
       }
 
       const manifestEntries = files.map((f) => ({
@@ -187,6 +267,11 @@ export function useUploadRunner({
         }),
       }).catch((err) => console.error('Notification failed:', err));
 
+      fetch('/api/revoke-upload-token', {
+        method: 'POST',
+        headers: apiHeaders(),
+      }).catch((err) => console.error('Token revoke failed:', err));
+
       setStatus('success');
       uploadSessionIdRef.current = null;
       uploadFolderIdRef.current = null;
@@ -209,6 +294,7 @@ export function useUploadRunner({
   }, [
     files,
     updateFileState,
+    markFilesComplete,
     sessionData,
     saveSession,
     clearSession,
@@ -221,6 +307,7 @@ export function useUploadRunner({
     setStatus,
     setErrorMessage,
     setTokenStatus,
+    onDeltaScan,
   ]);
 
   return { startUpload };

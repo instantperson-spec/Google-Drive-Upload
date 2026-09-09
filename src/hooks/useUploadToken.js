@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback } from 'react';
 export function useUploadToken() {
   const [accessToken, setAccessToken] = useState(undefined);
   const [tokenStatus, setTokenStatus] = useState('checking');
+  const [tokenPrefill, setTokenPrefill] = useState(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -30,7 +31,14 @@ export function useUploadToken() {
           },
         });
         if (cancelled) return;
-        setTokenStatus(res.ok ? 'valid' : 'invalid');
+        if (res.ok) {
+          const data = await res.json();
+          setTokenStatus('valid');
+          setTokenPrefill(data.prefill ?? null);
+        } else {
+          setTokenStatus('invalid');
+          setTokenPrefill(null);
+        }
       } catch {
         if (!cancelled) setTokenStatus('invalid');
       }
@@ -47,5 +55,5 @@ export function useUploadToken() {
     [accessToken]
   );
 
-  return { accessToken, tokenStatus, setTokenStatus, apiHeaders };
+  return { accessToken, tokenStatus, setTokenStatus, tokenPrefill, apiHeaders };
 }

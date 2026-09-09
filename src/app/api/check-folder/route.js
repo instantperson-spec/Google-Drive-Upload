@@ -1,7 +1,8 @@
-import { google } from 'googleapis';
 import { NextResponse } from 'next/server';
 import { verifyUploadToken, unauthorizedResponse } from '@/lib/auth';
 import { getAuthClient, isSessionFolder } from '@/lib/googleAuth';
+import { listSessionFilesRecursive } from '@/lib/listSessionFiles';
+import { partitionUploadQueue } from '@/lib/deltaMatch';
 import { rateLimit } from '@/lib/rateLimit';
 
 export async function POST(request) {
@@ -10,7 +11,8 @@ export async function POST(request) {
   if (!(await verifyUploadToken(request))) return unauthorizedResponse();
 
   try {
-    const { folderId } = await request.json();
+    const body = await request.json();
+    const { folderId, pending } = body;
 
     if (!folderId) {
       return NextResponse.json({ error: 'Folder ID is required' }, { status: 400 });
@@ -23,23 +25,20 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Invalid folder' }, { status: 403 });
     }
 
-    const drive = google.drive({ version: 'v3', auth: authClient });
-    
-    let allFiles = [];
-    let pageToken = null;
-    
-    do {
-      const res = await drive.files.list({
-        q: `'${folderId}' in parents and trashed = false`,
-        fields: 'nextPageToken, files(id, name, size)',
-        pageSize: 1000,
-        pageToken: pageToken
+    const allFiles = await listSessionFilesRecursive(authClient, folderId);
+
+    if (Array.isArray(pending) && pending.length) {
+      const { onDrive, toUpload } = partitionUploadQueue(pending, allFiles);
+      return NextResponse.json({
+        files: allFiles,
+        delta: {
+          onDriveCount: onDrive.length,
+          toUploadCount: toUpload.length,
+          onDrivePaths: onDrive.map((e) => e.relativePath),
+          toUploadPaths: toUpload.map((e) => e.relativePath),
+        },
       });
-      if (res.data.files) {
-        allFiles = allFiles.concat(res.data.files);
-      }
-      pageToken = res.data.nextPageToken;
-    } while (pageToken);
+    }
 
     return NextResponse.json({ files: allFiles });
   } catch (error) {

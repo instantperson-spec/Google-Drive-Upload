@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useUploadToken } from '@/hooks/useUploadToken';
 import { useUploadSession } from '@/hooks/useUploadSession';
 import { useUploadHeartbeat } from '@/hooks/useUploadHeartbeat';
@@ -14,14 +14,16 @@ import {
 } from '@/components/upload/UploadStatusScreens';
 import UserDetailsForm from '@/components/upload/UserDetailsForm';
 import SessionResumeBanner from '@/components/upload/SessionResumeBanner';
+import DeltaScanBanner from '@/components/upload/DeltaScanBanner';
 import UploadDropZone from '@/components/upload/UploadDropZone';
 import UploadFileList from '@/components/upload/UploadFileList';
 
 export default function Uploader() {
   const [status, setStatus] = useState('idle');
   const [errorMessage, setErrorMessage] = useState('');
+  const [deltaScan, setDeltaScan] = useState(null);
 
-  const { accessToken, tokenStatus, setTokenStatus, apiHeaders } = useUploadToken();
+  const { accessToken, tokenStatus, setTokenStatus, tokenPrefill, apiHeaders } = useUploadToken();
   const {
     sessionData,
     uploaderName,
@@ -32,6 +34,21 @@ export default function Uploader() {
     clearSession,
   } = useUploadSession();
 
+  useEffect(() => {
+    if (tokenStatus !== 'valid' || !tokenPrefill) return;
+    if (sessionData?.uploaderName && sessionData?.uploaderEmail) return;
+    if (!uploaderName.trim()) setUploaderName(tokenPrefill.name);
+    if (!uploaderEmail.trim()) setUploaderEmail(tokenPrefill.email);
+  }, [
+    tokenStatus,
+    tokenPrefill,
+    sessionData,
+    uploaderName,
+    uploaderEmail,
+    setUploaderName,
+    setUploaderEmail,
+  ]);
+
   const {
     files,
     isDragging,
@@ -40,6 +57,7 @@ export default function Uploader() {
     folderInputRef,
     removeFile,
     updateFileState,
+    markFilesComplete,
     clearFiles,
     handleDragOver,
     handleDragLeave,
@@ -61,6 +79,7 @@ export default function Uploader() {
   const { startUpload } = useUploadRunner({
     files,
     updateFileState,
+    markFilesComplete,
     sessionData,
     saveSession,
     clearSession,
@@ -73,6 +92,7 @@ export default function Uploader() {
     setStatus,
     setErrorMessage,
     setTokenStatus,
+    onDeltaScan: setDeltaScan,
   });
 
   const canUpload =
@@ -150,6 +170,8 @@ export default function Uploader() {
         hasSession={!!sessionData}
         onRemoveFile={removeFile}
       />
+
+      <DeltaScanBanner delta={deltaScan} />
 
       {errorMessage && (
         <div className="upload-error-banner" role="alert">

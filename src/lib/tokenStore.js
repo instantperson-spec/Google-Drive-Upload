@@ -161,7 +161,15 @@ export async function listTokens() {
   }));
 }
 
-export async function createToken({ token, clientName, type = 'retainer', expiresAt = null, notes = '' }) {
+export async function createToken({
+  token,
+  clientName,
+  type = 'retainer',
+  expiresAt = null,
+  notes = '',
+  prefillName = null,
+  prefillEmail = null,
+}) {
   if (!validateTokenSlug(token)) {
     throw new Error('Token must be 2–64 characters: letters, numbers, hyphen, underscore.');
   }
@@ -191,9 +199,45 @@ export async function createToken({ token, clientName, type = 'retainer', expire
     revokedAt: null,
   };
 
+  if (prefillName?.trim() && prefillEmail?.trim()) {
+    record.prefillName = prefillName.trim().slice(0, 200);
+    record.prefillEmail = prefillEmail.trim().slice(0, 200);
+  }
+
   registry.tokens.push(record);
   await saveRegistry(registry);
   return record;
+}
+
+/** Revoke by token slug; used after one-time project upload completes. */
+export async function revokeTokenByValue(tokenString) {
+  const registry = await readRegistry(true);
+  const record = registry.tokens.find((t) => t.token === tokenString);
+  if (!record || record.revoked) return record ?? null;
+  record.revoked = true;
+  record.revokedAt = new Date().toISOString();
+  await saveRegistry(registry);
+  invalidateCache();
+  return record;
+}
+
+export async function getTokenRecord(tokenString) {
+  const registry = await readRegistry();
+  return registry.tokens.find((t) => t.token === tokenString) ?? null;
+}
+
+/** Optional form prefill for a token (e.g. resume upload to existing session folder). */
+export async function getTokenPrefill(tokenString) {
+  const record = await getTokenRecord(tokenString);
+  if (!record || !isRecordActive(record)) return null;
+
+  const name = typeof record.prefillName === 'string' ? record.prefillName.trim() : '';
+  const email = typeof record.prefillEmail === 'string' ? record.prefillEmail.trim() : '';
+  if (!name || !email) return null;
+  if (email.length > 200 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return null;
+  if (name.length > 200) return null;
+
+  return { name, email };
 }
 
 export async function revokeToken(id) {

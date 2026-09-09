@@ -64,6 +64,17 @@ export function useFileQueue({ uploadStatus, setErrorMessage }) {
     });
   }, []);
 
+  /** Mark many files completed in one React update (avoids UI freeze during bulk skip). */
+  const markFilesComplete = useCallback((indices) => {
+    if (!indices.length) return;
+    const indexSet = new Set(indices);
+    setFiles((prev) =>
+      prev.map((f, i) =>
+        indexSet.has(i) ? { ...f, status: 'completed', progress: 100 } : f
+      )
+    );
+  }, []);
+
   const clearFiles = useCallback(() => setFiles([]), []);
 
   const handleDragOver = useCallback((e) => {
@@ -147,6 +158,7 @@ export function useFileQueue({ uploadStatus, setErrorMessage }) {
     addFileEntries,
     removeFile,
     updateFileState,
+    markFilesComplete,
     clearFiles,
     handleDragOver,
     handleDragLeave,
