@@ -115,6 +115,22 @@ export default function AdminTokenManager() {
     }
   };
 
+  const deleteTokenAction = async (id) => {
+    if (!window.confirm('Are you sure you want to permanently delete this token?')) return;
+    setError('');
+    try {
+      const res = await fetch(`/api/admin/tokens/${id}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Failed to delete token');
+      await fetchTokens();
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
   const activeCount = tokens.filter((t) => t.status === 'active').length;
 
   return (
@@ -240,7 +256,7 @@ export default function AdminTokenManager() {
                       </button>
                     )}
                   </td>
-                  <td>
+                  <td style={{ display: 'flex', gap: '5px' }}>
                     {t.status === 'active' ? (
                       <button
                         type="button"
@@ -258,6 +274,14 @@ export default function AdminTokenManager() {
                         Restore
                       </button>
                     ) : null}
+                    <button
+                      type="button"
+                      className="admin-revoke-btn"
+                      onClick={() => deleteTokenAction(t.id)}
+                      title="Permanently delete this token"
+                    >
+                      Delete
+                    </button>
                   </td>
                 </tr>
               ))}

@@ -263,6 +263,18 @@ export async function revokeToken(id) {
   return record;
 }
 
+export async function deleteToken(id) {
+  const registry = await readRegistry(true);
+  const initialLength = registry.tokens.length;
+  registry.tokens = registry.tokens.filter((t) => t.id !== id);
+  if (registry.tokens.length === initialLength) {
+    throw new Error('Token not found.');
+  }
+  await saveRegistry(registry);
+  invalidateCache();
+  return { success: true };
+}
+
 export async function restoreToken(id) {
   const registry = await readRegistry(true);
   const record = registry.tokens.find((t) => t.id === id);
