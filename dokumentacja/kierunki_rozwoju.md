@@ -2,9 +2,13 @@
 
 Poniżej znajduje się zestawienie potencjalnych funkcji i usprawnień, które mogą zostać wdrożone w przyszłości w celu podniesienia profesjonalizmu, bezpieczeństwa i wygody korzystania z aplikacji dla zastosowań B2B.
 
-## 1. Bezpieczeństwo i Dostęp (Security)
-* **Zabezpieczenie hasłem / PIN-em:** Dodanie prostego ekranu logowania z jednym globalnym hasłem (np. `SuperTajne123`), aby odsiać przypadkowych gości, zapobiec spamowi i zablokować automatyczne boty przed zapchaniem przestrzeni na dysku.
-* **Filtrowanie rozszerzeń:** Wprowadzenie walidacji i blokady na wgrywanie niebezpiecznych plików (np. `.exe`, `.bat`, `.js`). Możliwość wymuszenia przyjmowania tylko określonych formatów docelowych (np. wideo: `.mp4`, `.mov`, audio: `.wav`, grafika: `.zip`, dokumenty: `.pdf`).
+## 1. Bezpieczeństwo i Dostęp (Security - Bez Tzw. "Tarcia")
+Głównym założeniem aplikacji jest ominięcie problemów znanych z platform typu WeTransfer (rejestracje, limity, wygasające linki). Wprowadzenie dodatkowych haseł czy kont dla klientów zaburzyłoby ten cel. Zamiast tego wdraża się rozwiązania "niewidzialne":
+
+* **Zabezpieczenie przez ukrycie (No-index):** Dodanie tagu `<meta name="robots" content="noindex">` uniemożliwia wyszukiwarkom (Google) zindeksowanie strony. Dostęp zyskują wyłącznie klienci, którzy otrzymają bezpośredni link e-mailem.
+* **Sesje oparte na dedykowanych linkach (Token URLs):** Zamiast globalnego hasła, adres URL wysyłany klientowi może zawierać prosty parametr autoryzujący (np. `?token=NazwaProjektu`). Chroni to przed wejściem na stronę osób znających jedynie adres główny witryny.
+* **Walidacja negatywna plików (Czarna Lista):** Zamiast tzw. białej listy (wymuszania konkretnych formatów), sprawdzamy i odrzucamy wyłącznie pliki potencjalnie groźne dla systemu (np. `.exe`, `.bat`, `.cmd`, `.vbs`, `.sh`).
+  - **Dlaczego?** Klienci branży wideo często przesyłają całe struktury katalogów. Programy takie jak DaVinci Resolve czy Premiere Pro używają własnych, nietypowych rozszerzeń (np. `.drp`, `.prproj`) oraz zapisują metadane w `.xml` lub `.json`. Restrykcyjna biała lista (np. tylko `.mp4`) zablokowałaby te krytyczne pliki. Walidacja negatywna zapewnia bezpieczeństwo przed złośliwym kodem, dając klientom 100% swobody.
 
 ## 2. Organizacja i Workflow klienta
 * **Dodatkowe pole "Notatki / Numer Projektu":** Wzbogacenie formularza początkowego o opcjonalne pole tekstowe na wiadomości od klienta (np. *"To są te poprawione ujęcia z drona"*). Aplikacja mogłaby na tej podstawie generować mały plik tekstowy `wiadomosc_od_klienta.txt` i wgrywać go na Dysk Google obok materiałów wideo.
