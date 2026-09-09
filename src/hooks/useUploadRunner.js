@@ -267,10 +267,14 @@ export function useUploadRunner({
         }),
       }).catch((err) => console.error('Notification failed:', err));
 
-      fetch('/api/revoke-upload-token', {
-        method: 'POST',
-        headers: apiHeaders(),
-      }).catch((err) => console.error('Token revoke failed:', err));
+      // Only auto-revoke one-time tokens when this run actually uploaded files
+      // (skip-only runs must not revoke — delta resume would break)
+      if (uploadIndices.length > 0) {
+        fetch('/api/revoke-upload-token', {
+          method: 'POST',
+          headers: apiHeaders(),
+        }).catch((err) => console.error('Token revoke failed:', err));
+      }
 
       setStatus('success');
       uploadSessionIdRef.current = null;
