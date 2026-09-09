@@ -95,6 +95,7 @@ export default function Uploader() {
         rejected.push(name);
       } else {
         accepted.push({
+          id: crypto.randomUUID(),
           file: f,
           name,
           size: f.size,
@@ -111,8 +112,8 @@ export default function Uploader() {
     setFiles(prev => [...prev, ...accepted]);
   };
 
-  const removeFile = (indexToRemove) => {
-    setFiles(files.filter((_, index) => index !== indexToRemove));
+  const removeFile = (idToRemove) => {
+    setFiles(prev => prev.filter(f => f.id !== idToRemove));
   };
 
   const updateFileState = (index, updates) => {
@@ -176,8 +177,11 @@ export default function Uploader() {
     });
   };
 
+  // Single source of truth for "ready to upload" — used by startUpload and the button UI
+  const canUpload = files.length > 0 && status !== 'uploading' && !!uploaderName.trim() && !!uploaderEmail.trim();
+
   const startUpload = async () => {
-    if (files.length === 0 || !uploaderName.trim() || !uploaderEmail.trim()) return;
+    if (!canUpload) return;
     
     setStatus('uploading');
     setErrorMessage('');
@@ -445,7 +449,7 @@ export default function Uploader() {
           </div>
           <ul style={{ listStyle: 'none', padding: 0, margin: 0, maxHeight: '250px', overflowY: 'auto' }}>
             {files.map((fObj, index) => (
-              <li key={index} style={{ 
+              <li key={fObj.id} style={{ 
                 padding: '10px',
                 borderBottom: index < files.length - 1 ? '1px solid rgba(255,255,255,0.1)' : 'none',
                 opacity: (fObj.status === 'completed' || fObj.status === 'pending') && status === 'uploading' ? 0.6 : 1
@@ -458,7 +462,7 @@ export default function Uploader() {
                     <span style={{ fontSize: '12px', opacity: 0.7 }}>{(fObj.size / (1024 * 1024)).toFixed(2)} MB</span>
                     {status !== 'uploading' && fObj.status !== 'completed' && (
                       <button 
-                        onClick={(e) => { e.stopPropagation(); removeFile(index); }}
+                        onClick={(e) => { e.stopPropagation(); removeFile(fObj.id); }}
                         style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0 5px', fontSize: '16px' }}
                       >×</button>
                     )}
@@ -485,18 +489,18 @@ export default function Uploader() {
       <button 
         className="btn" 
         onClick={startUpload}
-        disabled={files.length === 0 || status === 'uploading' || !uploaderName.trim() || !uploaderEmail.trim()}
+        disabled={!canUpload}
         style={{
           marginTop: '25px',
           width: '100%',
           padding: '16px',
           borderRadius: '12px',
           border: 'none',
-          background: (files.length === 0 || status === 'uploading' || !uploaderName.trim() || !uploaderEmail.trim()) ? 'rgba(255,255,255,0.1)' : 'linear-gradient(135deg, #4ade80 0%, #3b82f6 100%)',
-          color: (files.length === 0 || status === 'uploading' || !uploaderName.trim() || !uploaderEmail.trim()) ? 'rgba(255,255,255,0.3)' : 'white',
+          background: !canUpload ? 'rgba(255,255,255,0.1)' : 'linear-gradient(135deg, #4ade80 0%, #3b82f6 100%)',
+          color: !canUpload ? 'rgba(255,255,255,0.3)' : 'white',
           fontSize: '18px',
           fontWeight: 'bold',
-          cursor: (files.length === 0 || status === 'uploading' || !uploaderName.trim() || !uploaderEmail.trim()) ? 'not-allowed' : 'pointer',
+          cursor: !canUpload ? 'not-allowed' : 'pointer',
           transition: 'all 0.3s ease'
         }}
       >
