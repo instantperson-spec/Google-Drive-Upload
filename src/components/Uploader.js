@@ -16,6 +16,23 @@ const isBlockedFile = (name) => {
   return BLOCKED_EXTENSIONS.has(ext);
 };
 
+/** Map API error responses to user-friendly messages. */
+async function getApiErrorMessage(res, fallback) {
+  if (res.status === 401) {
+    return 'This upload link is no longer valid. It may have been revoked or expired. Please contact the studio for a new link.';
+  }
+  if (res.status === 429) {
+    return 'Too many requests. Please wait a moment and try again.';
+  }
+  try {
+    const data = await res.json();
+    if (data?.error) return data.error;
+  } catch {
+    // ignore parse errors
+  }
+  return fallback;
+}
+
 export default function Uploader() {
   const [files, setFiles] = useState([]); // { file, name, size, type, status, progress, uploadUrl }
   const [isDragging, setIsDragging] = useState(false);
@@ -27,6 +44,8 @@ export default function Uploader() {
   const [sessionData, setSessionData] = useState(null);
   // undefined = not yet read from URL, '' = missing, string = present
   const [accessToken, setAccessToken] = useState(undefined);
+  // checking | valid | invalid — server-side token verification
+  const [tokenStatus, setTokenStatus] = useState('checking');
 
   const fileInputRef = useRef(null);
   const folderInputRef = useRef(null);
@@ -39,6 +58,35 @@ export default function Uploader() {
     const params = new URLSearchParams(window.location.search);
     setAccessToken(params.get('token') || '');
   }, []);
+
+  // Verify token with server (revoked/expired tokens must not show upload UI)
+  useEffect(() => {
+    if (!accessToken) {
+      setTokenStatus(accessToken === '' ? 'invalid' : 'checking');
+      return;
+    }
+
+    let cancelled = false;
+    setTokenStatus('checking');
+
+    (async () => {
+      try {
+        const res = await fetch('/api/validate-token', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-upload-token': accessToken,
+          },
+        });
+        if (cancelled) return;
+        setTokenStatus(res.ok ? 'valid' : 'invalid');
+      } catch {
+        if (!cancelled) setTokenStatus('invalid');
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [accessToken]);
 
   const apiHeaders = () => ({
     'Content-Type': 'application/json',
@@ -220,7 +268,12 @@ export default function Uploader() {
   };
 
   // Single source of truth for "ready to upload" — used by startUpload and the button UI
-  const canUpload = files.length > 0 && status !== 'uploading' && !!uploaderName.trim() && !!uploaderEmail.trim();
+  const canUpload =
+    tokenStatus === 'valid' &&
+    files.length > 0 &&
+    status !== 'uploading' &&
+    !!uploaderName.trim() &&
+    !!uploaderEmail.trim();
 
   const startUpload = async () => {
     if (!canUpload) return;
@@ -242,7 +295,9 @@ export default function Uploader() {
           headers: apiHeaders(),
           body: JSON.stringify({ uploaderName, uploaderEmail }),
         });
-        if (!folderRes.ok) throw new Error('Failed to create wrapper folder');
+        if (!folderRes.ok) {
+          throw new Error(await getApiErrorMessage(folderRes, 'Failed to create upload folder.'));
+        }
         const { folderId } = await folderRes.json();
         currentFolderId = folderId;
       }
@@ -262,6 +317,9 @@ export default function Uploader() {
         headers: apiHeaders(),
         body: JSON.stringify({ folderId: currentFolderId })
       });
+      if (!checkRes.ok) {
+        throw new Error(await getApiErrorMessage(checkRes, 'Failed to verify upload folder.'));
+      }
       const { files: existingDriveFiles = [] } = await checkRes.json();
 
       // 3. Upload loop
@@ -305,7 +363,9 @@ export default function Uploader() {
               folderId: currentFolderId,
             }),
           });
-          if (!initRes.ok) throw new Error(`Failed to init upload for ${fObj.name}`);
+          if (!initRes.ok) {
+            throw new Error(await getApiErrorMessage(initRes, `Failed to init upload for ${fObj.name}`));
+          }
           const data = await initRes.json();
           uploadUrl = data.uploadUrl;
           
@@ -368,24 +428,41 @@ export default function Uploader() {
       await sendProgressHeartbeat('error');
       uploadSessionIdRef.current = null;
       uploadFolderIdRef.current = null;
+
+      if (error.message?.includes('no longer valid')) {
+        setTokenStatus('invalid');
+        setStatus('idle');
+        return;
+      }
+
       setStatus('error');
       setErrorMessage(error.message || 'An error occurred during upload. You can retry safely.');
     }
   };
 
   // Token not yet read from URL — avoid flashing the wrong screen
-  if (accessToken === undefined) {
-    return null;
+  if (accessToken === undefined || tokenStatus === 'checking') {
+    return (
+      <div className="uploader-container">
+        <div style={{ textAlign: 'center', padding: '40px 20px', color: 'rgba(255,255,255,0.7)' }}>
+          <p>Verifying upload link…</p>
+        </div>
+      </div>
+    );
   }
 
-  if (accessToken === '') {
+  if (accessToken === '' || tokenStatus === 'invalid') {
+    const isRevoked = accessToken !== '';
     return (
       <div className="uploader-container">
         <div style={{ textAlign: 'center', padding: '40px 20px' }}>
-          <h2 style={{ color: 'white', marginBottom: '10px' }}>Access link required</h2>
+          <h2 style={{ color: 'white', marginBottom: '10px' }}>
+            {isRevoked ? 'Upload link no longer valid' : 'Access link required'}
+          </h2>
           <p style={{ color: 'rgba(255,255,255,0.7)' }}>
-            This page can only be used with a dedicated upload link.
-            Please open the exact link you received from the studio, or contact us to get one.
+            {isRevoked
+              ? 'This link has been revoked or has expired. Please contact the studio to receive a new upload link.'
+              : 'This page can only be used with a dedicated upload link. Please open the exact link you received from the studio, or contact us to get one.'}
           </p>
         </div>
       </div>
