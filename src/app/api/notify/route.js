@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
 import { verifyUploadToken, unauthorizedResponse } from '@/lib/auth';
+import { getTokenRecord } from '@/lib/tokenStore';
 import { rateLimit } from '@/lib/rateLimit';
 
 const MAX_FILES_IN_NOTIFICATION = 2000;
@@ -52,6 +53,29 @@ export async function POST(request) {
 
     // Log diagnostic metadata only — no PII (GDPR)
     console.log(`Notification received: ${files.length} files, folder: ${data.folderId || 'n/a'}`);
+
+    // Security: verify uploader email against token registry to prevent open relay abuse.
+    // Only send client email if it matches the prefillEmail registered for this token.
+    const rawToken = request.headers.get('x-upload-token') ||
+      new URL(request.url).searchParams.get('token') || '';
+    let allowedUploaderEmail = null;
+    if (rawToken && data.uploaderEmail) {
+      try {
+        const tokenRecord = await getTokenRecord(rawToken);
+        const registeredEmail = tokenRecord?.prefillEmail?.trim().toLowerCase();
+        const requestEmail = data.uploaderEmail.trim().toLowerCase();
+        if (registeredEmail && registeredEmail === requestEmail) {
+          allowedUploaderEmail = data.uploaderEmail;
+        } else if (registeredEmail) {
+          console.warn(`Notify: email mismatch — request: ${requestEmail}, registered: ${registeredEmail}. Skipping uploader email.`);
+        } else {
+          // Token has no registered email — allow it (retainer tokens without prefill)
+          allowedUploaderEmail = data.uploaderEmail;
+        }
+      } catch (err) {
+        console.error('Notify: token lookup failed, skipping uploader email.', err.message);
+      }
+    }
     
     // For webhook / admin email text
     const filesListText = files.map(f => `- \`${f.name}\` (${(f.size / 1024 / 1024).toFixed(2)} MB)`).join('\n');
@@ -109,8 +133,8 @@ export async function POST(request) {
         console.log('Notification email sent to admin.');
       }
 
-      // 2. Send Summary Email to UPLOADER
-      if (data.uploaderEmail) {
+      // 2. Send Summary Email to UPLOADER (only if email passed whitelist check)
+      if (allowedUploaderEmail) {
         const successFiles = files.filter(f => f.status === 'completed');
         const failedFiles = files.filter(f => f.status !== 'completed');
 
@@ -128,7 +152,7 @@ export async function POST(request) {
 
         const clientMailOptions = {
           from: `Drive Uploader <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
-          to: data.uploaderEmail,
+          to: allowedUploaderEmail,
           subject: `Upload Summary: ${successFiles.length} files successfully uploaded`,
           html: `
             <div style="font-family: sans-serif; padding: 20px; color: #333; max-width: 600px; border: 1px solid #eee; border-radius: 8px;">

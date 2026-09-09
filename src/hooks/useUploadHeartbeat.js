@@ -2,6 +2,12 @@
 
 import { useRef, useEffect, useCallback } from 'react';
 
+// Heartbeat is OFF by default to protect Vercel free-tier invocation limits.
+// Set NEXT_PUBLIC_ENABLE_HEARTBEAT=true in Vercel env vars to enable debug mode
+// (pulses every 30s). Error events are always sent regardless of this flag.
+const HEARTBEAT_ENABLED = process.env.NEXT_PUBLIC_ENABLE_HEARTBEAT === 'true';
+const HEARTBEAT_INTERVAL_MS = 30_000; // 30s in debug mode (was 10s)
+
 export function useUploadHeartbeat({
   accessToken,
   status,
@@ -34,6 +40,11 @@ export function useUploadHeartbeat({
       const folderId = uploadFolderIdRef.current;
       if (!sessionId || !folderId || !accessToken) return;
 
+      // In normal mode (heartbeat OFF), skip routine 'uploading' pings.
+      // Always send terminal states: 'completed', 'error' — these are critical.
+      const isTerminal = sessionStatus === 'completed' || sessionStatus === 'error';
+      if (!HEARTBEAT_ENABLED && !isTerminal) return;
+
       const fileList = (filesSnapshot ?? filesRef.current).map((f) => ({
         name: f.name,
         size: f.size,
@@ -58,11 +69,13 @@ export function useUploadHeartbeat({
     [accessToken, uploaderName, uploaderEmail, apiHeaders]
   );
 
+  // Periodic heartbeat — only fires in debug mode (NEXT_PUBLIC_ENABLE_HEARTBEAT=true)
   useEffect(() => {
+    if (!HEARTBEAT_ENABLED) return;
     if (status !== 'uploading' || !accessToken) return;
     const tick = () => sendProgressHeartbeat('uploading', filesRef.current);
     tick();
-    const interval = setInterval(tick, 10_000);
+    const interval = setInterval(tick, HEARTBEAT_INTERVAL_MS);
     return () => clearInterval(interval);
   }, [status, accessToken, sendProgressHeartbeat]);
 
