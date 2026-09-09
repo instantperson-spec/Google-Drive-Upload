@@ -57,17 +57,23 @@ UPLOAD_TOKENS="ClientA,ClientB"
 MAX_FILE_SIZE_GB="250"
 ```
 
-### 3. Local Development
+### 3. Verify OAuth scopes (recommended before deploy)
+```bash
+npm run check-oauth-scopes
+```
+Checks whether your refresh token has the recommended `drive.file` scope only (not full `drive`). See [`dokumentacja/regeneracja_oauth_scope.md`](dokumentacja/regeneracja_oauth_scope.md).
+
+### 4. Local Development
 ```bash
 npm install
 npm run dev
 ```
 Open [http://localhost:3000/?token=YourToken](http://localhost:3000/?token=YourToken) with your browser (replace `YourToken` with a value from `UPLOAD_TOKENS`).
 
-### 4. Client Links
+### 5. Client Links
 Each client receives a dedicated URL: `https://your-domain/?token=ClientToken`. See [`dokumentacja/operacje_tokeny_i_linki.md`](dokumentacja/operacje_tokeny_i_linki.md) for the full operational guide.
 
-### 5. Admin Console
+### 6. Admin Console
 Set `ADMIN_SECRET` in your environment, then open `/admin` to monitor uploads:
 - **Active now** — live progress bars (client heartbeat every 10s, admin refresh every 5s)
 - **History** — completed session folders from Google Drive (refresh every 60s)

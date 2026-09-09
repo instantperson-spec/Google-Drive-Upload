@@ -171,7 +171,7 @@ Wszystkie poprzednie zmienne (`GOOGLE_*`, `SMTP_*`, `NOTIFICATION_EMAIL`, `WEBHO
 □ Test: otwórz link bez tokena — ekran „Access link required"
 □ Test: curl bez tokena → 401
 □ Wyślij zaktualizowane linki klientom retainer
-□ (Opcjonalnie) Regeneruj refresh token z scope drive.file only
+□ Uruchom `npm run check-oauth-scopes` — jeśli ❌ full `drive`, regeneruj token (patrz `regeneracja_oauth_scope.md`)
 ```
 
 ---

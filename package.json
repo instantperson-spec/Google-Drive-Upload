@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "check-oauth-scopes": "node scripts/check-oauth-scopes.mjs"
   },
   "dependencies": {
     "googleapis": "^178.1.1",
