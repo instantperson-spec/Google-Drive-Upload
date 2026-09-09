@@ -23,7 +23,7 @@ function formatBytes(bytes) {
 
 const MAX_FILES_SHOWN = 8;
 
-function ActiveSessionCard({ session }) {
+function ActiveSessionCard({ session, liveMonitor }) {
   const [showLogs, setShowLogs] = useState(false);
   const isDone = session.sessionStatus === 'completed';
   
@@ -68,53 +68,61 @@ function ActiveSessionCard({ session }) {
         {' · '}updated {formatDate(session.updatedAt)}
       </div>
 
-      <ul className="admin-active-files" style={{ maxHeight: '250px', overflowY: 'auto', paddingRight: '5px' }}>
-        {sortedFiles.map((f) => (
-          <li key={f.name} className="admin-active-file">
-            <div className="admin-active-file-row">
-              <span className="admin-active-file-name" title={f.name}>{f.name}</span>
-              <span className="admin-active-file-meta">
-                {formatBytes(f.size)} · {f.progress}%
-              </span>
+      {/* File list and logs only visible when Live Monitor is ON */}
+      {liveMonitor ? (
+        <>
+          <ul className="admin-active-files" style={{ maxHeight: '250px', overflowY: 'auto', paddingRight: '5px' }}>
+            {sortedFiles.map((f) => (
+              <li key={f.name} className="admin-active-file">
+                <div className="admin-active-file-row">
+                  <span className="admin-active-file-name" title={f.name}>{f.name}</span>
+                  <span className="admin-active-file-meta">
+                    {formatBytes(f.size)} · {f.progress}%
+                  </span>
+                </div>
+                <div className="admin-progress-track">
+                  <div
+                    className={`admin-progress-fill ${f.status === 'completed' ? 'admin-progress-done' : ''}`}
+                    style={{ width: `${f.progress}%` }}
+                  />
+                </div>
+              </li>
+            ))}
+          </ul>
+
+          <div style={{ marginTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '0.5rem' }}>
+            <button 
+              className="btn admin-btn-secondary" 
+              onClick={() => setShowLogs(!showLogs)}
+              style={{ fontSize: '0.75rem', padding: '4px 8px' }}
+            >
+              {showLogs ? 'Hide Terminal' : `Show Terminal Logs (${session.logs?.length || 0})`}
+            </button>
+          </div>
+
+          {showLogs && (
+            <div className="admin-terminal" style={{ 
+              marginTop: '0.5rem', 
+              background: 'rgba(0,0,0,0.8)', 
+              color: '#4af626', 
+              fontFamily: 'monospace', 
+              padding: '10px', 
+              fontSize: '0.75rem',
+              maxHeight: '200px',
+              overflowY: 'auto',
+              borderRadius: '4px',
+              border: '1px solid #333'
+            }}>
+              {(!session.logs || session.logs.length === 0) ? 'No logs recorded...' : session.logs.map((log, i) => (
+                <div key={i}>{log}</div>
+              ))}
             </div>
-            <div className="admin-progress-track">
-              <div
-                className={`admin-progress-fill ${f.status === 'completed' ? 'admin-progress-done' : ''}`}
-                style={{ width: `${f.progress}%` }}
-              />
-            </div>
-          </li>
-        ))}
-      </ul>
-
-
-      <div style={{ marginTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '0.5rem' }}>
-        <button 
-          className="btn admin-btn-secondary" 
-          onClick={() => setShowLogs(!showLogs)}
-          style={{ fontSize: '0.75rem', padding: '4px 8px' }}
-        >
-          {showLogs ? 'Hide Terminal' : `Show Terminal Logs (${session.logs?.length || 0})`}
-        </button>
-      </div>
-
-      {showLogs && (
-        <div className="admin-terminal" style={{ 
-          marginTop: '0.5rem', 
-          background: 'rgba(0,0,0,0.8)', 
-          color: '#4af626', 
-          fontFamily: 'monospace', 
-          padding: '10px', 
-          fontSize: '0.75rem',
-          maxHeight: '200px',
-          overflowY: 'auto',
-          borderRadius: '4px',
-          border: '1px solid #333'
-        }}>
-          {(!session.logs || session.logs.length === 0) ? 'No logs recorded...' : session.logs.map((log, i) => (
-            <div key={i}>{log}</div>
-          ))}
-        </div>
+          )}
+        </>
+      ) : (
+        <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.35)', marginTop: '0.5rem', fontStyle: 'italic' }}>
+          Turn on Live Monitor to see file details and progress.
+        </p>
       )}
     </div>
   );
@@ -185,11 +193,11 @@ export default function AdminDashboard() {
     fetchSessions();
   }, [fetchActive, fetchSessions]);
 
-  // Active uploads: slow passive poll (60s) always, fast poll (5s) when Live Monitor ON.
-  // Passive poll ensures per-file events (file-started, file-completed) appear automatically.
+  // Active uploads: NO auto-polling when Live Monitor OFF (file list is hidden anyway).
+  // When Live Monitor ON: fast 5s poll for real-time file progress.
   useEffect(() => {
-    if (!authenticated) return;
-    const interval = setInterval(fetchActive, liveMonitor ? 5_000 : 60_000);
+    if (!authenticated || !liveMonitor) return;
+    const interval = setInterval(fetchActive, 5_000);
     return () => clearInterval(interval);
   }, [authenticated, liveMonitor, fetchActive]);
 
@@ -321,7 +329,7 @@ export default function AdminDashboard() {
 
         <div className="admin-active-grid">
           {activeSessions.map((s) => (
-            <ActiveSessionCard key={s.sessionId} session={s} />
+            <ActiveSessionCard key={s.sessionId} session={s} liveMonitor={liveMonitor} />
           ))}
         </div>
       </section>
