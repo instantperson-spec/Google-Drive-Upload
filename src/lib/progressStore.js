@@ -8,7 +8,7 @@ import { getAuthClient } from '@/lib/googleAuth';
 
 const PROGRESS_FILE_NAME = '_uploader_progress.json';
 const TTL_MS = 24 * 60 * 60 * 1000;
-export const ACTIVE_STALE_MS = 30 * 1000;
+export const ACTIVE_STALE_MS = 3 * 60 * 1000;
 const RECENTLY_COMPLETED_MS = 2 * 60 * 1000;
 const CACHE_TTL_MS = 30_000;
 
@@ -138,6 +138,13 @@ async function saveRegistry(registry) {
   }
 }
 
+const LIVE_SESSION_STATUSES = new Set(['uploading', 'file-started', 'file-completed']);
+
+function normalizeSessionStatus(status) {
+  if (status === 'completed' || status === 'error') return status;
+  return 'uploading';
+}
+
 /**
  * @param {object} data validated session payload
  */
@@ -150,7 +157,7 @@ export async function upsertProgressSession(data) {
     uploaderEmail: data.uploaderEmail,
     folderId: data.folderId,
     files: data.files,
-    sessionStatus: data.sessionStatus || 'uploading',
+    sessionStatus: normalizeSessionStatus(data.sessionStatus),
     logs: data.logs || [],
     updatedAt: new Date().toISOString(),
   };
@@ -183,7 +190,9 @@ export async function getActiveSessions(staleMs = ACTIVE_STALE_MS) {
 
   for (const session of Object.values(registry.sessions)) {
     const updated = new Date(session.updatedAt).getTime();
-    const isLive = updated >= activeCutoff && session.sessionStatus === 'uploading';
+    const isLive =
+      updated >= activeCutoff &&
+      (session.sessionStatus === 'uploading' || LIVE_SESSION_STATUSES.has(session.sessionStatus));
     const isRecentlyDone =
       session.sessionStatus === 'completed' && updated >= completedCutoff;
 

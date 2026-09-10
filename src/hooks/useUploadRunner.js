@@ -132,7 +132,12 @@ export function useUploadRunner({
 
         updateFileState(i, { status: 'uploading', progress: 0 });
         await new Promise((r) => setTimeout(r, 0));
-        await sendProgressHeartbeat('file-started');
+        await sendProgressHeartbeat('file-started', fileSnapshot.map((f, idx) => ({
+          name: f.name,
+          size: f.size,
+          progress: idx === i ? 0 : (f.progress ?? 0),
+          status: idx === i ? 'uploading' : (f.status || 'pending'),
+        })));
 
         let uploadUrl = sessionFiles[fObj.uploadName];
         let nextByte = 0;
