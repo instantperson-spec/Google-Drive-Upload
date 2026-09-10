@@ -10,7 +10,7 @@ const PROGRESS_FILE_NAME = '_uploader_progress.json';
 const TTL_MS = 24 * 60 * 60 * 1000;
 export const ACTIVE_STALE_MS = 30 * 1000;
 const RECENTLY_COMPLETED_MS = 2 * 60 * 1000;
-const CACHE_TTL_MS = 5_000;
+const CACHE_TTL_MS = 30_000;
 
 /** @type {{ registry: object|null, loadedAt: number, fileId: string|null }} */
 const cache = { registry: null, loadedAt: 0, fileId: null };
@@ -81,24 +81,29 @@ async function readRegistry(force = false) {
 
   try {
     const drive = await getDrive();
-    const file = await findProgressFile(drive);
+    let fileId = cache.fileId;
 
-    if (!file) {
+    if (!fileId) {
+      const file = await findProgressFile(drive);
+      fileId = file?.id ?? null;
+    }
+
+    if (!fileId) {
       const registry = emptyRegistry();
-      const fileId = await createProgressFile(drive, registry);
+      fileId = await createProgressFile(drive, registry);
       cache.registry = registry;
       cache.fileId = fileId;
       cache.loadedAt = Date.now();
       return registry;
     }
 
-    const registry = await readFileJson(drive, file.id);
+    const registry = await readFileJson(drive, fileId);
     if (!registry.sessions || typeof registry.sessions !== 'object') {
       registry.sessions = {};
     }
     pruneSessions(registry);
     cache.registry = registry;
-    cache.fileId = file.id;
+    cache.fileId = fileId;
     cache.loadedAt = Date.now();
     return registry;
   } catch (err) {

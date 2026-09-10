@@ -206,10 +206,10 @@ export default function AdminDashboard() {
   }, [fetchActive, fetchSessions]);
 
   // Active uploads: NO auto-polling when Live Monitor OFF (file list is hidden anyway).
-  // When Live Monitor ON: fast 5s poll for real-time file progress.
+  // When Live Monitor ON: 15s poll (limits Drive API load during client uploads).
   useEffect(() => {
     if (!authenticated || !liveMonitor) return;
-    const interval = setInterval(fetchActive, 5_000);
+    const interval = setInterval(fetchActive, 15_000);
     return () => clearInterval(interval);
   }, [authenticated, liveMonitor, fetchActive]);
 
@@ -300,7 +300,7 @@ export default function AdminDashboard() {
           <h2>Admin Console</h2>
           <p className="admin-meta">
             {liveMonitor
-              ? <>🟢 Live Monitor ON · refresh 5s{activeFetchedAt && <> · updated {formatDate(activeFetchedAt)}</>}</>
+              ? <>🟢 Live Monitor ON · refresh 15s{activeFetchedAt && <> · updated {formatDate(activeFetchedAt)}</>}</>
               : <>⚫ Live Monitor OFF · passive refresh 60s · history refresh 60s</>}
           </p>
         </div>
@@ -309,7 +309,7 @@ export default function AdminDashboard() {
             type="button"
             className={`btn ${liveMonitor ? 'admin-btn' : 'admin-btn-secondary'}`}
             onClick={() => setLiveMonitor((v) => !v)}
-            title={liveMonitor ? 'Turn off live polling (saves Vercel invocations)' : 'Turn on live polling (5s refresh)'}
+            title={liveMonitor ? 'Turn off live polling (saves Vercel invocations)' : 'Turn on live polling (15s refresh)'}
           >
             {liveMonitor ? '🟢 Live Monitor ON' : '⚫ Live Monitor OFF'}
           </button>
