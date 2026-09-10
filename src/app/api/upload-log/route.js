@@ -23,7 +23,7 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Invalid target folder.' }, { status: 403 });
     }
 
-    const session = getSession(sessionId);
+    const session = await getSession(sessionId);
     const logs = session?.logs || [];
     
     let logContent = `CRASH LOG: ${new Date().toISOString()}\n`;

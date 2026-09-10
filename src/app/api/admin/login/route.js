@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import {
   ADMIN_COOKIE,
   adminSessionCookieOptions,
@@ -25,10 +24,9 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Invalid password.' }, { status: 401 });
     }
 
-    const cookieStore = await cookies();
-    cookieStore.set(ADMIN_COOKIE, createAdminSessionToken(), adminSessionCookieOptions());
-
-    return NextResponse.json({ success: true });
+    const response = NextResponse.json({ success: true });
+    response.cookies.set(ADMIN_COOKIE, createAdminSessionToken(), adminSessionCookieOptions());
+    return response;
   } catch {
     return NextResponse.json({ error: 'Login failed.' }, { status: 500 });
   }

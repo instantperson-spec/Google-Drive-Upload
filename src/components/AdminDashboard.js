@@ -189,8 +189,20 @@ export default function AdminDashboard() {
   }, []);
 
   useEffect(() => {
-    fetchActive();
-    fetchSessions();
+    (async () => {
+      try {
+        const res = await fetch('/api/admin/me', { credentials: 'include' });
+        const data = await res.json().catch(() => ({}));
+        if (data.authenticated) {
+          setAuthenticated(true);
+          await Promise.all([fetchActive(), fetchSessions()]);
+        } else {
+          setAuthenticated(false);
+        }
+      } catch {
+        setAuthenticated(false);
+      }
+    })();
   }, [fetchActive, fetchSessions]);
 
   // Active uploads: NO auto-polling when Live Monitor OFF (file list is hidden anyway).
@@ -269,6 +281,7 @@ export default function AdminDashboard() {
           placeholder="Admin password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+          autoComplete="current-password"
           autoFocus
           required
         />

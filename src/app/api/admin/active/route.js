@@ -8,7 +8,7 @@ export async function GET(request) {
     return unauthorizedAdminResponse();
   }
 
-  const sessions = getActiveSessions().map((s) => {
+  const sessions = (await getActiveSessions()).map((s) => {
     const totalSize = s.files.reduce((sum, f) => sum + (f.size || 0), 0);
     const completedCount = s.files.filter((f) => f.status === 'completed').length;
     const overallProgress =

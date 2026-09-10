@@ -75,7 +75,7 @@ export async function POST(request) {
       logs: Array.isArray(raw.logs) ? raw.logs.slice(-200).map(String) : [],
     };
 
-    upsertProgressSession(payload);
+    await upsertProgressSession(payload);
 
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -93,7 +93,7 @@ export async function DELETE(request) {
     if (!isUuid(sessionId)) {
       return NextResponse.json({ error: 'Invalid sessionId.' }, { status: 400 });
     }
-    removeProgressSession(sessionId);
+    await removeProgressSession(sessionId);
     return NextResponse.json({ success: true });
   } catch {
     return NextResponse.json({ error: 'Failed to remove session.' }, { status: 500 });
