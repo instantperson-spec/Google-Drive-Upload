@@ -318,19 +318,24 @@ Użytkownik może wpisać `prezes@klientfirma.pl` i odebrać oficjalne potwierdz
 
 ---
 
-## Rekomendowany Kolejność Działań
+## Historia Działań — Wszystkie Punkty Zrealizowane ✅
 
-### Natychmiast (przed maintenance window)
-1. Wyłączyć lub zabezpieczyć endpoint `/api/notify` — usunąć możliwość wysyłki maila do zewnętrznego adresu z requestu
-2. Naprawić bug SMTP `secure` (VULN-03) — 5 minut roboty, zero ryzyka regresji
+### ~~Natychmiast (przed maintenance window)~~
+1. ✅ `/api/notify` zabezpieczony — token auth + whitelist `prefillEmail` z rejestru tokenów (`security-fixes`)
+2. ✅ Bug SMTP `secure` naprawiony — `smtpPort === 465` (`security-hardening`)
 
-### W maintenance window
-3. Wdrożyć `UPLOAD_SECRET` jako shared secret weryfikowany w każdym route handlerze
-4. Usunąć `console.log(data)` → zastąpić logowaniem metadanych
-5. Poprawić OAuth scope (`drive` → tylko `drive.file`)
-6. Dodać `noindex` do `layout.js`
+### ~~W maintenance window~~
+3. ✅ Token URL (`?token=X`) weryfikowany server-side w każdym route handlerze — `lib/auth.js` + `verifyUploadToken()` (`security-hardening`)
+4. ✅ `console.log(data)` zastąpiony logowaniem metadanych — tylko `files.length` + `folderId` (`security-hardening`)
+5. ✅ OAuth scope — tylko `drive.file`, potwierdzone live skanem `checkOAuthScopes.js`
+6. ✅ `noindex` — metadata API Next.js w `layout.js` (`security-hardening`)
 
-### Wraz z wdrożeniem Token URL (kierunki rozwoju)
-7. Zastąpić `UPLOAD_SECRET` weryfikacją tokena projekt-specific po stronie serwera
-8. Dodać walidację rozszerzeń w `/api/upload-session`
-9. Rozważyć rate limiting per IP (Vercel KV lub Cloudflare)
+### ~~Wraz z wdrożeniem Token URL~~
+7. ✅ Token projekt-specific po stronie serwera — `tokenStore.js` + Google Drive registry (`security-hardening`)
+8. ✅ Walidacja rozszerzeń w `/api/upload-session` — `lib/blocklist.js` + `lib/validation.js` (`security-hardening`)
+9. ✅ Rate limiting per IP — `lib/rateLimit.js` (sliding window, wszystkie endpointy) (`security-hardening`)
+
+---
+
+> [!NOTE]
+> Jedyny otwarty punkt: **VULN-08** (email klienta bez weryfikacji własności) — celowo pominięty jako akceptowane ryzyko dla narzędzia B2B z tokenami per-klient.
