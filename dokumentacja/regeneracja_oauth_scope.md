@@ -122,3 +122,31 @@ W ostateczności (mniej bezpieczne): `drive.readonly` + `drive.file` — nadal b
 ## Service Account (fallback)
 
 Jeśli używasz Service Account zamiast OAuth — scope w kodzie jest już poprawiony (`drive.file` only w `src/lib/googleAuth.js`). Ten dokument dotyczy głównie ścieżki **OAuth refresh token**.
+
+---
+
+## OAuth „agentic” (`is_agentic`) i Workspace MCP (2026)
+
+Google wprowadza flagę **agentic** na kliencie OAuth 2.0 (projekt m.in. `drive-uploader-508019`). Dotyczy **Workspace MCP servers** (Gmail, Drive, Calendar przez Model Context Protocol dla agentów AI), **nie** zwykłych REST API.
+
+| Termin | Znaczenie |
+|--------|-----------|
+| **12 paź 2026** | W Google Cloud Console można oznaczyć klienta OAuth jako agentic |
+| **11 lis 2026** | Tylko klienci agentic mogą wołać Workspace MCP |
+| **12 lis 2026** | Flagi agentic **nie da się zmienić** na istniejącym Client ID — trzeba nowy klient |
+
+### drive-uploader (ta aplikacja)
+
+- Używa wyłącznie **Drive REST API** (`googleapis`: upload, foldery, `_uploader_tokens.json`, progress).
+- **Nie** integruje Workspace MCP.
+- Upload robi **użytkownik w przeglądarce**, nie autonomiczny agent AI.
+
+**Działanie:** **nie włączaj** `is_agentic` na OAuth kliencie używanym przez produkcję (Vercel). Google: aplikacje tylko-REST **nie wymagają** zmiany w związku z MCP.
+
+### Kiedy coś robić
+
+1. **Osobny OAuth Client ID** dla agenta AI (Cursor, bot), jeśli ma korzystać z **Workspace MCP** — oznacz go jako agentic **między 12 paź a 11 lis 2026**.
+2. **Nie mieszaj** tego samego Client ID dla strony uploadu (ludzie) i agenta — osobne klienty, osobne refresh tokeny w env.
+3. Po **12 lis 2026** zmiana agentic na starym kliencie = **nowy** Client ID + regeneracja refresh tokena (jak Krok 2 powyżej).
+
+Źródło: powiadomienie Google Cloud o Workspace MCP / `is_agentic` (2026).
