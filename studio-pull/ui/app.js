@@ -7,6 +7,8 @@
   const destEl = $('dest');
   const destErrorEl = $('dest-error');
   const statusEl = $('status');
+  const statusTitleEl = $('status-title');
+  const statusSubEl = $('status-sub');
   const barEl = $('bar');
   const logEl = $('log');
   const btnRefresh = $('btn-refresh');
@@ -29,8 +31,31 @@
   let currentFileTotal = 1;
 
   function setStatus(text, cls) {
-    statusEl.textContent = text;
+    const state = running
+      ? 'running'
+      : cls === 'ok'
+        ? 'ok'
+        : cls === 'warn'
+          ? 'warn'
+          : cls === 'error'
+            ? 'error'
+            : 'idle';
+    statusEl.dataset.state = state;
     statusEl.className = 'status' + (cls ? ` ${cls}` : '');
+
+    if (running) {
+      statusTitleEl.textContent = 'Syncing…';
+      statusSubEl.textContent = text || '';
+      return;
+    }
+    if (cls === 'ok' || cls === 'warn' || cls === 'error') {
+      statusTitleEl.textContent = text || (cls === 'ok' ? 'Gotowe' : 'Uwaga');
+      statusSubEl.textContent =
+        cls === 'ok' ? 'Pull zakończony.' : cls === 'error' ? 'Coś poszło nie tak.' : 'Sprawdź log.';
+      return;
+    }
+    statusTitleEl.textContent = 'Gotowy';
+    statusSubEl.textContent = text || 'Zaznacz sesje i folder bazowy.';
   }
 
   function appendLog(line) {

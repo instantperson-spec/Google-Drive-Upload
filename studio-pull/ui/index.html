@@ -54,7 +54,20 @@
 
       <section class="card">
         <h2>Postęp</h2>
-        <div id="status" class="status">Gotowy.</div>
+        <div id="status" class="status" data-state="idle">
+          <span class="sync-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 12a9 9 0 0 0-15.5-6.3"/>
+              <polyline points="3 4 3 9 8 9"/>
+              <path d="M3 12a9 9 0 0 0 15.5 6.3"/>
+              <polyline points="21 20 21 15 16 15"/>
+            </svg>
+          </span>
+          <div class="status-copy">
+            <div id="status-title" class="status-title">Gotowy</div>
+            <div id="status-sub" class="status-sub">Zaznacz sesje i folder bazowy.</div>
+          </div>
+        </div>
         <div class="bar-track"><div id="bar" class="bar-fill" style="width:0%"></div></div>
         <pre id="log" class="log"></pre>
       </section>
