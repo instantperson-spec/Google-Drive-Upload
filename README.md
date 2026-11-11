@@ -84,6 +84,14 @@ Set `ADMIN_SECRET` in your environment, then open `/admin` to monitor uploads:
 - **Client tokens** — create, copy upload links, revoke/restore tokens (stored in `_uploader_tokens.json` on Drive)
 - **OAuth scope test** — verify `drive.file` token before/after deploy
 
+### 7. Studio Pull (local archive to external disk)
+One-shot CLI to download a session folder from Drive onto a removable volume (no agent, no background sync). See [`studio-pull/README.md`](studio-pull/README.md).
+
+```bash
+npm run studio-pull -- --list
+npm run studio-pull -- --folder-id=FOLDER_ID --dest=/Volumes/YourDisk/SessionName
+```
+
 ## 🌐 Deployment
 
 Branch `security-hardening` is ready for merge → deploy on **Vercel**. Full checklist: [`dokumentacja/wdrozenie_security_hardening.md`](dokumentacja/wdrozenie_security_hardening.md).
