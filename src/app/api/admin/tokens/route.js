@@ -46,6 +46,7 @@ export async function POST(request) {
       type: body.type,
       expiresAt: body.expiresAt || null,
       notes: body.notes,
+      locale: body.locale,
     });
 
     const origin = getUploadOrigin(request);

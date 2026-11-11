@@ -31,6 +31,7 @@ export default function AdminTokenManager() {
     type: 'retainer',
     expiresAt: '',
     notes: '',
+    locale: 'en',
   });
 
   const fetchTokens = useCallback(async () => {
@@ -80,12 +81,13 @@ export default function AdminTokenManager() {
           type: form.type,
           expiresAt: form.expiresAt || null,
           notes: form.notes.trim(),
+          locale: form.locale,
         }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || 'Failed to create token');
 
-      setForm({ token: '', clientName: '', type: 'retainer', expiresAt: '', notes: '' });
+      setForm({ token: '', clientName: '', type: 'retainer', expiresAt: '', notes: '', locale: 'en' });
       setShowForm(false);
       await fetchTokens();
       if (data.token?.uploadUrl) {
@@ -201,6 +203,17 @@ export default function AdminTokenManager() {
                 onChange={(e) => setForm({ ...form, expiresAt: e.target.value })}
               />
             </label>
+            <label>
+              Upload UI language
+              <select
+                className="glass-input admin-input"
+                value={form.locale}
+                onChange={(e) => setForm({ ...form, locale: e.target.value })}
+              >
+                <option value="en">English</option>
+                <option value="pl">Polski</option>
+              </select>
+            </label>
           </div>
           <label>
             Notes (optional)
@@ -231,6 +244,7 @@ export default function AdminTokenManager() {
                 <th>Client</th>
                 <th>Token</th>
                 <th>Type</th>
+                <th>Locale</th>
                 <th>Status</th>
                 <th>Expires</th>
                 <th>Link</th>
@@ -243,6 +257,7 @@ export default function AdminTokenManager() {
                   <td className="admin-cell-name">{t.clientName}</td>
                   <td><code className="admin-code">{t.token}</code></td>
                   <td>{t.type === 'retainer' ? 'Retainer' : 'One-time'}</td>
+                  <td>{t.locale === 'pl' ? 'PL' : 'EN'}</td>
                   <td><StatusBadge status={t.status} /></td>
                   <td className="admin-cell-date">{formatDate(t.expiresAt)}</td>
                   <td>

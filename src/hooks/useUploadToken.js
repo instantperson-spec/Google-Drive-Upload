@@ -6,6 +6,7 @@ export function useUploadToken() {
   const [accessToken, setAccessToken] = useState(undefined);
   const [tokenStatus, setTokenStatus] = useState('checking');
   const [tokenPrefill, setTokenPrefill] = useState(null);
+  const [locale, setLocale] = useState('en');
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -35,9 +36,11 @@ export function useUploadToken() {
           const data = await res.json();
           setTokenStatus('valid');
           setTokenPrefill(data.prefill ?? null);
+          setLocale(data.locale ?? 'en');
         } else {
           setTokenStatus('invalid');
           setTokenPrefill(null);
+          setLocale('en');
         }
       } catch {
         if (!cancelled) setTokenStatus('invalid');
@@ -55,5 +58,5 @@ export function useUploadToken() {
     [accessToken]
   );
 
-  return { accessToken, tokenStatus, setTokenStatus, tokenPrefill, apiHeaders };
+  return { accessToken, tokenStatus, setTokenStatus, tokenPrefill, locale, apiHeaders };
 }

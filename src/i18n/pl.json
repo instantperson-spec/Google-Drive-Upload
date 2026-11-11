@@ -1,0 +1,52 @@
+{
+  "page": {
+    "title": "Wyślij pliki",
+    "subtitle": "Wybierz i prześlij pliki tutaj."
+  },
+  "status": {
+    "checking": "Weryfikacja linku…",
+    "invalidTitle": "Wymagany link dostępu",
+    "revokedTitle": "Link do uploadu nie jest już ważny",
+    "invalidBody": "Ta strona działa tylko z dedykowanym linkiem. Otwórz dokładnie ten link, który dostałeś od studia, lub skontaktuj się z nami.",
+    "revokedBody": "Ten link został unieważniony lub wygasł. Skontaktuj się ze studiem, aby otrzymać nowy link.",
+    "structuringTitle": "Układanie struktury folderów…",
+    "structuringBody": "Transfer zakończony. Porządkujemy pliki w podfolderach na Google Drive — nie zamykaj tej karty.",
+    "successTitle": "Upload zakończony!",
+    "successBody": "Wszystkie pliki zostały przesłane na serwer.",
+    "successButton": "Wyślij kolejne pliki"
+  },
+  "form": {
+    "namePlaceholder": "Imię i nazwisko / nazwa firmy",
+    "emailPlaceholder": "Adres e-mail"
+  },
+  "resume": {
+    "title": "Poprzednia sesja została przerwana",
+    "body": "Wybierz ponownie te same pliki, aby wznowić upload. Już przesłane pliki zostaną pominięte.",
+    "cancel": "Anuluj sesję i zacznij od nowa"
+  },
+  "dropzone": {
+    "main": "Przeciągnij pliki lub cały folder projektu tutaj",
+    "hint": "Zagnieżdżone podfoldery są uwzględniane automatycznie — wybierz lub upuść folder najwyższego poziomu.",
+    "scanning": "Skanowanie struktury folderów…",
+    "selectFiles": "Wybierz pliki",
+    "selectFolder": "Wybierz folder"
+  },
+  "files": {
+    "title": "Wybrane pliki ({count})",
+    "sessionBadge": "Aktywna sesja wznawialna",
+    "removeAria": "Usuń {name}",
+    "completed": "Gotowe"
+  },
+  "delta": {
+    "scanComplete": "Skan zakończony.",
+    "onDriveOne": "{count} plik jest już na Drive (zostanie pominięty).",
+    "onDriveMany": "{count} plików jest już na Drive (zostaną pominięte).",
+    "willUploadOne": "Zostanie przesłany {count} plik.",
+    "willUploadMany": "Zostanie przesłanych {count} plików.",
+    "allDone": "Wszystko jest już na Drive — nic do wysłania."
+  },
+  "upload": {
+    "inProgress": "Trwa upload…",
+    "start": "Rozpocznij upload ({count} plików)"
+  }
+}

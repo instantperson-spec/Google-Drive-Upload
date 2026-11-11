@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { useUploadToken } from '@/hooks/useUploadToken';
+import { useUploadTokenContext } from '@/context/UploadTokenContext';
+import { useT } from '@/context/LocaleContext';
 import { useUploadSession } from '@/hooks/useUploadSession';
 import { useUploadHeartbeat } from '@/hooks/useUploadHeartbeat';
 import { useFileQueue } from '@/hooks/useFileQueue';
@@ -22,8 +23,10 @@ export default function Uploader() {
   const [status, setStatus] = useState('idle');
   const [errorMessage, setErrorMessage] = useState('');
   const [deltaScan, setDeltaScan] = useState(null);
+  const t = useT();
 
-  const { accessToken, tokenStatus, setTokenStatus, tokenPrefill, apiHeaders } = useUploadToken();
+  const { accessToken, tokenStatus, setTokenStatus, tokenPrefill, apiHeaders } =
+    useUploadTokenContext();
   const {
     sessionData,
     uploaderName,
@@ -186,7 +189,9 @@ export default function Uploader() {
         onClick={startUpload}
         disabled={!canUpload}
       >
-        {status === 'uploading' ? 'Upload in progress...' : `Start Upload (${pendingCount} files)`}
+        {status === 'uploading'
+          ? t('upload.inProgress')
+          : t('upload.start', { count: pendingCount })}
       </button>
     </div>
   );

@@ -1,5 +1,7 @@
 'use client';
 
+import { useT } from '@/context/LocaleContext';
+
 function formatMb(size) {
   return `${(size / (1024 * 1024)).toFixed(2)} MB`;
 }
@@ -12,14 +14,15 @@ export default function UploadFileList({
 }) {
   if (!files.length) return null;
 
+  const t = useT();
   const isUploading = uploadStatus === 'uploading';
 
   return (
     <div className="upload-file-list">
       <div className="upload-file-list-header">
-        <h4 className="upload-file-list-title">Selected files ({files.length})</h4>
+        <h4 className="upload-file-list-title">{t('files.title', { count: files.length })}</h4>
         {hasSession && !isUploading && (
-          <span className="upload-session-badge">Resumable Session Active</span>
+          <span className="upload-session-badge">{t('files.sessionBadge')}</span>
         )}
       </div>
       <ul className="upload-file-list-items">
@@ -47,7 +50,7 @@ export default function UploadFileList({
                         e.stopPropagation();
                         onRemoveFile(fObj.id);
                       }}
-                      aria-label={`Remove ${fObj.name}`}
+                      aria-label={t('files.removeAria', { name: fObj.name })}
                     >
                       ×
                     </button>
@@ -62,7 +65,7 @@ export default function UploadFileList({
                   />
                 </div>
               )}
-              {isCompleted && <div className="upload-file-done-label">Completed</div>}
+              {isCompleted && <div className="upload-file-done-label">{t('files.completed')}</div>}
             </li>
           );
         })}

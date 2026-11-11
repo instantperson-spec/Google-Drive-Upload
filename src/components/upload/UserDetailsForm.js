@@ -1,5 +1,7 @@
 'use client';
 
+import { useT } from '@/context/LocaleContext';
+
 export default function UserDetailsForm({
   uploaderName,
   uploaderEmail,
@@ -7,11 +9,12 @@ export default function UserDetailsForm({
   onEmailChange,
   disabled,
 }) {
+  const t = useT();
   return (
     <div className="upload-user-form">
       <input
         type="text"
-        placeholder="Full Name / Company Name"
+        placeholder={t('form.namePlaceholder')}
         value={uploaderName}
         onChange={(e) => onNameChange(e.target.value)}
         disabled={disabled}
@@ -19,7 +22,7 @@ export default function UserDetailsForm({
       />
       <input
         type="email"
-        placeholder="Your Email Address"
+        placeholder={t('form.emailPlaceholder')}
         value={uploaderEmail}
         onChange={(e) => onEmailChange(e.target.value)}
         disabled={disabled}

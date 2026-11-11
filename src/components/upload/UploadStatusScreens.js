@@ -1,26 +1,28 @@
 'use client';
 
+import { useT } from '@/context/LocaleContext';
+
 export function UploadCheckingScreen() {
+  const t = useT();
   return (
     <div className="uploader-container">
       <div className="upload-status-screen">
-        <p className="upload-status-muted">Verifying upload link…</p>
+        <p className="upload-status-muted">{t('status.checking')}</p>
       </div>
     </div>
   );
 }
 
 export function UploadInvalidScreen({ isRevoked }) {
+  const t = useT();
   return (
     <div className="uploader-container">
       <div className="upload-status-screen">
         <h2 className="upload-status-title">
-          {isRevoked ? 'Upload link no longer valid' : 'Access link required'}
+          {isRevoked ? t('status.revokedTitle') : t('status.invalidTitle')}
         </h2>
         <p className="upload-status-muted">
-          {isRevoked
-            ? 'This link has been revoked or has expired. Please contact the studio to receive a new upload link.'
-            : 'This page can only be used with a dedicated upload link. Please open the exact link you received from the studio, or contact us to get one.'}
+          {isRevoked ? t('status.revokedBody') : t('status.invalidBody')}
         </p>
       </div>
     </div>
@@ -28,20 +30,20 @@ export function UploadInvalidScreen({ isRevoked }) {
 }
 
 export function UploadStructuringScreen() {
+  const t = useT();
   return (
     <div className="uploader-container">
       <div className="upload-status-screen">
         <div className="structuring-spinner" aria-hidden="true" />
-        <h2 className="upload-status-title">Compiling folder structure…</h2>
-        <p className="upload-status-muted">
-          Upload finished. Reorganizing files into subfolders on Google Drive — please keep this tab open.
-        </p>
+        <h2 className="upload-status-title">{t('status.structuringTitle')}</h2>
+        <p className="upload-status-muted">{t('status.structuringBody')}</p>
       </div>
     </div>
   );
 }
 
 export function UploadSuccessScreen({ onReset }) {
+  const t = useT();
   return (
     <div className="uploader-container">
       <div className="upload-success-screen">
@@ -49,12 +51,10 @@ export function UploadSuccessScreen({ onReset }) {
           <circle className="checkmark-circle" cx="26" cy="26" r="25" fill="none" stroke="#4ade80" strokeWidth="2" />
           <path className="checkmark-check" fill="none" stroke="#4ade80" strokeWidth="4" d="M14.1 27.2l7.1 7.2 16.7-16.8" />
         </svg>
-        <h2 className="upload-status-title">Upload Complete!</h2>
-        <p className="upload-status-muted upload-success-subtitle">
-          All files have been successfully uploaded to the server.
-        </p>
+        <h2 className="upload-status-title">{t('status.successTitle')}</h2>
+        <p className="upload-status-muted upload-success-subtitle">{t('status.successBody')}</p>
         <button type="button" className="btn" onClick={onReset}>
-          Upload more files
+          {t('status.successButton')}
         </button>
       </div>
     </div>

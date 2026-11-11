@@ -1,0 +1,52 @@
+{
+  "page": {
+    "title": "Send Files",
+    "subtitle": "Please select and upload your files here."
+  },
+  "status": {
+    "checking": "Verifying upload link…",
+    "invalidTitle": "Access link required",
+    "revokedTitle": "Upload link no longer valid",
+    "invalidBody": "This page can only be used with a dedicated upload link. Please open the exact link you received from the studio, or contact us to get one.",
+    "revokedBody": "This link has been revoked or has expired. Please contact the studio to receive a new upload link.",
+    "structuringTitle": "Compiling folder structure…",
+    "structuringBody": "Upload finished. Reorganizing files into subfolders on Google Drive — please keep this tab open.",
+    "successTitle": "Upload Complete!",
+    "successBody": "All files have been successfully uploaded to the server.",
+    "successButton": "Upload more files"
+  },
+  "form": {
+    "namePlaceholder": "Full Name / Company Name",
+    "emailPlaceholder": "Your Email Address"
+  },
+  "resume": {
+    "title": "Previous session was interrupted",
+    "body": "Select the exact same files again to resume your upload. Already completed files will be automatically skipped.",
+    "cancel": "Cancel session and start fresh"
+  },
+  "dropzone": {
+    "main": "Drag and drop files or an entire project folder here",
+    "hint": "Nested subfolders are included automatically — select or drop the top-level folder.",
+    "scanning": "Scanning folder structure…",
+    "selectFiles": "Select Files",
+    "selectFolder": "Select Folder"
+  },
+  "files": {
+    "title": "Selected files ({count})",
+    "sessionBadge": "Resumable Session Active",
+    "removeAria": "Remove {name}",
+    "completed": "Completed"
+  },
+  "delta": {
+    "scanComplete": "Scan complete.",
+    "onDriveOne": "{count} file already on Drive (will be skipped).",
+    "onDriveMany": "{count} files already on Drive (will be skipped).",
+    "willUploadOne": "{count} file will be uploaded.",
+    "willUploadMany": "{count} files will be uploaded.",
+    "allDone": "Everything is already uploaded — nothing left to send."
+  },
+  "upload": {
+    "inProgress": "Upload in progress…",
+    "start": "Start Upload ({count} files)"
+  }
+}

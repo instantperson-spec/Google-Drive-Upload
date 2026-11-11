@@ -1,5 +1,7 @@
 'use client';
 
+import { useT } from '@/context/LocaleContext';
+
 export default function UploadDropZone({
   isDragging,
   isScanning,
@@ -13,6 +15,7 @@ export default function UploadDropZone({
   onOpenFilePicker,
   onOpenFolderPicker,
 }) {
+  const t = useT();
   return (
     <div
       className={`dropzone upload-dropzone ${isDragging ? 'active' : ''}`}
@@ -24,12 +27,10 @@ export default function UploadDropZone({
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
       </svg>
       <div className="dropzone-text">
-        <p>Drag and drop files or an entire project folder here</p>
-        <p className="upload-dropzone-hint">
-          Nested subfolders are included automatically — select or drop the top-level folder.
-        </p>
+        <p>{t('dropzone.main')}</p>
+        <p className="upload-dropzone-hint">{t('dropzone.hint')}</p>
         {isScanning && (
-          <p className="upload-dropzone-scanning">Scanning folder structure…</p>
+          <p className="upload-dropzone-scanning">{t('dropzone.scanning')}</p>
         )}
         <div className="upload-dropzone-actions">
           <button
@@ -38,7 +39,7 @@ export default function UploadDropZone({
             onClick={onOpenFilePicker}
             disabled={uploadDisabled}
           >
-            Select Files
+            {t('dropzone.selectFiles')}
           </button>
           <button
             type="button"
@@ -46,7 +47,7 @@ export default function UploadDropZone({
             onClick={onOpenFolderPicker}
             disabled={uploadDisabled}
           >
-            Select Folder
+            {t('dropzone.selectFolder')}
           </button>
         </div>
       </div>

@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import { google } from 'googleapis';
 import { getAuthClient } from '@/lib/googleAuth';
+import { normalizeLocale, DEFAULT_LOCALE } from '@/lib/locales';
 
 export const TOKEN_FILE_NAME = '_uploader_tokens.json';
 const CACHE_TTL_MS = 30_000;
@@ -179,6 +180,7 @@ export async function createToken({
   notes = '',
   prefillName = null,
   prefillEmail = null,
+  locale = DEFAULT_LOCALE,
 }) {
   if (!validateTokenSlug(token)) {
     throw new Error('Token must be 2–64 characters: letters, numbers, hyphen, underscore.');
@@ -214,6 +216,8 @@ export async function createToken({
     record.prefillEmail = prefillEmail.trim().slice(0, 200);
   }
 
+  record.locale = normalizeLocale(locale);
+
   registry.tokens.push(record);
   await saveRegistry(registry);
   return record;
@@ -248,6 +252,13 @@ export async function getTokenPrefill(tokenString) {
   if (name.length > 200) return null;
 
   return { name, email };
+}
+
+/** UI language for upload screen (`en` default if unset). */
+export async function getTokenLocale(tokenString) {
+  const record = await getTokenRecord(tokenString);
+  if (!record || !isRecordActive(record)) return DEFAULT_LOCALE;
+  return normalizeLocale(record.locale);
 }
 
 export async function revokeToken(id) {
