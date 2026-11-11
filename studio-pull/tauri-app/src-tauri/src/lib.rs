@@ -12,17 +12,37 @@ const UI_HOST: &str = "127.0.0.1:8787";
 
 struct ServerState(Mutex<Option<Child>>);
 
+fn config_root_file() -> PathBuf {
+  let home = std::env::var("HOME").unwrap_or_else(|_| "/tmp".into());
+  PathBuf::from(home)
+    .join("Library/Application Support/StudioConsole")
+    .join("root_path.txt")
+}
+
+fn look_like_root(pb: &PathBuf) -> bool {
+  pb.join("studio-pull/ui-server.mjs").is_file() && pb.join("package.json").is_file()
+}
+
 fn resolve_project_root() -> Option<PathBuf> {
   if let Ok(p) = std::env::var("STUDIO_CONSOLE_ROOT") {
-    let pb = PathBuf::from(p);
-    if pb.join("studio-pull/ui-server.mjs").is_file() {
+    let pb = PathBuf::from(p.trim());
+    if look_like_root(&pb) {
+      return Some(pb);
+    }
+  }
+
+  // Permanent install: path written by `npm run studio-console:install`
+  let cfg = config_root_file();
+  if let Ok(raw) = std::fs::read_to_string(&cfg) {
+    let pb = PathBuf::from(raw.trim());
+    if look_like_root(&pb) {
       return Some(pb);
     }
   }
 
   if let Ok(mut cur) = std::env::current_dir() {
     for _ in 0..10 {
-      if cur.join("studio-pull/ui-server.mjs").is_file() {
+      if look_like_root(&cur) {
         return Some(cur);
       }
       if !cur.pop() {
@@ -34,7 +54,7 @@ fn resolve_project_root() -> Option<PathBuf> {
   if let Ok(exe) = std::env::current_exe() {
     let mut cur = exe;
     for _ in 0..12 {
-      if cur.join("studio-pull/ui-server.mjs").is_file() {
+      if look_like_root(&cur) {
         return Some(cur);
       }
       if !cur.pop() {
