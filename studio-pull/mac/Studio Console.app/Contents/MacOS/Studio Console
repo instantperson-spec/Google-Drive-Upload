@@ -1,8 +1,8 @@
 #!/bin/bash
-# Studio Console — double-click launcher (no Live Progress, no background agent).
+# Studio Console — double-click launcher (Finder has a minimal PATH).
 set -euo pipefail
 
-# MacOS -> Contents -> .app -> mac -> studio-pull -> drive-uploader
+# MacOS → Contents → .app → mac → studio-pull → drive-uploader
 ROOT="$(cd "$(dirname "$0")/../../../../.." && pwd)"
 
 if [[ ! -f "$ROOT/package.json" ]] || [[ ! -f "$ROOT/studio-pull/ui-server.mjs" ]]; then
@@ -10,14 +10,54 @@ if [[ ! -f "$ROOT/package.json" ]] || [[ ! -f "$ROOT/studio-pull/ui-server.mjs" 
   exit 1
 fi
 
-if ! command -v node >/dev/null 2>&1; then
-  osascript -e 'display alert "Studio Console" message "Nie znaleziono Node.js w PATH." as critical'
-  exit 1
+# Finder / LaunchServices do not load .zshrc — seed common Node locations.
+export PATH="/usr/local/bin:/opt/homebrew/bin:/opt/homebrew/opt/node/bin:/opt/homebrew/opt/nodejs/bin:${HOME}/.local/bin:/usr/bin:/bin:${PATH:-}"
+
+if [[ -s "${HOME}/.nvm/nvm.sh" ]]; then
+  # shellcheck disable=SC1091
+  export NVM_DIR="${HOME}/.nvm"
+  # shellcheck disable=SC1090
+  . "${NVM_DIR}/nvm.sh" >/dev/null 2>&1 || true
 fi
 
+resolve_node() {
+  if command -v node >/dev/null 2>&1; then
+    command -v node
+    return 0
+  fi
+  local candidate
+  for candidate in \
+    /usr/local/bin/node \
+    /opt/homebrew/bin/node \
+    /opt/homebrew/opt/node/bin/node \
+    /opt/homebrew/opt/nodejs/bin/node \
+    /opt/homebrew/opt/node.js/bin/node; do
+    if [[ -x "$candidate" ]]; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+  done
+  local nvm_node
+  nvm_node="$(ls -d "${HOME}/.nvm/versions/node"/*/bin/node 2>/dev/null | sort -V | tail -1 || true)"
+  if [[ -n "${nvm_node}" && -x "${nvm_node}" ]]; then
+    printf '%s\n' "$nvm_node"
+    return 0
+  fi
+  return 1
+}
+
+NODE="$(resolve_node)" || {
+  osascript -e 'display alert "Studio Console" message "Nie znaleziono Node.js.\nZainstaluj: https://nodejs.org lub brew install node" as critical'
+  exit 1
+}
+
+NODE_BIN="$(dirname "$NODE")"
+export PATH="${NODE_BIN}:/usr/local/bin:/opt/homebrew/bin:${PATH}"
+
+# Run node directly (skip npm) so LaunchServices PATH cannot break us.
 osascript <<EOF
 tell application "Terminal"
   activate
-  do script "cd $(printf %q "$ROOT") && echo 'Studio Console — zamknij to okno terminala, aby zatrzymać.' && npm run studio-pull:ui"
+  do script "export PATH=$(printf %q "$PATH"); cd $(printf %q "$ROOT") && echo \"Studio Console ($NODE) — zamknij to okno, aby zatrzymać.\" && exec $(printf %q "$NODE") studio-pull/ui-server.mjs"
 end tell
 EOF
