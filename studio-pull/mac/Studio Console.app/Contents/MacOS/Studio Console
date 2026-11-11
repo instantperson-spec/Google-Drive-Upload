@@ -1,20 +1,39 @@
 #!/bin/bash
-# Studio Console — double-click launcher (Finder has a minimal PATH).
+# Studio Console — Finder launcher (no AppleScript string embedding).
 set -euo pipefail
 
-# MacOS → Contents → .app → mac → studio-pull → drive-uploader
 ROOT="$(cd "$(dirname "$0")/../../../../.." && pwd)"
+LOG="$HOME/Library/Logs/StudioConsole.log"
+mkdir -p "$(dirname "$LOG")"
+
+alert() {
+  /usr/bin/osascript -e "display alert \"Studio Console\" message \"$1\" as critical" >/dev/null 2>&1 || true
+}
+
+notify() {
+  /usr/bin/osascript -e "display notification \"$1\" with title \"Studio Console\"" >/dev/null 2>&1 || true
+}
+
+port_in_use() {
+  /usr/sbin/lsof -nP -iTCP:8787 -sTCP:LISTEN >/dev/null 2>&1
+}
 
 if [[ ! -f "$ROOT/package.json" ]] || [[ ! -f "$ROOT/studio-pull/ui-server.mjs" ]]; then
-  osascript -e 'display alert "Studio Console" message "Nie znaleziono katalogu drive-uploader (ui-server.mjs)." as critical'
+  alert "Nie znaleziono katalogu drive-uploader (ui-server.mjs)."
   exit 1
 fi
 
-# Finder / LaunchServices do not load .zshrc — seed common Node locations.
+# Already running — just open UI
+if port_in_use; then
+  /usr/bin/open "http://127.0.0.1:8787" >/dev/null 2>&1 || true
+  notify "Studio Console juz dziala — otwieram przegladarke."
+  exit 0
+fi
+
+# Finder / LaunchServices do not load .zshrc
 export PATH="/usr/local/bin:/opt/homebrew/bin:/opt/homebrew/opt/node/bin:/opt/homebrew/opt/nodejs/bin:${HOME}/.local/bin:/usr/bin:/bin:${PATH:-}"
 
 if [[ -s "${HOME}/.nvm/nvm.sh" ]]; then
-  # shellcheck disable=SC1091
   export NVM_DIR="${HOME}/.nvm"
   # shellcheck disable=SC1090
   . "${NVM_DIR}/nvm.sh" >/dev/null 2>&1 || true
@@ -47,17 +66,50 @@ resolve_node() {
 }
 
 NODE="$(resolve_node)" || {
-  osascript -e 'display alert "Studio Console" message "Nie znaleziono Node.js.\nZainstaluj: https://nodejs.org lub brew install node" as critical'
+  alert "Nie znaleziono Node.js. Zainstaluj: https://nodejs.org lub brew install node"
   exit 1
 }
 
 NODE_BIN="$(dirname "$NODE")"
 export PATH="${NODE_BIN}:/usr/local/bin:/opt/homebrew/bin:${PATH}"
 
-# Run node directly (skip npm) so LaunchServices PATH cannot break us.
-osascript <<EOF
-tell application "Terminal"
-  activate
-  do script "export PATH=$(printf %q "$PATH"); cd $(printf %q "$ROOT") && echo \"Studio Console ($NODE) — zamknij to okno, aby zatrzymać.\" && exec $(printf %q "$NODE") studio-pull/ui-server.mjs"
-end tell
+# macOS mktemp requires XXXXXX at the end of the template
+RUNNER="$(mktemp -t studio-console)"
+mv "$RUNNER" "${RUNNER}.sh"
+RUNNER="${RUNNER}.sh"
+
+cat > "$RUNNER" <<EOF
+#!/bin/bash
+export PATH=$(printf %q "$PATH")
+cd $(printf %q "$ROOT") || exit 1
+echo "Studio Console"
+echo "Node: $(printf %q "$NODE")"
+echo "Zamknij to okno terminala, aby zatrzymac serwer."
+echo "Log: $(printf %q "$LOG")"
+echo
+$(printf %q "$NODE") studio-pull/ui-server.mjs 2>&1 | tee -a $(printf %q "$LOG")
 EOF
+chmod +x "$RUNNER"
+
+if /usr/bin/open -a Terminal "$RUNNER" 2>>"$LOG"; then
+  notify "Uruchamiam Studio Console…"
+  (
+    for _ in 1 2 3 4 5 6 7 8; do
+      if port_in_use; then
+        /usr/bin/open "http://127.0.0.1:8787" >/dev/null 2>&1 || true
+        break
+      fi
+      sleep 0.4
+    done
+    sleep 20
+    rm -f "$RUNNER"
+  ) &
+  exit 0
+fi
+
+alert "Nie udalo sie otworzyc Terminal.app — startuje w tle."
+nohup "$NODE" "$ROOT/studio-pull/ui-server.mjs" >>"$LOG" 2>&1 &
+sleep 0.8
+/usr/bin/open "http://127.0.0.1:8787" >/dev/null 2>&1 || true
+notify "Studio Console dziala na http://127.0.0.1:8787"
+rm -f "$RUNNER"
