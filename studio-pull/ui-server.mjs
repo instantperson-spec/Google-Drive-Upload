@@ -19,6 +19,7 @@ import {
   createTokenLocal,
   patchTokenLocal,
   setTokenLocaleLocal,
+  deleteTokenLocal,
 } from './lib/tokenOps.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -353,6 +354,11 @@ const server = http.createServer(async (req, res) => {
     const tokenMatch = pathname.match(/^\/api\/tokens\/([^/]+)$/);
     if (req.method === 'PATCH' && tokenMatch) {
       await handleTokenPatch(decodeURIComponent(tokenMatch[1]), req, res);
+      return;
+    }
+    if (req.method === 'DELETE' && tokenMatch) {
+      await deleteTokenLocal(decodeURIComponent(tokenMatch[1]));
+      sendJson(res, 200, { success: true });
       return;
     }
 

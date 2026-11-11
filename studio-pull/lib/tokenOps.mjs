@@ -155,3 +155,15 @@ export async function setTokenLocaleLocal(id, locale) {
   await writeRegistry(drive, mainFolderId, fileId, registry);
   return { ...record, status: statusOf(record), uploadUrl: buildUploadUrl(record.token, env) };
 }
+
+export async function deleteTokenLocal(id) {
+  const { drive, mainFolderId } = createDriveClient();
+  const { fileId, registry } = await readRegistry(drive, mainFolderId);
+  const initialLength = registry.tokens.length;
+  registry.tokens = registry.tokens.filter((t) => t.id !== id);
+  if (registry.tokens.length === initialLength) {
+    throw new Error('Token not found.');
+  }
+  await writeRegistry(drive, mainFolderId, fileId, registry);
+  return { success: true };
+}

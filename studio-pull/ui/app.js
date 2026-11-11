@@ -414,6 +414,24 @@
         });
         actions.appendChild(loc);
 
+        const del = document.createElement('button');
+        del.type = 'button';
+        del.className = 'btn secondary tiny';
+        del.textContent = 'Delete';
+        del.addEventListener('click', async () => {
+          if (!window.confirm(`Na pewno usunąć token „${t.token}”?`)) return;
+          const res = await fetch(`/api/tokens/${encodeURIComponent(t.id)}`, {
+            method: 'DELETE',
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            window.alert(data.error || 'Delete failed');
+            return;
+          }
+          loadTokens();
+        });
+        actions.appendChild(del);
+
         tbody.appendChild(tr);
       }
       table.appendChild(tbody);
