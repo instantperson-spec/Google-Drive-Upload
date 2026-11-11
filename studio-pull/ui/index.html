@@ -3,44 +3,96 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Studio Pull</title>
+  <title>Studio Console</title>
   <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
   <main class="wrap">
     <header>
-      <h1>Studio Pull</h1>
-      <p class="sub">Ściągnij sesję z Drive na dysk zewnętrzny — ręczny start, bez agenta.</p>
+      <h1>Studio Console</h1>
+      <p class="sub">Lokalny panel studia — Pull na dysk zewnętrzny + tokeny. Bez agenta, bez Live Progress.</p>
+      <nav class="tabs" role="tablist">
+        <button type="button" class="tab active" data-tab="pull">Pull</button>
+        <button type="button" class="tab" data-tab="tokens">Tokeny</button>
+      </nav>
     </header>
 
-    <section class="card">
-      <div class="row">
-        <h2>Sesja na Drive</h2>
-        <button type="button" id="btn-refresh" class="btn secondary">Odśwież</button>
-      </div>
-      <div id="sessions" class="sessions">Ładowanie…</div>
-    </section>
+    <div id="panel-pull" class="panel">
+      <section class="card">
+        <div class="row">
+          <h2>Sesje na Drive</h2>
+          <div class="row-actions">
+            <button type="button" id="btn-refresh" class="btn secondary">Odśwież</button>
+          </div>
+        </div>
+        <div id="sessions" class="sessions">Ładowanie…</div>
+      </section>
 
-    <section class="card">
-      <h2>Folder docelowy</h2>
-      <div class="row">
-        <input id="dest" type="text" placeholder="/Volumes/VIDEO_16TB/Sesja" spellcheck="false" />
-        <button type="button" id="btn-pick" class="btn secondary">Wybierz folder…</button>
-      </div>
-      <p id="dest-error" class="error hidden"></p>
-    </section>
+      <section class="card">
+        <div class="row">
+          <h2>Podgląd plików</h2>
+          <button type="button" id="btn-preview" class="btn secondary" disabled>Pokaż pliki</button>
+        </div>
+        <div id="preview-meta" class="muted">Zaznacz sesję (radio podglądu) i kliknij „Pokaż pliki”.</div>
+        <div id="preview" class="preview hidden"></div>
+      </section>
 
-    <section class="card actions">
-      <button type="button" id="btn-start" class="btn primary" disabled>Start</button>
-      <button type="button" id="btn-cancel" class="btn secondary" disabled>Anuluj</button>
-    </section>
+      <section class="card">
+        <h2>Folder bazowy (dysk zewnętrzny)</h2>
+        <p class="hint">Każda sesja trafi do podfolderu: <code>bazowy/Nazwa sesji/</code></p>
+        <div class="row">
+          <input id="dest" type="text" placeholder="/Volumes/VIDEO_16TB/Incoming" spellcheck="false" />
+          <button type="button" id="btn-pick" class="btn secondary">Wybierz folder…</button>
+        </div>
+        <p id="dest-error" class="error hidden"></p>
+      </section>
 
-    <section class="card">
-      <h2>Postęp</h2>
-      <div id="status" class="status">Gotowy.</div>
-      <div class="bar-track"><div id="bar" class="bar-fill" style="width:0%"></div></div>
-      <pre id="log" class="log"></pre>
-    </section>
+      <section class="card actions">
+        <button type="button" id="btn-start" class="btn primary" disabled>Start kolejki</button>
+        <button type="button" id="btn-cancel" class="btn secondary" disabled>Anuluj</button>
+      </section>
+
+      <section class="card">
+        <h2>Postęp</h2>
+        <div id="status" class="status">Gotowy.</div>
+        <div class="bar-track"><div id="bar" class="bar-fill" style="width:0%"></div></div>
+        <pre id="log" class="log"></pre>
+      </section>
+    </div>
+
+    <div id="panel-tokens" class="panel hidden">
+      <section class="card">
+        <div class="row">
+          <h2>Tokeny klientów</h2>
+          <button type="button" id="btn-tokens-refresh" class="btn secondary">Odśwież</button>
+        </div>
+        <p class="hint">Te same dane co Vercel <code>/admin</code> (<code>_uploader_tokens.json</code>). Vercel admin zostaje awaryjnie.</p>
+        <div id="tokens" class="tokens">Ładowanie…</div>
+      </section>
+
+      <section class="card">
+        <h2>Nowy token</h2>
+        <form id="token-form" class="token-form">
+          <label>Slug <input name="token" required pattern="[a-zA-Z0-9_-]{2,64}" placeholder="StudioAlfa" /></label>
+          <label>Klient <input name="clientName" required placeholder="Studio Alfa" /></label>
+          <label>Typ
+            <select name="type">
+              <option value="retainer">Retainer</option>
+              <option value="one-time">One-time</option>
+            </select>
+          </label>
+          <label>Locale
+            <select name="locale">
+              <option value="en">EN</option>
+              <option value="pl">PL</option>
+            </select>
+          </label>
+          <label>Notatki <input name="notes" placeholder="opcjonalnie" /></label>
+          <button type="submit" class="btn primary">Utwórz</button>
+        </form>
+        <p id="token-form-error" class="error hidden"></p>
+      </section>
+    </div>
   </main>
   <script src="/app.js"></script>
 </body>

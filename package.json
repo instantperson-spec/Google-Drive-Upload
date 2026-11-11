@@ -9,7 +9,8 @@
     "lint": "eslint",
     "check-oauth-scopes": "node scripts/check-oauth-scopes.mjs",
     "studio-pull": "node studio-pull/pull.mjs",
-    "studio-pull:ui": "node studio-pull/ui-server.mjs"
+    "studio-pull:ui": "node studio-pull/ui-server.mjs",
+    "studio-console": "node studio-pull/ui-server.mjs"
   },
   "dependencies": {
     "googleapis": "^178.1.1",

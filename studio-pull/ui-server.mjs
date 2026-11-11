@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * Studio Pull UI — local HTTP server (127.0.0.1 only).
- * Manual start. Closing this process stops everything.
+ * Studio Console — local HTTP server (127.0.0.1 only).
+ * Pull (multi-session) + Tokens. No Live Progress. No background agent.
  */
 import http from 'http';
 import fs from 'fs';
@@ -13,6 +13,13 @@ import { assertSafeDest } from './lib/safety.mjs';
 import { listSessionFolders, walkDriveFolder } from './lib/driveWalk.mjs';
 import { downloadFiles, formatBytes } from './lib/download.mjs';
 import { pickFolderMac } from './lib/pickFolder.mjs';
+import { joinSessionDest } from './lib/paths.mjs';
+import {
+  listTokensLocal,
+  createTokenLocal,
+  patchTokenLocal,
+  setTokenLocaleLocal,
+} from './lib/tokenOps.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const UI_DIR = path.join(__dirname, 'ui');
@@ -81,12 +88,29 @@ async function readBody(req) {
 
 async function handleSessions(res) {
   const { drive, mainFolderId } = createDriveClient();
-  const folders = await listSessionFolders(drive, mainFolderId, 40);
+  const folders = await listSessionFolders(drive, mainFolderId, 50);
   sendJson(res, 200, {
     sessions: folders.map((f) => ({
       folderId: f.id,
       name: f.name,
       modifiedTime: f.modifiedTime || null,
+    })),
+  });
+}
+
+async function handleSessionFiles(folderId, res) {
+  const { drive } = createDriveClient();
+  const files = await walkDriveFolder(drive, folderId);
+  const totalBytes = files.reduce((s, f) => s + f.size, 0);
+  sendJson(res, 200, {
+    folderId,
+    fileCount: files.length,
+    totalBytes,
+    totalLabel: formatBytes(totalBytes),
+    files: files.map((f) => ({
+      relativePath: f.relativePath,
+      size: f.size,
+      sizeLabel: formatBytes(f.size),
     })),
   });
 }
@@ -105,6 +129,10 @@ async function handlePickDest(res) {
   }
 }
 
+/**
+ * Body: { dest, sessions: [{ folderId, name }] }
+ * dest = root on external disk; each session downloads into dest/<sessionName>/
+ */
 async function handlePull(req, res) {
   if (jobRunning) {
     sendJson(res, 409, { error: 'A pull is already running.' });
@@ -119,16 +147,20 @@ async function handlePull(req, res) {
     return;
   }
 
-  const folderId = body.folderId;
   const destInput = body.dest;
-  if (!folderId || !destInput) {
-    sendJson(res, 400, { error: 'folderId and dest are required.' });
+  let sessions = Array.isArray(body.sessions) ? body.sessions : [];
+  if ((!sessions.length) && body.folderId) {
+    sessions = [{ folderId: body.folderId, name: body.name || body.folderId }];
+  }
+  sessions = sessions.filter((s) => s && s.folderId);
+  if (!destInput || !sessions.length) {
+    sendJson(res, 400, { error: 'dest and sessions[] (or folderId) are required.' });
     return;
   }
 
-  let dest;
+  let destRoot;
   try {
-    ({ dest } = assertSafeDest(destInput, { create: true }));
+    ({ dest: destRoot } = assertSafeDest(destInput, { create: true }));
   } catch (err) {
     sendJson(res, 400, { error: err.message || String(err) });
     return;
@@ -136,48 +168,93 @@ async function handlePull(req, res) {
 
   jobRunning = true;
   cancelRequested = false;
-  sendJson(res, 202, { ok: true, dest });
+  sendJson(res, 202, { ok: true, dest: destRoot, sessionCount: sessions.length });
 
-  // Run job after response
   setImmediate(async () => {
+    const totals = {
+      downloaded: 0,
+      skipped: 0,
+      failed: 0,
+      bytesDownloaded: 0,
+    };
+
     try {
       const { drive } = createDriveClient();
-      broadcast({ type: 'listing', folderId, dest });
-      const files = await walkDriveFolder(drive, folderId);
-      const totalBytes = files.reduce((s, f) => s + f.size, 0);
       broadcast({
-        type: 'listing_done',
-        fileCount: files.length,
-        totalBytes,
-        totalLabel: formatBytes(totalBytes),
+        type: 'queue_start',
+        sessionCount: sessions.length,
+        dest: destRoot,
       });
 
-      if (!files.length) {
+      for (let si = 0; si < sessions.length; si += 1) {
+        if (cancelRequested) break;
+        const session = sessions[si];
+        const sessionDest = joinSessionDest(destRoot, session.name, session.folderId);
+        fs.mkdirSync(sessionDest, { recursive: true });
+
         broadcast({
-          type: 'summary',
-          downloaded: 0,
-          skipped: 0,
-          failed: 0,
-          bytesDownloaded: 0,
-          bytesLabel: '0 B',
-          dest,
-          empty: true,
+          type: 'session_start',
+          index: si + 1,
+          total: sessions.length,
+          folderId: session.folderId,
+          name: session.name,
+          dest: sessionDest,
         });
-        return;
-      }
 
-      const stats = await downloadFiles(drive, files, dest, {
-        failFast: false,
-        shouldCancel: () => cancelRequested,
-        onEvent: (event) => broadcast(event),
-      });
+        broadcast({ type: 'listing', folderId: session.folderId, dest: sessionDest });
+        const files = await walkDriveFolder(drive, session.folderId);
+        const totalBytes = files.reduce((s, f) => s + f.size, 0);
+        broadcast({
+          type: 'listing_done',
+          folderId: session.folderId,
+          fileCount: files.length,
+          totalBytes,
+          totalLabel: formatBytes(totalBytes),
+        });
+
+        if (!files.length) {
+          broadcast({
+            type: 'session_done',
+            folderId: session.folderId,
+            name: session.name,
+            empty: true,
+          });
+          continue;
+        }
+
+        const stats = await downloadFiles(drive, files, sessionDest, {
+          failFast: false,
+          shouldCancel: () => cancelRequested,
+          onEvent: (event) =>
+            broadcast({
+              ...event,
+              sessionIndex: si + 1,
+              sessionTotal: sessions.length,
+              sessionName: session.name,
+            }),
+        });
+
+        totals.downloaded += stats.downloaded;
+        totals.skipped += stats.skipped;
+        totals.failed += stats.failed;
+        totals.bytesDownloaded += stats.bytesDownloaded;
+
+        broadcast({
+          type: 'session_done',
+          folderId: session.folderId,
+          name: session.name,
+          ...stats,
+          bytesLabel: formatBytes(stats.bytesDownloaded),
+        });
+      }
 
       broadcast({
         type: 'summary',
-        ...stats,
-        bytesLabel: formatBytes(stats.bytesDownloaded),
-        dest,
+        ...totals,
+        bytesLabel: formatBytes(totals.bytesDownloaded),
+        dest: destRoot,
         cancelled: cancelRequested,
+        sessionCount: sessions.length,
       });
     } catch (err) {
       broadcast({ type: 'fatal', message: err.message || String(err) });
@@ -210,6 +287,28 @@ function handleCancel(res) {
   sendJson(res, 200, { ok: true, running: true, cancelRequested: true });
 }
 
+async function handleTokensGet(res) {
+  const tokens = await listTokensLocal();
+  sendJson(res, 200, { tokens });
+}
+
+async function handleTokensPost(req, res) {
+  const body = await readBody(req);
+  const token = await createTokenLocal(body);
+  sendJson(res, 201, { token });
+}
+
+async function handleTokenPatch(id, req, res) {
+  const body = await readBody(req);
+  if (body.locale && body.action === 'locale') {
+    const token = await setTokenLocaleLocal(id, body.locale);
+    sendJson(res, 200, { token });
+    return;
+  }
+  const token = await patchTokenLocal(id, body.action);
+  sendJson(res, 200, { token });
+}
+
 const server = http.createServer(async (req, res) => {
   try {
     const url = new URL(req.url, `http://${HOST}:${PORT}`);
@@ -219,6 +318,13 @@ const server = http.createServer(async (req, res) => {
       await handleSessions(res);
       return;
     }
+
+    const filesMatch = pathname.match(/^\/api\/sessions\/([^/]+)\/files$/);
+    if (req.method === 'GET' && filesMatch) {
+      await handleSessionFiles(decodeURIComponent(filesMatch[1]), res);
+      return;
+    }
+
     if (req.method === 'POST' && pathname === '/api/pick-dest') {
       await handlePickDest(res);
       return;
@@ -235,6 +341,21 @@ const server = http.createServer(async (req, res) => {
       handleCancel(res);
       return;
     }
+
+    if (req.method === 'GET' && pathname === '/api/tokens') {
+      await handleTokensGet(res);
+      return;
+    }
+    if (req.method === 'POST' && pathname === '/api/tokens') {
+      await handleTokensPost(req, res);
+      return;
+    }
+    const tokenMatch = pathname.match(/^\/api\/tokens\/([^/]+)$/);
+    if (req.method === 'PATCH' && tokenMatch) {
+      await handleTokenPatch(decodeURIComponent(tokenMatch[1]), req, res);
+      return;
+    }
+
     if (req.method === 'GET' && !pathname.startsWith('/api/')) {
       serveStatic(req, res);
       return;
@@ -249,11 +370,25 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-server.listen(PORT, HOST, () => {
-  const url = `http://${HOST}:${PORT}`;
-  console.log(`Studio Pull UI → ${url}`);
-  console.log('Close this terminal to stop. No background agent.');
-  if (process.platform === 'darwin') {
-    exec(`open "${url}"`);
-  }
-});
+export function startStudioConsole({ openBrowser = true } = {}) {
+  return new Promise((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(PORT, HOST, () => {
+      const url = `http://${HOST}:${PORT}`;
+      console.log(`Studio Console → ${url}`);
+      console.log('Close this process to stop. No background agent. No Live Progress.');
+      if (openBrowser && process.platform === 'darwin') {
+        exec(`open "${url}"`);
+      }
+      resolve({ url, server, host: HOST, port: PORT });
+    });
+  });
+}
+
+const autoStart = process.env.STUDIO_CONSOLE_NO_AUTO !== '1';
+if (autoStart) {
+  startStudioConsole().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
+}

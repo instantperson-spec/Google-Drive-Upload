@@ -84,14 +84,14 @@ Set `ADMIN_SECRET` in your environment, then open `/admin` to monitor uploads:
 - **Client tokens** — create, copy upload links, revoke/restore tokens (stored in `_uploader_tokens.json` on Drive)
 - **OAuth scope test** — verify `drive.file` token before/after deploy
 
-### 7. Studio Pull (local archive to external disk)
-One-shot CLI to download a session folder from Drive onto a removable volume (no agent, no background sync). See [`studio-pull/README.md`](studio-pull/README.md).
+### 7. Studio Console (local)
+Local studio panel: multi-session Pull to external disk + token manager. No agent, no Live Progress. Vercel `/admin` remains as emergency fallback. See [`studio-pull/README.md`](studio-pull/README.md).
 
 ```bash
-npm run studio-pull:ui
-# or CLI:
+npm run studio-console
+# or double-click studio-pull/mac/Studio Console.app
+# CLI still available:
 npm run studio-pull -- --list
-npm run studio-pull -- --folder-id=FOLDER_ID --dest=/Volumes/YourDisk/SessionName
 ```
 
 ## 🌐 Deployment

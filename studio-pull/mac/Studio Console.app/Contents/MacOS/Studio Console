@@ -1,0 +1,23 @@
+#!/bin/bash
+# Studio Console — double-click launcher (no Live Progress, no background agent).
+set -euo pipefail
+
+# MacOS -> Contents -> .app -> mac -> studio-pull -> drive-uploader
+ROOT="$(cd "$(dirname "$0")/../../../../.." && pwd)"
+
+if [[ ! -f "$ROOT/package.json" ]] || [[ ! -f "$ROOT/studio-pull/ui-server.mjs" ]]; then
+  osascript -e 'display alert "Studio Console" message "Nie znaleziono katalogu drive-uploader (ui-server.mjs)." as critical'
+  exit 1
+fi
+
+if ! command -v node >/dev/null 2>&1; then
+  osascript -e 'display alert "Studio Console" message "Nie znaleziono Node.js w PATH." as critical'
+  exit 1
+fi
+
+osascript <<EOF
+tell application "Terminal"
+  activate
+  do script "cd $(printf %q "$ROOT") && echo 'Studio Console — zamknij to okno terminala, aby zatrzymać.' && npm run studio-pull:ui"
+end tell
+EOF
