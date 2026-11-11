@@ -391,13 +391,18 @@ const server = http.createServer(async (req, res) => {
 });
 
 export function startStudioConsole({ openBrowser = true } = {}) {
+  const wantBrowser =
+    openBrowser &&
+    process.env.STUDIO_CONSOLE_NO_BROWSER !== '1' &&
+    process.env.STUDIO_CONSOLE_EMBEDDED !== '1';
+
   return new Promise((resolve, reject) => {
     server.once('error', reject);
     server.listen(PORT, HOST, () => {
       const url = `http://${HOST}:${PORT}`;
       console.log(`Studio Console → ${url}`);
       console.log('Close this process to stop. No background agent. No Live Progress.');
-      if (openBrowser && process.platform === 'darwin') {
+      if (wantBrowser && process.platform === 'darwin') {
         exec(`open "${url}"`);
       }
       resolve({ url, server, host: HOST, port: PORT });

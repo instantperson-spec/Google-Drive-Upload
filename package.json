@@ -10,7 +10,9 @@
     "check-oauth-scopes": "node scripts/check-oauth-scopes.mjs",
     "studio-pull": "node studio-pull/pull.mjs",
     "studio-pull:ui": "node studio-pull/ui-server.mjs",
-    "studio-console": "node studio-pull/ui-server.mjs"
+    "studio-console": "node studio-pull/ui-server.mjs",
+    "studio-console:app": "npm --prefix studio-pull/tauri-app run dev",
+    "studio-console:build": "npm --prefix studio-pull/tauri-app run build"
   },
   "dependencies": {
     "googleapis": "^178.1.1",

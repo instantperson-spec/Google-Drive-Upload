@@ -39,8 +39,13 @@ npm run studio-pull -- --folder-id=ID --dest=/Volumes/DISK/Folder
 
 ## Apka Mac / Tauri
 
-- **Działa teraz:** `Studio Console.app` (launcher → Terminal + Node UI).
-- **Tauri:** wymaga Rust — zobacz [`tauri/README.md`](tauri/README.md).
+- **Okienko (Tauri):** [`mac/Studio Console.app`](mac/Studio%20Console.app) — natywne okno, bez przeglądarki.
+- **Stary launcher (browser):** `mac/Studio Console (browser-launcher).app`
+- Build: `npm run studio-console:build` (wymaga Rust). Szczegóły: [`tauri-app/README.md`](tauri-app/README.md).
+
+### Auth lokalnie
+
+Brak hasła admina. Apka używa `.env.local` (Google OAuth) i działa tylko na `127.0.0.1`. Vercel `/admin` = awaryjny dostęp z hasłem.
 
 ## Safety
 
