@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Studio Pull</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <main class="wrap">
+    <header>
+      <h1>Studio Pull</h1>
+      <p class="sub">Ściągnij sesję z Drive na dysk zewnętrzny — ręczny start, bez agenta.</p>
+    </header>
+
+    <section class="card">
+      <div class="row">
+        <h2>Sesja na Drive</h2>
+        <button type="button" id="btn-refresh" class="btn secondary">Odśwież</button>
+      </div>
+      <div id="sessions" class="sessions">Ładowanie…</div>
+    </section>
+
+    <section class="card">
+      <h2>Folder docelowy</h2>
+      <div class="row">
+        <input id="dest" type="text" readonly placeholder="/Volumes/… (wybierz folder)" />
+        <button type="button" id="btn-pick" class="btn secondary">Wybierz folder…</button>
+      </div>
+      <p id="dest-error" class="error hidden"></p>
+    </section>
+
+    <section class="card actions">
+      <button type="button" id="btn-start" class="btn primary" disabled>Start</button>
+      <button type="button" id="btn-cancel" class="btn secondary" disabled>Anuluj</button>
+    </section>
+
+    <section class="card">
+      <h2>Postęp</h2>
+      <div id="status" class="status">Gotowy.</div>
+      <div class="bar-track"><div id="bar" class="bar-fill" style="width:0%"></div></div>
+      <pre id="log" class="log"></pre>
+    </section>
+  </main>
+  <script src="/app.js"></script>
+</body>
+</html>

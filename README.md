@@ -88,6 +88,8 @@ Set `ADMIN_SECRET` in your environment, then open `/admin` to monitor uploads:
 One-shot CLI to download a session folder from Drive onto a removable volume (no agent, no background sync). See [`studio-pull/README.md`](studio-pull/README.md).
 
 ```bash
+npm run studio-pull:ui
+# or CLI:
 npm run studio-pull -- --list
 npm run studio-pull -- --folder-id=FOLDER_ID --dest=/Volumes/YourDisk/SessionName
 ```

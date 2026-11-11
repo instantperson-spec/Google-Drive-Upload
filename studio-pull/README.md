@@ -13,7 +13,16 @@ Lokalny, **ręcznie uruchamiany** downloader sesji z Google Drive na dysk zewnę
 - Uzupełnione [`.env.local`](../.env.local) (OAuth + `GOOGLE_DRIVE_FOLDER_ID`)
 - Podpięty dysk zewnętrzny
 
-## Użycie
+## Użycie — UI (zalecane)
+
+```bash
+npm run studio-pull:ui
+```
+
+Otwiera `http://127.0.0.1:8787` w przeglądarce: wybór sesji, folder docelowy (dialog macOS), Start, postęp.  
+Zamknięcie procesu w terminalu = koniec (brak agenta w tle).
+
+## Użycie — CLI
 
 Z katalogu `drive-uploader`:
 
