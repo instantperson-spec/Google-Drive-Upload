@@ -26,10 +26,29 @@
   }
 
   function updateStartEnabled() {
-    btnStart.disabled = running || !selectedFolderId || !destPath;
+    const canStart = !running && !!selectedFolderId && !!destPath;
+    btnStart.disabled = !canStart;
     btnCancel.disabled = !running;
     btnPick.disabled = running;
     btnRefresh.disabled = running;
+
+    if (!running && !canStart) {
+      if (!selectedFolderId && !destPath) {
+        setStatus('Wybierz sesję i folder docelowy.');
+      } else if (!selectedFolderId) {
+        setStatus('Wybierz sesję z listy powyżej.');
+      } else if (!destPath) {
+        setStatus('Wybierz lub wpisz folder docelowy na dysku zewnętrznym.');
+      }
+    }
+  }
+
+  function selectSession(folderId) {
+    selectedFolderId = folderId;
+    sessionsEl.querySelectorAll('.session').forEach((el) => {
+      el.classList.toggle('selected', el.dataset.folderId === folderId);
+    });
+    updateStartEnabled();
   }
 
   function setProgress(index, total) {
@@ -56,7 +75,8 @@
       for (const s of list) {
         const btn = document.createElement('button');
         btn.type = 'button';
-        btn.className = 'session' + (s.folderId === selectedFolderId ? ' selected' : '');
+        btn.dataset.folderId = s.folderId;
+        btn.className = 'session';
         const when = s.modifiedTime
           ? new Date(s.modifiedTime).toLocaleString()
           : '—';
@@ -64,14 +84,13 @@
           `<div class="session-name"></div><div class="session-meta"></div>`;
         btn.querySelector('.session-name').textContent = s.name;
         btn.querySelector('.session-meta').textContent = `${s.folderId} · ${when}`;
-        btn.addEventListener('click', () => {
-          selectedFolderId = s.folderId;
-          sessionsEl.querySelectorAll('.session').forEach((el) => el.classList.remove('selected'));
-          btn.classList.add('selected');
-          updateStartEnabled();
-        });
+        btn.addEventListener('click', () => selectSession(s.folderId));
         sessionsEl.appendChild(btn);
       }
+
+      const stillThere = list.some((s) => s.folderId === selectedFolderId);
+      const pickId = stillThere ? selectedFolderId : list[0].folderId;
+      selectSession(pickId);
     } catch (err) {
       sessionsEl.textContent = err.message || String(err);
     }
@@ -94,13 +113,20 @@
         setStatus('Folder odrzucony (safety).', 'error');
         return;
       }
-      destPath = data.path;
+      destPath = String(data.path || '').trim();
       destEl.value = destPath;
       setStatus(`Cel: ${destPath}`);
       updateStartEnabled();
     } catch (err) {
       setStatus(err.message || String(err), 'error');
     }
+  }
+
+  function onDestTyped() {
+    destPath = destEl.value.trim();
+    destErrorEl.classList.add('hidden');
+    updateStartEnabled();
+    if (destPath) setStatus(`Cel: ${destPath}`);
   }
 
   async function startPull() {
@@ -205,6 +231,8 @@
   btnPick.addEventListener('click', pickDest);
   btnStart.addEventListener('click', startPull);
   btnCancel.addEventListener('click', cancelPull);
+  destEl.addEventListener('input', onDestTyped);
+  destEl.addEventListener('change', onDestTyped);
 
   updateStartEnabled();
   loadSessions();
