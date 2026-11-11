@@ -331,56 +331,80 @@
     }
   }
 
+  function statusBadgeClass(status) {
+    if (status === 'active') return 'token-badge token-badge-active';
+    if (status === 'expired') return 'token-badge token-badge-expired';
+    return 'token-badge token-badge-revoked';
+  }
+
   async function loadTokens() {
     tokensEl.textContent = 'Ładowanie…';
+    const countEl = $('tokens-active-count');
     try {
       const res = await fetch('/api/tokens');
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Błąd tokenów');
       const list = data.tokens || [];
+      const activeCount = list.filter((t) => t.status === 'active').length;
+      if (activeCount > 0) {
+        countEl.textContent = `${activeCount} active`;
+        countEl.classList.remove('hidden');
+      } else {
+        countEl.classList.add('hidden');
+      }
       if (!list.length) {
-        tokensEl.textContent = 'Brak tokenów.';
+        tokensEl.textContent = 'No tokens yet.';
         return;
       }
       tokensEl.innerHTML = '';
+      const wrap = document.createElement('div');
+      wrap.className = 'token-table-wrap';
       const table = document.createElement('table');
       table.className = 'token-table';
       table.innerHTML =
-        '<thead><tr><th>Klient</th><th>Token</th><th>Locale</th><th>Status</th><th>Wygasa</th><th></th></tr></thead>';
+        '<thead><tr><th>Client</th><th>Token</th><th>Type</th><th>Locale</th><th>Status</th><th>Expires</th><th>Link</th><th></th></tr></thead>';
       const tbody = document.createElement('tbody');
       for (const t of list) {
         const tr = document.createElement('tr');
+        if (t.status !== 'active') tr.className = 'inactive';
         tr.innerHTML = `
-          <td></td><td><code></code></td><td></td><td></td><td></td>
+          <td></td><td><code class="token-code"></code></td><td></td><td></td>
+          <td><span class="${statusBadgeClass(t.status)}"></span></td>
+          <td class="token-cell-date"></td>
+          <td class="token-actions"></td>
           <td class="token-actions"></td>`;
         tr.cells[0].textContent = t.clientName;
         tr.cells[1].querySelector('code').textContent = t.token;
-        tr.cells[2].textContent = (t.locale || 'en').toUpperCase();
-        tr.cells[3].textContent = t.status;
-        tr.cells[4].textContent = formatExpires(t.expiresAt);
-        const actions = tr.cells[5];
+        tr.cells[2].textContent = t.type === 'one-time' ? 'One-time' : 'Retainer';
+        tr.cells[3].textContent = (t.locale || 'en').toUpperCase();
+        tr.cells[4].querySelector('span').textContent = t.status;
+        tr.cells[5].textContent = formatExpires(t.expiresAt);
+        const linkCell = tr.cells[6];
+        const actions = tr.cells[7];
 
-        const copyBtn = document.createElement('button');
-        copyBtn.type = 'button';
-        copyBtn.className = 'btn secondary tiny';
-        copyBtn.textContent = 'Copy link';
-        copyBtn.addEventListener('click', async () => {
-          try {
-            await navigator.clipboard.writeText(t.uploadUrl);
-            copyBtn.textContent = 'Copied';
-            setTimeout(() => {
-              copyBtn.textContent = 'Copy link';
-            }, 1500);
-          } catch {
-            window.prompt('Copy:', t.uploadUrl);
-          }
-        });
-        actions.appendChild(copyBtn);
+        if (t.status === 'active') {
+          const copyBtn = document.createElement('button');
+          copyBtn.type = 'button';
+          copyBtn.className = 'btn ghost tiny';
+          copyBtn.textContent = 'Copy link';
+          copyBtn.addEventListener('click', async () => {
+            try {
+              await navigator.clipboard.writeText(t.uploadUrl);
+              copyBtn.textContent = 'Copied';
+              setTimeout(() => {
+                copyBtn.textContent = 'Copy link';
+              }, 1500);
+            } catch {
+              window.prompt('Copy:', t.uploadUrl);
+            }
+          });
+          linkCell.appendChild(copyBtn);
+        }
 
         if (t.status === 'active') {
           const rev = document.createElement('button');
           rev.type = 'button';
-          rev.className = 'btn secondary tiny';
+          rev.className = 'btn danger tiny';
           rev.textContent = 'Revoke';
           rev.addEventListener('click', async () => {
             await fetch(`/api/tokens/${encodeURIComponent(t.id)}`, {
@@ -394,7 +418,7 @@
         } else if (t.status === 'revoked') {
           const rest = document.createElement('button');
           rest.type = 'button';
-          rest.className = 'btn secondary tiny';
+          rest.className = 'btn ok tiny';
           rest.textContent = 'Restore';
           rest.addEventListener('click', async () => {
             await fetch(`/api/tokens/${encodeURIComponent(t.id)}`, {
@@ -409,7 +433,7 @@
 
         const loc = document.createElement('button');
         loc.type = 'button';
-        loc.className = 'btn secondary tiny';
+        loc.className = 'btn ghost tiny';
         loc.textContent = t.locale === 'pl' ? '→ EN' : '→ PL';
         loc.addEventListener('click', async () => {
           await fetch(`/api/tokens/${encodeURIComponent(t.id)}`, {
@@ -426,16 +450,16 @@
 
         const del = document.createElement('button');
         del.type = 'button';
-        del.className = 'btn secondary tiny';
+        del.className = 'btn danger tiny';
         del.textContent = 'Delete';
         del.addEventListener('click', async () => {
           if (!window.confirm(`Na pewno usunąć token „${t.token}”?`)) return;
-          const res = await fetch(`/api/tokens/${encodeURIComponent(t.id)}`, {
+          const delRes = await fetch(`/api/tokens/${encodeURIComponent(t.id)}`, {
             method: 'DELETE',
           });
-          const data = await res.json().catch(() => ({}));
-          if (!res.ok) {
-            window.alert(data.error || 'Delete failed');
+          const delData = await delRes.json().catch(() => ({}));
+          if (!delRes.ok) {
+            window.alert(delData.error || 'Delete failed');
             return;
           }
           loadTokens();
@@ -445,7 +469,8 @@
         tbody.appendChild(tr);
       }
       table.appendChild(tbody);
-      tokensEl.appendChild(table);
+      wrap.appendChild(table);
+      tokensEl.appendChild(wrap);
     } catch (err) {
       tokensEl.textContent = err.message || String(err);
     }

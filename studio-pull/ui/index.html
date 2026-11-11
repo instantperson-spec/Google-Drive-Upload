@@ -63,35 +63,36 @@
     <div id="panel-tokens" class="panel hidden">
       <section class="card">
         <div class="row">
-          <h2>Tokeny klientów</h2>
+          <div class="section-title-row">
+            <h2>Client tokens</h2>
+            <span id="tokens-active-count" class="section-count hidden"></span>
+          </div>
           <button type="button" id="btn-tokens-refresh" class="btn secondary">Odśwież</button>
         </div>
-        <p class="hint">Te same dane co Vercel <code>/admin</code> (<code>_uploader_tokens.json</code>). Vercel admin zostaje awaryjnie.</p>
-        <div id="tokens" class="tokens">Ładowanie…</div>
-      </section>
+        <p class="hint">Tokens are stored in <code>_uploader_tokens.json</code> on Google Drive. Revoke takes effect immediately — no redeploy needed.</p>
 
-      <section class="card">
-        <h2>Nowy token</h2>
         <form id="token-form" class="token-form">
-          <label>Slug <input name="token" required pattern="[a-zA-Z0-9_-]{2,64}" placeholder="StudioAlfa" /></label>
-          <label>Klient <input name="clientName" required placeholder="Studio Alfa" /></label>
-          <label>Typ
+          <label>Token (URL slug) <input name="token" required pattern="[a-zA-Z0-9_-]{2,64}" placeholder="StudioAlfa" /></label>
+          <label>Client name <input name="clientName" required placeholder="Studio Alfa Sp. z o.o." /></label>
+          <label>Type
             <select name="type">
-              <option value="retainer">Retainer</option>
-              <option value="one-time">One-time</option>
+              <option value="retainer">Retainer (permanent)</option>
+              <option value="one-time">One-time project</option>
             </select>
           </label>
-          <label>Locale
+          <label>Expires (optional) <input name="expiresAt" type="date" /></label>
+          <label>Upload UI language
             <select name="locale">
-              <option value="en">EN</option>
-              <option value="pl">PL</option>
+              <option value="en">English</option>
+              <option value="pl">Polski</option>
             </select>
           </label>
-          <label>Wygasa (opcjonalnie) <input name="expiresAt" type="date" /></label>
-          <label>Notatki <input name="notes" placeholder="opcjonalnie" /></label>
-          <button type="submit" class="btn primary">Utwórz</button>
+          <label class="span-2">Notes (optional) <input name="notes" placeholder="Internal note…" /></label>
+          <button type="submit" class="btn primary">Create token &amp; copy link</button>
         </form>
         <p id="token-form-error" class="error hidden"></p>
+
+        <div id="tokens" class="tokens">Ładowanie…</div>
       </section>
     </div>
   </main>
