@@ -28,7 +28,7 @@ Otwiera `http://127.0.0.1:8787`. Zamknięcie procesu = koniec.
 
 ## Tokeny
 
-Zakładka **Tokeny** — create / copy / revoke / restore / locale / **delete** (ten sam Drive registry co Vercel). Linki: `PUBLIC_UPLOAD_URL` z `.env.local` (fallback produkcja).
+Zakładka **Tokeny** — create (opcjonalny termin ważności) / copy / revoke / restore / locale / delete (ten sam Drive registry co Vercel). Linki: `PUBLIC_UPLOAD_URL` z `.env.local` (fallback produkcja).
 
 ## CLI (bez UI)
 

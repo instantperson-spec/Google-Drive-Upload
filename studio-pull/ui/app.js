@@ -322,6 +322,15 @@
     }
   };
 
+  function formatExpires(iso) {
+    if (!iso) return '—';
+    try {
+      return new Intl.DateTimeFormat('pl-PL', { dateStyle: 'medium' }).format(new Date(iso));
+    } catch {
+      return String(iso);
+    }
+  }
+
   async function loadTokens() {
     tokensEl.textContent = 'Ładowanie…';
     try {
@@ -337,18 +346,19 @@
       const table = document.createElement('table');
       table.className = 'token-table';
       table.innerHTML =
-        '<thead><tr><th>Klient</th><th>Token</th><th>Locale</th><th>Status</th><th></th></tr></thead>';
+        '<thead><tr><th>Klient</th><th>Token</th><th>Locale</th><th>Status</th><th>Wygasa</th><th></th></tr></thead>';
       const tbody = document.createElement('tbody');
       for (const t of list) {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td></td><td><code></code></td><td></td><td></td>
+          <td></td><td><code></code></td><td></td><td></td><td></td>
           <td class="token-actions"></td>`;
         tr.cells[0].textContent = t.clientName;
         tr.cells[1].querySelector('code').textContent = t.token;
         tr.cells[2].textContent = (t.locale || 'en').toUpperCase();
         tr.cells[3].textContent = t.status;
-        const actions = tr.cells[4];
+        tr.cells[4].textContent = formatExpires(t.expiresAt);
+        const actions = tr.cells[5];
 
         const copyBtn = document.createElement('button');
         copyBtn.type = 'button';

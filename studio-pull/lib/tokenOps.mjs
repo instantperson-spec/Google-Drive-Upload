@@ -107,7 +107,7 @@ export async function createTokenLocal(input) {
     type,
     notes: String(input.notes || '').slice(0, 500),
     createdAt: now,
-    expiresAt: input.expiresAt || null,
+    expiresAt: String(input.expiresAt || '').trim() || null,
     revoked: false,
     revokedAt: null,
     locale,
