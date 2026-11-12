@@ -57,16 +57,25 @@ export async function walkDriveFolder(drive, rootFolderId) {
 }
 
 /**
- * List recent session folders under the main upload root (one API page).
+ * List session folders under the main upload root (paginated).
+ * Uses createdTime — folder modifiedTime often stays stuck at create even after new uploads.
  */
-export async function listSessionFolders(drive, mainFolderId, limit = 30) {
-  const res = await drive.files.list({
-    q: `'${mainFolderId}' in parents and mimeType = '${FOLDER_MIME}' and trashed = false`,
-    fields: 'files(id, name, modifiedTime)',
-    orderBy: 'modifiedTime desc',
-    pageSize: Math.min(Math.max(limit, 1), 100),
-    supportsAllDrives: true,
-    includeItemsFromAllDrives: true,
-  });
-  return res.data.files || [];
+export async function listSessionFolders(drive, mainFolderId, limit = 100) {
+  const cap = Math.min(Math.max(limit, 1), 500);
+  const files = [];
+  let pageToken = null;
+  do {
+    const res = await drive.files.list({
+      q: `'${mainFolderId}' in parents and mimeType = '${FOLDER_MIME}' and trashed = false`,
+      fields: 'nextPageToken, files(id, name, modifiedTime, createdTime)',
+      orderBy: 'createdTime desc',
+      pageSize: Math.min(100, cap - files.length),
+      pageToken,
+      supportsAllDrives: true,
+      includeItemsFromAllDrives: true,
+    });
+    if (res.data.files) files.push(...res.data.files);
+    pageToken = res.data.nextPageToken || null;
+  } while (pageToken && files.length < cap);
+  return files;
 }

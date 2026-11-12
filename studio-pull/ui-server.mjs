@@ -11,6 +11,7 @@ import { exec } from 'child_process';
 import { createDriveClient } from './lib/auth.mjs';
 import { assertSafeDest } from './lib/safety.mjs';
 import { listSessionFolders, walkDriveFolder } from './lib/driveWalk.mjs';
+import { loadProgressByFolderId } from './lib/progressOps.mjs';
 import { downloadFiles, formatBytes } from './lib/download.mjs';
 import { pickFolderMac } from './lib/pickFolder.mjs';
 import { joinSessionDest } from './lib/paths.mjs';
@@ -103,13 +104,32 @@ async function readBody(req) {
 
 async function handleSessions(res) {
   const { drive, mainFolderId } = createDriveClient();
-  const folders = await listSessionFolders(drive, mainFolderId, 50);
-  sendJson(res, 200, {
-    sessions: folders.map((f) => ({
+  const [folders, progressByFolder] = await Promise.all([
+    listSessionFolders(drive, mainFolderId, 200),
+    loadProgressByFolderId().catch(() => new Map()),
+  ]);
+
+  const sessions = folders.map((f) => {
+    const prog = progressByFolder.get(f.id);
+    const lastActivity = prog?.updatedAt || f.modifiedTime || f.createdTime || null;
+    return {
       folderId: f.id,
       name: f.name,
+      createdTime: f.createdTime || null,
       modifiedTime: f.modifiedTime || null,
-    })),
+      lastActivity,
+      progressStatus: prog?.sessionStatus || null,
+      token: prog?.token || null,
+    };
+  });
+
+  sessions.sort((a, b) => String(b.lastActivity || '').localeCompare(String(a.lastActivity || '')));
+
+  sendJson(res, 200, {
+    sessions,
+    total: sessions.length,
+    mainFolderId,
+    fetchedAt: new Date().toISOString(),
   });
 }
 

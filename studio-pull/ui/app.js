@@ -132,8 +132,13 @@
             Podgląd
           </label>`;
         row.querySelector('.session-name').textContent = s.name;
-        const when = s.modifiedTime ? new Date(s.modifiedTime).toLocaleString() : '—';
-        row.querySelector('.session-meta').textContent = `${s.folderId} · ${when}`;
+        const whenRaw = s.lastActivity || s.modifiedTime || s.createdTime;
+        const when = whenRaw ? new Date(whenRaw).toLocaleString() : '—';
+        const bits = [`aktywność ${when}`];
+        if (s.progressStatus) bits.push(s.progressStatus);
+        if (s.token) bits.push(`token:${s.token}`);
+        bits.push(s.folderId);
+        row.querySelector('.session-meta').textContent = bits.join(' · ');
 
         const cb = row.querySelector('input[type=checkbox]');
         cb.addEventListener('change', () => {
