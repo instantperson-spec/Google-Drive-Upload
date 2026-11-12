@@ -8,6 +8,13 @@ const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 100;
 
 function parseSessionFolderName(name) {
+  // Formats:
+  //   "Name - email@x.com"
+  //   "Name - email@x.com - YYYY-MM-DD HH:MM"  (per-upload session folder)
+  const stampMatch = name.match(/^(.*) - ([^\s@]+@[^\s@]+) - (\d{4}-\d{2}-\d{2} \d{2}:\d{2})$/);
+  if (stampMatch) {
+    return { uploaderName: stampMatch[1], uploaderEmail: stampMatch[2] };
+  }
   const dashIdx = name.lastIndexOf(' - ');
   if (dashIdx <= 0) return { uploaderName: name, uploaderEmail: '' };
   return {

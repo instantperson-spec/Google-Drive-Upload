@@ -25,7 +25,7 @@
             <button type="button" id="btn-refresh" class="btn secondary">Odśwież</button>
           </div>
         </div>
-        <p class="hint">Jeden klient = jeden folder sesji (kolejne uploady dokładają pliki do tego samego folderu). Odśwież po nowym uploadzie.</p>
+        <p class="hint">Nowe uploady (po deployu) = osobny folder z datą. Stare foldery mogą mieć całą historię — włącz „Tylko świeże pliki”.</p>
         <div id="sessions" class="sessions">Ładowanie…</div>
       </section>
 
@@ -46,6 +46,15 @@
           <button type="button" id="btn-pick" class="btn secondary">Wybierz folder…</button>
         </div>
         <p id="dest-error" class="error hidden"></p>
+        <div class="pull-filter">
+          <label class="session-check">
+            <input type="checkbox" id="fresh-only" checked />
+            <span>Tylko świeże pliki (nie cała historia folderu)</span>
+          </label>
+          <label class="fresh-since-label">Od
+            <input type="datetime-local" id="fresh-since" />
+          </label>
+        </div>
       </section>
 
       <section class="card actions">

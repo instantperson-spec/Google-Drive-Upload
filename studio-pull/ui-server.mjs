@@ -165,8 +165,9 @@ async function handlePickDest(res) {
 }
 
 /**
- * Body: { dest, sessions: [{ folderId, name }] }
+ * Body: { dest, sessions: [{ folderId, name }], since?: ISO date string|null }
  * dest = root on external disk; each session downloads into dest/<sessionName>/
+ * since = only files with createdTime >= since (for old reused client folders)
  */
 async function handlePull(req, res) {
   if (jobRunning) {
@@ -193,6 +194,10 @@ async function handlePull(req, res) {
     return;
   }
 
+  const sinceRaw = body.since ? String(body.since).trim() : '';
+  const sinceMs = sinceRaw ? Date.parse(sinceRaw) : NaN;
+  const sinceIso = Number.isFinite(sinceMs) ? new Date(sinceMs).toISOString() : null;
+
   let destRoot;
   try {
     ({ dest: destRoot } = assertSafeDest(destInput, { create: true }));
@@ -203,7 +208,12 @@ async function handlePull(req, res) {
 
   jobRunning = true;
   cancelRequested = false;
-  sendJson(res, 202, { ok: true, dest: destRoot, sessionCount: sessions.length });
+  sendJson(res, 202, {
+    ok: true,
+    dest: destRoot,
+    sessionCount: sessions.length,
+    since: sinceIso,
+  });
 
   setImmediate(async () => {
     const totals = {
@@ -219,6 +229,7 @@ async function handlePull(req, res) {
         type: 'queue_start',
         sessionCount: sessions.length,
         dest: destRoot,
+        since: sinceIso,
       });
 
       for (let si = 0; si < sessions.length; si += 1) {
@@ -237,12 +248,22 @@ async function handlePull(req, res) {
         });
 
         broadcast({ type: 'listing', folderId: session.folderId, dest: sessionDest });
-        const files = await walkDriveFolder(drive, session.folderId);
+        let files = await walkDriveFolder(drive, session.folderId);
+        const listedTotal = files.length;
+        if (sinceIso) {
+          files = files.filter((f) => {
+            const t = Date.parse(f.createdTime || f.modifiedTime || '');
+            return Number.isFinite(t) && t >= sinceMs;
+          });
+        }
         const totalBytes = files.reduce((s, f) => s + f.size, 0);
         broadcast({
           type: 'listing_done',
           folderId: session.folderId,
           fileCount: files.length,
+          listedTotal,
+          filtered: Boolean(sinceIso),
+          since: sinceIso,
           totalBytes,
           totalLabel: formatBytes(totalBytes),
         });

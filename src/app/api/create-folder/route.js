@@ -1,4 +1,3 @@
-import { google } from 'googleapis';
 import { NextResponse } from 'next/server';
 import { verifyUploadToken, unauthorizedResponse } from '@/lib/auth';
 import { getAuthClient } from '@/lib/googleAuth';
@@ -27,20 +26,12 @@ export async function POST(request) {
     }
 
     const authClient = await getAuthClient();
-    const folderName = `${uploaderName.trim()} - ${uploaderEmail.trim()}`;
 
-    // Reuse an existing session folder instead of creating duplicates
-    // (e.g. when the same client returns after clearing localStorage)
-    const drive = google.drive({ version: 'v3', auth: authClient });
-    const escapedName = folderName.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-    const existing = await drive.files.list({
-      q: `'${mainFolderId}' in parents and name = '${escapedName}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
-      fields: 'files(id)',
-      pageSize: 1,
-    });
-    if (existing.data.files && existing.data.files.length > 0) {
-      return NextResponse.json({ folderId: existing.data.files[0].id });
-    }
+    // One Drive folder per upload run (not per client forever).
+    // Studio Pull then downloads only that session — not the client's whole history.
+    // Resume within the same browser tab still reuses folderId from localStorage.
+    const stamp = new Date().toISOString().slice(0, 16).replace('T', ' '); // YYYY-MM-DD HH:MM UTC
+    const folderName = `${uploaderName.trim()} - ${uploaderEmail.trim()} - ${stamp}`;
 
     const folderRes = await authClient.request({
       url: 'https://www.googleapis.com/drive/v3/files',

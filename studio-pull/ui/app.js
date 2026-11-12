@@ -238,6 +238,17 @@
     if (destPath) setStatus(`Baza: ${destPath}`);
   }
 
+  function defaultFreshSinceLocal() {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T00:00`;
+  }
+
+  const freshOnlyEl = $('fresh-only');
+  const freshSinceEl = $('fresh-since');
+  if (freshSinceEl && !freshSinceEl.value) freshSinceEl.value = defaultFreshSinceLocal();
+
   async function startPull() {
     if (!selected.size || !destPath || running) return;
     const sessions = [...selected].map((id) => {
@@ -245,17 +256,31 @@
       return { folderId: id, name: s?.name || id };
     });
 
+    let since = null;
+    if (freshOnlyEl?.checked) {
+      const local = freshSinceEl?.value;
+      if (!local) {
+        setStatus('Ustaw datę „Od” albo wyłącz filtr świeżych plików.', 'warn');
+        return;
+      }
+      since = new Date(local).toISOString();
+    }
+
     running = true;
     updateStartEnabled();
     logEl.textContent = '';
     setProgress(0, 1);
-    setStatus(`Start kolejki (${sessions.length} sesji)…`);
+    setStatus(
+      since
+        ? `Start kolejki (${sessions.length}) — tylko pliki od ${new Date(since).toLocaleString()}…`
+        : `Start kolejki (${sessions.length} sesji)…`
+    );
 
     try {
       const res = await fetch('/api/pull', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dest: destPath, sessions }),
+        body: JSON.stringify({ dest: destPath, sessions, since }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Nie udało się uruchomić');
@@ -276,6 +301,7 @@
     switch (event.type) {
       case 'queue_start':
         appendLog(`Kolejka: ${event.sessionCount} sesji → ${event.dest}`);
+        if (event.since) appendLog(`Filtr świeżych: createdTime ≥ ${event.since}`);
         break;
       case 'session_start':
         appendLog(`── Sesja ${event.index}/${event.total}: ${event.name}`);
@@ -286,7 +312,11 @@
         appendLog(`Listing ${event.folderId}`);
         break;
       case 'listing_done':
-        appendLog(`Plików: ${event.fileCount}, ${event.totalLabel}`);
+        appendLog(
+          event.filtered
+            ? `Plików po filtrze: ${event.fileCount}/${event.listedTotal || '?'} (od ${event.since || '?'}), ${event.totalLabel}`
+            : `Plików: ${event.fileCount}, ${event.totalLabel}`
+        );
         setProgress(0, event.fileCount || 1);
         break;
       case 'skip':

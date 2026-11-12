@@ -12,7 +12,7 @@ async function listChildren(drive, folderId) {
   do {
     const res = await drive.files.list({
       q: `'${folderId}' in parents and trashed = false`,
-      fields: 'nextPageToken, files(id, name, size, mimeType)',
+      fields: 'nextPageToken, files(id, name, size, mimeType, createdTime, modifiedTime)',
       pageSize: 1000,
       pageToken,
       supportsAllDrives: true,
@@ -48,6 +48,8 @@ export async function walkDriveFolder(drive, rootFolderId) {
         name: item.name,
         relativePath: rel,
         size: Number(item.size) || 0,
+        createdTime: item.createdTime || null,
+        modifiedTime: item.modifiedTime || null,
       });
     }
   }
