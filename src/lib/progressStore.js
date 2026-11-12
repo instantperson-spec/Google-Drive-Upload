@@ -153,6 +153,7 @@ export async function upsertProgressSession(data) {
   registry.sessions[data.sessionId] = {
     sessionId: data.sessionId,
     token: data.token,
+    projectName: data.projectName || '',
     uploaderName: data.uploaderName,
     uploaderEmail: data.uploaderEmail,
     folderId: data.folderId,

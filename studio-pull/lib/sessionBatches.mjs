@@ -1,7 +1,7 @@
 import { formatBytes } from './download.mjs';
 import { walkDriveFolder } from './driveWalk.mjs';
 
-/** New-style unique upload folders already end with a timestamp. */
+/** Unique upload folders end with " - YYYY-MM-DD HH:MM" (project - name - stamp). */
 const STAMPED_FOLDER_RE = / - \d{4}-\d{2}-\d{2} \d{2}:\d{2}$/;
 
 export function isStampedSessionFolder(name) {

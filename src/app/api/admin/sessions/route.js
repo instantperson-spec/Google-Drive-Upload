@@ -3,25 +3,10 @@ import { NextResponse } from 'next/server';
 import { isAdminAuthenticated, unauthorizedAdminResponse } from '@/lib/adminAuth';
 import { getAuthClient } from '@/lib/googleAuth';
 import { formatBytes } from '@/lib/formatBytes';
+import { parseSessionFolderName } from '@/lib/sessionFolderName';
 
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 100;
-
-function parseSessionFolderName(name) {
-  // Formats:
-  //   "Name - email@x.com"
-  //   "Name - email@x.com - YYYY-MM-DD HH:MM"  (per-upload session folder)
-  const stampMatch = name.match(/^(.*) - ([^\s@]+@[^\s@]+) - (\d{4}-\d{2}-\d{2} \d{2}:\d{2})$/);
-  if (stampMatch) {
-    return { uploaderName: stampMatch[1], uploaderEmail: stampMatch[2] };
-  }
-  const dashIdx = name.lastIndexOf(' - ');
-  if (dashIdx <= 0) return { uploaderName: name, uploaderEmail: '' };
-  return {
-    uploaderName: name.slice(0, dashIdx),
-    uploaderEmail: name.slice(dashIdx + 3),
-  };
-}
 
 async function listAllFilesInFolder(drive, folderId) {
   let files = [];
@@ -77,11 +62,12 @@ export async function GET(request) {
           const t = f.modifiedTime || '';
           return t > max ? t : max;
         }, '');
-        const { uploaderName, uploaderEmail } = parseSessionFolderName(folder.name);
+        const { projectName, uploaderName, uploaderEmail } = parseSessionFolderName(folder.name);
 
         return {
           folderId: folder.id,
           folderName: folder.name,
+          projectName: projectName || '',
           uploaderName,
           uploaderEmail,
           fileCount: regularFiles.length,

@@ -3,8 +3,10 @@
 import { useT } from '@/context/LocaleContext';
 
 export default function UserDetailsForm({
+  projectName,
   uploaderName,
   uploaderEmail,
+  onProjectChange,
   onNameChange,
   onEmailChange,
   disabled,
@@ -12,6 +14,16 @@ export default function UserDetailsForm({
   const t = useT();
   return (
     <div className="upload-user-form">
+      <input
+        type="text"
+        placeholder={t('form.projectPlaceholder')}
+        value={projectName}
+        onChange={(e) => onProjectChange(e.target.value)}
+        disabled={disabled}
+        className="glass-input"
+        autoComplete="off"
+        required
+      />
       <input
         type="text"
         placeholder={t('form.namePlaceholder')}

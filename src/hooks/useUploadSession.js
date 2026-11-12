@@ -12,7 +12,7 @@ export function readStoredUploadSession() {
     if (!saved) return null;
     const session = JSON.parse(saved);
     if (session?.uploaderName && session?.uploaderEmail && session?.folderId) {
-      return session;
+      return session; // projectName optional for older resumes
     }
   } catch (e) {
     console.error('Failed to parse session data', e);
@@ -22,6 +22,7 @@ export function readStoredUploadSession() {
 
 export function useUploadSession() {
   const [sessionData, setSessionData] = useState(null);
+  const [projectName, setProjectName] = useState('');
   const [uploaderName, setUploaderName] = useState('');
   const [uploaderEmail, setUploaderEmail] = useState('');
 
@@ -31,6 +32,7 @@ export function useUploadSession() {
       if (!saved) return;
       const session = JSON.parse(saved);
       if (session.uploaderName && session.uploaderEmail && session.folderId) {
+        setProjectName(session.projectName || '');
         setUploaderName(session.uploaderName);
         setUploaderEmail(session.uploaderEmail);
         setSessionData(session);
@@ -52,6 +54,8 @@ export function useUploadSession() {
 
   return {
     sessionData,
+    projectName,
+    setProjectName,
     uploaderName,
     setUploaderName,
     uploaderEmail,

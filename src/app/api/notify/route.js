@@ -39,8 +39,11 @@ export async function POST(request) {
 
     // Sanitized view of the request used everywhere below
     const plainName = String(raw.uploaderName || 'Unknown').slice(0, MAX_NAME_LENGTH);
+    const plainProject = String(raw.projectName || '').slice(0, 120);
     const data = {
       plainName, // for plain-text contexts: subjects, webhook
+      plainProject,
+      projectName: escapeHtml(plainProject),
       uploaderName: escapeHtml(plainName), // for HTML email bodies
       uploaderEmail: raw.uploaderEmail || '',
       folderId: isValidFolderId(raw.folderId) ? raw.folderId : '',
@@ -89,7 +92,7 @@ export async function POST(request) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          content: `🚀 **New Upload Session!**\nUploader: \`${data.plainName}\` (${data.uploaderEmail})\nFiles:\n${filesListText}`
+          content: `🚀 **New Upload Session!**\nProject: \`${data.plainProject || '—'}\`\nUploader: \`${data.plainName}\` (${data.uploaderEmail})\nFiles:\n${filesListText}`
         })
       }).catch(err => console.error('Webhook error:', err));
     }
@@ -111,10 +114,11 @@ export async function POST(request) {
         const mailOptions = {
           from: `Drive Uploader <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
           to: process.env.NOTIFICATION_EMAIL, 
-          subject: `✅ New files uploaded by: ${data.plainName}`,
+          subject: `✅ ${data.plainProject ? `${data.plainProject} — ` : ''}New files from ${data.plainName}`,
           html: `
             <div style="font-family: sans-serif; padding: 20px; color: #333;">
               <h2 style="color: #0056b3;">You have received new files!</h2>
+              ${data.projectName ? `<p><strong>Project:</strong> ${data.projectName}</p>` : ''}
               <p>User <strong>${data.uploaderName}</strong> (<a href="mailto:${data.uploaderEmail}">${data.uploaderEmail}</a>) has just uploaded a batch of files via your application.</p>
               
               <h3 style="margin-top: 20px; border-bottom: 1px solid #ddd; padding-bottom: 5px;">File list (${files.length}):</h3>
@@ -123,7 +127,7 @@ export async function POST(request) {
               </ul>
 
               <p style="margin-top: 30px; font-size: 14px; color: #666;">
-                All files have been securely saved to a dedicated folder in your Google Drive ("${data.uploaderName} - ${data.uploaderEmail}").
+                Files are in a dedicated Google Drive session folder${data.projectName ? ` for project "${data.projectName}"` : ''}.
               </p>
               ${folderLink ? `<a href="${folderLink}" style="display: inline-block; margin-top: 10px; padding: 10px 20px; background-color: #0056b3; color: white; text-decoration: none; border-radius: 6px; font-weight: bold;">Open Folder in Google Drive</a>` : ''}
             </div>

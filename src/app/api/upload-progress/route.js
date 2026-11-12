@@ -67,6 +67,7 @@ export async function POST(request) {
     const payload = {
       sessionId: raw.sessionId,
       token,
+      projectName: String(raw.projectName || '').slice(0, 120),
       uploaderName: String(raw.uploaderName || 'Unknown').slice(0, 200),
       uploaderEmail: String(raw.uploaderEmail || '').slice(0, 254),
       folderId: raw.folderId,

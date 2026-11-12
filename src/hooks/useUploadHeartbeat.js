@@ -10,6 +10,7 @@ const HEARTBEAT_INTERVAL_MS = DEBUG_HEARTBEAT ? 30_000 : 90_000;
 export function useUploadHeartbeat({
   accessToken,
   status,
+  projectName,
   uploaderName,
   uploaderEmail,
   files,
@@ -51,6 +52,7 @@ export function useUploadHeartbeat({
         headers: apiHeaders(),
         body: JSON.stringify({
           sessionId,
+          projectName,
           uploaderName,
           uploaderEmail,
           folderId,
@@ -60,7 +62,7 @@ export function useUploadHeartbeat({
         }),
       }).catch(() => {});
     },
-    [accessToken, uploaderName, uploaderEmail, apiHeaders]
+    [accessToken, projectName, uploaderName, uploaderEmail, apiHeaders]
   );
 
   // Periodic heartbeat while uploading (90s prod / 30s debug) for admin Live Monitor.

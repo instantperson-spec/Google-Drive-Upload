@@ -16,6 +16,7 @@
     "successButton": "Upload more files"
   },
   "form": {
+    "projectPlaceholder": "Project name (e.g. Sligo Extra B-roll)",
     "namePlaceholder": "Full Name / Company Name",
     "emailPlaceholder": "Your Email Address"
   },

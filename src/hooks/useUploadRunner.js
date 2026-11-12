@@ -39,6 +39,7 @@ export function useUploadRunner({
   saveSession,
   clearSession,
   apiHeaders,
+  projectName,
   uploaderName,
   uploaderEmail,
   uploadSessionIdRef,
@@ -67,7 +68,7 @@ export function useUploadRunner({
         const folderRes = await fetch('/api/create-folder', {
           method: 'POST',
           headers: apiHeaders(),
-          body: JSON.stringify({ uploaderName, uploaderEmail }),
+          body: JSON.stringify({ projectName, uploaderName, uploaderEmail }),
         });
         if (!folderRes.ok) {
           throw new Error(await getApiErrorMessage(folderRes, 'Failed to create upload folder.'));
@@ -78,6 +79,7 @@ export function useUploadRunner({
 
       uploadFolderIdRef.current = currentFolderId;
       saveSession({
+        projectName,
         uploaderName,
         uploaderEmail,
         folderId: currentFolderId,
@@ -146,7 +148,13 @@ export function useUploadRunner({
           const statusCheck = await queryUploadStatusWithRetry(uploadUrl);
           if (statusCheck.status === UPLOAD_STATUS.COMPLETED) {
             delete sessionFiles[fObj.uploadName];
-            saveSession({ uploaderName, uploaderEmail, folderId: currentFolderId, files: sessionFiles });
+            saveSession({
+              projectName,
+              uploaderName,
+              uploaderEmail,
+              folderId: currentFolderId,
+              files: sessionFiles,
+            });
             updateFileState(i, { status: 'completed', progress: 100 });
             continue;
           }
@@ -182,7 +190,13 @@ export function useUploadRunner({
           const data = await initRes.json();
           uploadUrl = data.uploadUrl;
           sessionFiles[fObj.uploadName] = uploadUrl;
-          saveSession({ uploaderName, uploaderEmail, folderId: currentFolderId, files: sessionFiles });
+          saveSession({
+            projectName,
+            uploaderName,
+            uploaderEmail,
+            folderId: currentFolderId,
+            files: sessionFiles,
+          });
         }
 
         updateFileState(i, { uploadUrl });
@@ -231,7 +245,13 @@ export function useUploadRunner({
         }
 
         delete sessionFiles[fObj.uploadName];
-        saveSession({ uploaderName, uploaderEmail, folderId: currentFolderId, files: sessionFiles });
+        saveSession({
+          projectName,
+          uploaderName,
+          uploaderEmail,
+          folderId: currentFolderId,
+          files: sessionFiles,
+        });
         updateFileState(i, { status: 'completed', progress: 100 });
         await sendProgressHeartbeat('file-completed');
         await new Promise((r) => setTimeout(r, 50));
@@ -274,6 +294,7 @@ export function useUploadRunner({
         headers: apiHeaders(),
         body: JSON.stringify({
           files: uploadedFilesInfo,
+          projectName,
           uploaderName,
           uploaderEmail,
           folderId: currentFolderId,
@@ -331,6 +352,7 @@ export function useUploadRunner({
     saveSession,
     clearSession,
     apiHeaders,
+    projectName,
     uploaderName,
     uploaderEmail,
     uploadSessionIdRef,

@@ -37,7 +37,14 @@ function ActiveSessionCard({ session, liveMonitor }) {
     <div className={`admin-active-card ${isDone ? 'admin-active-card-done' : ''}`}>
       <div className="admin-active-card-header">
         <div>
-          <strong>{session.uploaderName}</strong>
+          {session.projectName ? (
+            <strong>{session.projectName}</strong>
+          ) : (
+            <strong>{session.uploaderName}</strong>
+          )}
+          {session.projectName ? (
+            <span className="admin-active-email"> · {session.uploaderName}</span>
+          ) : null}
           {session.uploaderEmail && (
             <span className="admin-active-email"> · {session.uploaderEmail}</span>
           )}
@@ -378,7 +385,11 @@ export default function AdminDashboard() {
               <tbody>
                 {sessions.map((s) => (
                   <tr key={s.folderId}>
-                    <td className="admin-cell-name">{s.uploaderName}</td>
+                    <td className="admin-cell-name">
+                      {s.projectName ? <strong>{s.projectName}</strong> : null}
+                      {s.projectName ? <br /> : null}
+                      {s.uploaderName}
+                    </td>
                     <td className="admin-cell-email">{s.uploaderEmail || '—'}</td>
                     <td>{s.fileCount}</td>
                     <td>{s.totalSizeFormatted}</td>

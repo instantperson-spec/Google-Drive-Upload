@@ -29,6 +29,8 @@ export default function Uploader() {
     useUploadTokenContext();
   const {
     sessionData,
+    projectName,
+    setProjectName,
     uploaderName,
     setUploaderName,
     uploaderEmail,
@@ -73,6 +75,7 @@ export default function Uploader() {
   const { uploadSessionIdRef, uploadFolderIdRef, sendProgressHeartbeat, pushLog } = useUploadHeartbeat({
     accessToken,
     status,
+    projectName,
     uploaderName,
     uploaderEmail,
     files,
@@ -87,6 +90,7 @@ export default function Uploader() {
     saveSession,
     clearSession,
     apiHeaders,
+    projectName,
     uploaderName,
     uploaderEmail,
     uploadSessionIdRef,
@@ -104,6 +108,7 @@ export default function Uploader() {
     files.length > 0 &&
     status !== 'uploading' &&
     !isScanning &&
+    (!!sessionData?.folderId || projectName.trim().length >= 2) &&
     !!uploaderName.trim() &&
     !!uploaderEmail.trim();
 
@@ -112,15 +117,17 @@ export default function Uploader() {
   const handleSuccessReset = useCallback(() => {
     clearFiles();
     setStatus('idle');
+    setProjectName('');
     setUploaderName('');
     setUploaderEmail('');
-  }, [clearFiles, setUploaderName, setUploaderEmail]);
+  }, [clearFiles, setProjectName, setUploaderName, setUploaderEmail]);
 
   const handleCancelSession = useCallback(() => {
     clearSession();
+    setProjectName('');
     setUploaderName('');
     setUploaderEmail('');
-  }, [clearSession, setUploaderName, setUploaderEmail]);
+  }, [clearSession, setProjectName, setUploaderName, setUploaderEmail]);
 
   if (accessToken === undefined || tokenStatus === 'checking') {
     return <UploadCheckingScreen />;
@@ -143,8 +150,10 @@ export default function Uploader() {
   return (
     <div className="uploader-container">
       <UserDetailsForm
+        projectName={projectName}
         uploaderName={uploaderName}
         uploaderEmail={uploaderEmail}
+        onProjectChange={setProjectName}
         onNameChange={setUploaderName}
         onEmailChange={setUploaderEmail}
         disabled={status === 'uploading'}

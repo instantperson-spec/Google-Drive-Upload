@@ -16,6 +16,7 @@
     "successButton": "Wyślij kolejne pliki"
   },
   "form": {
+    "projectPlaceholder": "Nazwa projektu (np. Sligo Extra B-roll)",
     "namePlaceholder": "Imię i nazwisko / nazwa firmy",
     "emailPlaceholder": "Adres e-mail"
   },
