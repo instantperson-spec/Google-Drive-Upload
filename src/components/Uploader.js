@@ -41,18 +41,13 @@ export default function Uploader() {
 
   useEffect(() => {
     if (tokenStatus !== 'valid' || !tokenPrefill) return;
-    if (sessionData?.uploaderName && sessionData?.uploaderEmail) return;
-    if (!uploaderName.trim()) setUploaderName(tokenPrefill.name);
-    if (!uploaderEmail.trim()) setUploaderEmail(tokenPrefill.email);
-  }, [
-    tokenStatus,
-    tokenPrefill,
-    sessionData,
-    uploaderName,
-    uploaderEmail,
-    setUploaderName,
-    setUploaderEmail,
-  ]);
+    // Token identity wins over empty fields (and over stale manual edits when locked).
+    if (tokenPrefill.name) setUploaderName(tokenPrefill.name);
+    if (tokenPrefill.email) setUploaderEmail(tokenPrefill.email);
+  }, [tokenStatus, tokenPrefill, setUploaderName, setUploaderEmail]);
+
+  const identityLocked = Boolean(tokenPrefill?.name && tokenPrefill?.email && !tokenPrefill?.incomplete);
+  const identityIncomplete = Boolean(tokenPrefill?.incomplete);
 
   const {
     files,
@@ -156,6 +151,8 @@ export default function Uploader() {
         onProjectChange={setProjectName}
         onNameChange={setUploaderName}
         onEmailChange={setUploaderEmail}
+        identityLocked={identityLocked}
+        identityIncomplete={identityIncomplete}
         disabled={status === 'uploading'}
       />
 

@@ -28,6 +28,7 @@ export default function AdminTokenManager() {
   const [form, setForm] = useState({
     token: '',
     clientName: '',
+    clientEmail: '',
     type: 'retainer',
     expiresAt: '',
     notes: '',
@@ -78,6 +79,7 @@ export default function AdminTokenManager() {
         body: JSON.stringify({
           token: form.token.trim(),
           clientName: form.clientName.trim(),
+          clientEmail: form.clientEmail.trim(),
           type: form.type,
           expiresAt: form.expiresAt || null,
           notes: form.notes.trim(),
@@ -87,7 +89,15 @@ export default function AdminTokenManager() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || 'Failed to create token');
 
-      setForm({ token: '', clientName: '', type: 'retainer', expiresAt: '', notes: '', locale: 'en' });
+      setForm({
+        token: '',
+        clientName: '',
+        clientEmail: '',
+        type: 'retainer',
+        expiresAt: '',
+        notes: '',
+        locale: 'en',
+      });
       setShowForm(false);
       await fetchTokens();
       if (data.token?.uploadUrl) {
@@ -100,14 +110,14 @@ export default function AdminTokenManager() {
     }
   };
 
-  const patchToken = async (id, action) => {
+  const patchToken = async (id, action, extra = {}) => {
     setError('');
     try {
       const res = await fetch(`/api/admin/tokens/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ action }),
+        body: JSON.stringify({ action, ...extra }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || 'Failed to update token');
@@ -115,6 +125,18 @@ export default function AdminTokenManager() {
     } catch (err) {
       setError(err.message);
     }
+  };
+
+  const setIdentity = async (t) => {
+    const clientEmail = window.prompt(
+      `Client email for token „${t.token}” (locked on upload form):`,
+      t.prefillEmail || ''
+    );
+    if (clientEmail == null) return;
+    await patchToken(t.id, 'identity', {
+      clientName: t.clientName,
+      clientEmail: clientEmail.trim(),
+    });
   };
 
   const deleteTokenAction = async (id) => {
@@ -184,6 +206,17 @@ export default function AdminTokenManager() {
               />
             </label>
             <label>
+              Client email
+              <input
+                type="email"
+                className="glass-input admin-input"
+                placeholder="client@studio.com"
+                value={form.clientEmail}
+                onChange={(e) => setForm({ ...form, clientEmail: e.target.value })}
+                required
+              />
+            </label>
+            <label>
               Type
               <select
                 className="glass-input admin-input"
@@ -242,6 +275,7 @@ export default function AdminTokenManager() {
             <thead>
               <tr>
                 <th>Client</th>
+                <th>Email</th>
                 <th>Token</th>
                 <th>Type</th>
                 <th>Locale</th>
@@ -255,6 +289,7 @@ export default function AdminTokenManager() {
               {tokens.map((t) => (
                 <tr key={t.id} className={t.status !== 'active' ? 'admin-token-row-inactive' : ''}>
                   <td className="admin-cell-name">{t.clientName}</td>
+                  <td className="admin-cell-email">{t.prefillEmail || '—'}</td>
                   <td><code className="admin-code">{t.token}</code></td>
                   <td>{t.type === 'retainer' ? 'Retainer' : 'One-time'}</td>
                   <td>{t.locale === 'pl' ? 'PL' : 'EN'}</td>
@@ -271,7 +306,17 @@ export default function AdminTokenManager() {
                       </button>
                     )}
                   </td>
-                  <td style={{ display: 'flex', gap: '5px' }}>
+                  <td style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
+                    {!t.prefillEmail && t.status === 'active' && (
+                      <button
+                        type="button"
+                        className="admin-copy-btn"
+                        onClick={() => setIdentity(t)}
+                        title="Bind name/email to this token"
+                      >
+                        Set email
+                      </button>
+                    )}
                     {t.status === 'active' ? (
                       <button
                         type="button"

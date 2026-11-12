@@ -87,6 +87,9 @@ export async function createTokenLocal(input) {
 
   const token = String(input.token || '').trim();
   const clientName = String(input.clientName || '').trim();
+  const clientEmail = String(input.clientEmail || input.prefillEmail || '')
+    .trim()
+    .toLowerCase();
   const type = input.type === 'one-time' ? 'one-time' : 'retainer';
   const locale = normalizeLocale(input.locale);
 
@@ -94,6 +97,9 @@ export async function createTokenLocal(input) {
     throw new Error('Token must be 2–64 characters: letters, numbers, hyphen, underscore.');
   }
   if (!clientName) throw new Error('Client name is required.');
+  if (!clientEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clientEmail)) {
+    throw new Error('A valid client email is required (locked on the upload form).');
+  }
 
   const { fileId, registry } = await readRegistry(drive, mainFolderId);
   const duplicate = registry.tokens.find((t) => t.token === token && !t.revoked);
@@ -111,6 +117,8 @@ export async function createTokenLocal(input) {
     revoked: false,
     revokedAt: null,
     locale,
+    prefillName: clientName.slice(0, 200),
+    prefillEmail: clientEmail.slice(0, 200),
   };
 
   registry.tokens.push(record);

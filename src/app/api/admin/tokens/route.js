@@ -43,6 +43,9 @@ export async function POST(request) {
     const record = await createToken({
       token: body.token,
       clientName: body.clientName,
+      clientEmail: body.clientEmail || body.prefillEmail,
+      prefillName: body.prefillName,
+      prefillEmail: body.prefillEmail || body.clientEmail,
       type: body.type,
       expiresAt: body.expiresAt || null,
       notes: body.notes,

@@ -1,6 +1,11 @@
 import { NextResponse } from 'next/server';
 import { isAdminAuthenticated, unauthorizedAdminResponse } from '@/lib/adminAuth';
-import { revokeToken, restoreToken, buildUploadUrl } from '@/lib/tokenStore';
+import {
+  revokeToken,
+  restoreToken,
+  setTokenIdentity,
+  buildUploadUrl,
+} from '@/lib/tokenStore';
 import { getUploadOrigin } from '@/lib/uploadOrigin';
 import { rateLimit } from '@/lib/rateLimit';
 
@@ -20,9 +25,14 @@ export async function PATCH(request, { params }) {
       record = await restoreToken(id);
     } else if (body.action === 'revoke' || body.revoked === true) {
       record = await revokeToken(id);
+    } else if (body.action === 'identity') {
+      record = await setTokenIdentity(id, {
+        clientName: body.clientName,
+        clientEmail: body.clientEmail || body.prefillEmail,
+      });
     } else {
       return NextResponse.json(
-        { error: 'Unsupported action. Use action: "revoke" or "restore".' },
+        { error: 'Unsupported action. Use action: "revoke", "restore", or "identity".' },
         { status: 400 }
       );
     }

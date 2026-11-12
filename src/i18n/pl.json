@@ -18,7 +18,9 @@
   "form": {
     "projectPlaceholder": "Nazwa projektu (np. Sligo Extra B-roll)",
     "namePlaceholder": "Imię i nazwisko / nazwa firmy",
-    "emailPlaceholder": "Adres e-mail"
+    "emailPlaceholder": "Adres e-mail",
+    "identityLocked": "Upload jako {name} ({email})",
+    "identityIncomplete": "Ten link nie ma zapisanego e-maila — wpisz dane poniżej albo poproś studio o aktualizację tokena."
   },
   "resume": {
     "title": "Poprzednia sesja została przerwana",

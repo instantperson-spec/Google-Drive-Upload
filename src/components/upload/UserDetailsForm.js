@@ -9,6 +9,8 @@ export default function UserDetailsForm({
   onProjectChange,
   onNameChange,
   onEmailChange,
+  identityLocked,
+  identityIncomplete,
   disabled,
 }) {
   const t = useT();
@@ -24,22 +26,34 @@ export default function UserDetailsForm({
         autoComplete="off"
         required
       />
-      <input
-        type="text"
-        placeholder={t('form.namePlaceholder')}
-        value={uploaderName}
-        onChange={(e) => onNameChange(e.target.value)}
-        disabled={disabled}
-        className="glass-input"
-      />
-      <input
-        type="email"
-        placeholder={t('form.emailPlaceholder')}
-        value={uploaderEmail}
-        onChange={(e) => onEmailChange(e.target.value)}
-        disabled={disabled}
-        className="glass-input"
-      />
+
+      {identityLocked ? (
+        <p className="upload-identity-locked">
+          {t('form.identityLocked', { name: uploaderName, email: uploaderEmail })}
+        </p>
+      ) : (
+        <>
+          {identityIncomplete ? (
+            <p className="upload-identity-hint">{t('form.identityIncomplete')}</p>
+          ) : null}
+          <input
+            type="text"
+            placeholder={t('form.namePlaceholder')}
+            value={uploaderName}
+            onChange={(e) => onNameChange(e.target.value)}
+            disabled={disabled}
+            className="glass-input"
+          />
+          <input
+            type="email"
+            placeholder={t('form.emailPlaceholder')}
+            value={uploaderEmail}
+            onChange={(e) => onEmailChange(e.target.value)}
+            disabled={disabled}
+            className="glass-input"
+          />
+        </>
+      )}
     </div>
   );
 }

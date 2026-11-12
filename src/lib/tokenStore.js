@@ -175,6 +175,7 @@ export async function listTokens() {
 export async function createToken({
   token,
   clientName,
+  clientEmail,
   type = 'retainer',
   expiresAt = null,
   notes = '',
@@ -188,6 +189,12 @@ export async function createToken({
   if (!clientName?.trim()) {
     throw new Error('Client name is required.');
   }
+  const email = String(prefillEmail || clientEmail || '')
+    .trim()
+    .toLowerCase();
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 200) {
+    throw new Error('A valid client email is required (locked on the upload form).');
+  }
   if (!['retainer', 'one-time'].includes(type)) {
     throw new Error('Type must be "retainer" or "one-time".');
   }
@@ -199,6 +206,9 @@ export async function createToken({
   }
 
   const now = new Date().toISOString();
+  const name = String(prefillName || clientName)
+    .trim()
+    .slice(0, 200);
   const record = {
     id: crypto.randomUUID(),
     token,
@@ -209,12 +219,10 @@ export async function createToken({
     expiresAt: expiresAt || null,
     revoked: false,
     revokedAt: null,
+    // Bound to token — upload form does not ask the client for these.
+    prefillName: name,
+    prefillEmail: email,
   };
-
-  if (prefillName?.trim() && prefillEmail?.trim()) {
-    record.prefillName = prefillName.trim().slice(0, 200);
-    record.prefillEmail = prefillEmail.trim().slice(0, 200);
-  }
 
   record.locale = normalizeLocale(locale);
 
@@ -240,18 +248,32 @@ export async function getTokenRecord(tokenString) {
   return registry.tokens.find((t) => t.token === tokenString) ?? null;
 }
 
-/** Optional form prefill for a token (e.g. resume upload to existing session folder). */
+/**
+ * Identity locked to the token for the upload form.
+ * Name falls back to clientName; email must be stored on the token.
+ */
 export async function getTokenPrefill(tokenString) {
   const record = await getTokenRecord(tokenString);
   if (!record || !isRecordActive(record)) return null;
 
-  const name = typeof record.prefillName === 'string' ? record.prefillName.trim() : '';
-  const email = typeof record.prefillEmail === 'string' ? record.prefillEmail.trim() : '';
-  if (!name || !email) return null;
-  if (email.length > 200 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return null;
-  if (name.length > 200) return null;
+  const name = (
+    (typeof record.prefillName === 'string' && record.prefillName.trim()) ||
+    (typeof record.clientName === 'string' && record.clientName.trim()) ||
+    ''
+  ).slice(0, 200);
+  const email = (
+    (typeof record.prefillEmail === 'string' && record.prefillEmail.trim()) ||
+    ''
+  )
+    .toLowerCase()
+    .slice(0, 200);
 
-  return { name, email };
+  if (!name) return null;
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return { name, email: '', incomplete: true };
+  }
+
+  return { name, email, incomplete: false };
 }
 
 /** UI language for upload screen (`en` default if unset). */
@@ -259,6 +281,33 @@ export async function getTokenLocale(tokenString) {
   const record = await getTokenRecord(tokenString);
   if (!record || !isRecordActive(record)) return DEFAULT_LOCALE;
   return normalizeLocale(record.locale);
+}
+
+/** Set / repair client identity used by the locked upload form. */
+export async function setTokenIdentity(id, { clientName, clientEmail } = {}) {
+  const registry = await readRegistry(true);
+  const record = registry.tokens.find((t) => t.id === id);
+  if (!record) throw new Error('Token not found.');
+
+  const name = String(clientName || record.clientName || record.prefillName || '')
+    .trim()
+    .slice(0, 200);
+  const email = String(clientEmail || record.prefillEmail || '')
+    .trim()
+    .toLowerCase()
+    .slice(0, 200);
+
+  if (!name) throw new Error('Client name is required.');
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    throw new Error('A valid client email is required.');
+  }
+
+  record.clientName = name;
+  record.prefillName = name;
+  record.prefillEmail = email;
+  await saveRegistry(registry);
+  invalidateCache();
+  return record;
 }
 
 export async function revokeToken(id) {
