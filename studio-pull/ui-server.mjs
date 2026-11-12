@@ -12,6 +12,7 @@ import { createDriveClient } from './lib/auth.mjs';
 import { assertSafeDest } from './lib/safety.mjs';
 import { listSessionFolders, walkDriveFolder } from './lib/driveWalk.mjs';
 import { loadProgressByFolderId } from './lib/progressOps.mjs';
+import { expandFoldersToSessions, filterFilesByWindow } from './lib/sessionBatches.mjs';
 import { downloadFiles, formatBytes } from './lib/download.mjs';
 import { pickFolderMac } from './lib/pickFolder.mjs';
 import { joinSessionDest } from './lib/paths.mjs';
@@ -109,21 +110,8 @@ async function handleSessions(res) {
     loadProgressByFolderId().catch(() => new Map()),
   ]);
 
-  const sessions = folders.map((f) => {
-    const prog = progressByFolder.get(f.id);
-    const lastActivity = prog?.updatedAt || f.modifiedTime || f.createdTime || null;
-    return {
-      folderId: f.id,
-      name: f.name,
-      createdTime: f.createdTime || null,
-      modifiedTime: f.modifiedTime || null,
-      lastActivity,
-      progressStatus: prog?.sessionStatus || null,
-      token: prog?.token || null,
-    };
-  });
-
-  sessions.sort((a, b) => String(b.lastActivity || '').localeCompare(String(a.lastActivity || '')));
+  // Legacy fat folders → one row per upload day; stamped folders stay 1:1.
+  const sessions = await expandFoldersToSessions(drive, folders, progressByFolder);
 
   sendJson(res, 200, {
     sessions,
@@ -133,9 +121,18 @@ async function handleSessions(res) {
   });
 }
 
-async function handleSessionFiles(folderId, res) {
+async function handleSessionFiles(folderId, reqUrl, res) {
   const { drive } = createDriveClient();
-  const files = await walkDriveFolder(drive, folderId);
+  let files = await walkDriveFolder(drive, folderId);
+  const sinceMs = reqUrl.searchParams.get('since')
+    ? Date.parse(reqUrl.searchParams.get('since'))
+    : NaN;
+  const untilMs = reqUrl.searchParams.get('until')
+    ? Date.parse(reqUrl.searchParams.get('until'))
+    : NaN;
+  if (Number.isFinite(sinceMs) || Number.isFinite(untilMs)) {
+    files = filterFilesByWindow(files, sinceMs, untilMs);
+  }
   const totalBytes = files.reduce((s, f) => s + f.size, 0);
   sendJson(res, 200, {
     folderId,
@@ -194,9 +191,11 @@ async function handlePull(req, res) {
     return;
   }
 
-  const sinceRaw = body.since ? String(body.since).trim() : '';
-  const sinceMs = sinceRaw ? Date.parse(sinceRaw) : NaN;
-  const sinceIso = Number.isFinite(sinceMs) ? new Date(sinceMs).toISOString() : null;
+  const globalSinceRaw = body.since ? String(body.since).trim() : '';
+  const globalSinceMs = globalSinceRaw ? Date.parse(globalSinceRaw) : NaN;
+  const globalSinceIso = Number.isFinite(globalSinceMs)
+    ? new Date(globalSinceMs).toISOString()
+    : null;
 
   let destRoot;
   try {
@@ -212,7 +211,7 @@ async function handlePull(req, res) {
     ok: true,
     dest: destRoot,
     sessionCount: sessions.length,
-    since: sinceIso,
+    since: globalSinceIso,
   });
 
   setImmediate(async () => {
@@ -229,7 +228,7 @@ async function handlePull(req, res) {
         type: 'queue_start',
         sessionCount: sessions.length,
         dest: destRoot,
-        since: sinceIso,
+        since: globalSinceIso,
       });
 
       for (let si = 0; si < sessions.length; si += 1) {
@@ -238,6 +237,17 @@ async function handlePull(req, res) {
         const sessionDest = joinSessionDest(destRoot, session.name, session.folderId);
         fs.mkdirSync(sessionDest, { recursive: true });
 
+        const sessionSinceMs = session.since ? Date.parse(session.since) : NaN;
+        const sessionUntilMs = session.until ? Date.parse(session.until) : NaN;
+        const sinceMs = Number.isFinite(sessionSinceMs)
+          ? sessionSinceMs
+          : Number.isFinite(globalSinceMs)
+            ? globalSinceMs
+            : NaN;
+        const untilMs = Number.isFinite(sessionUntilMs) ? sessionUntilMs : NaN;
+        const sinceIso = Number.isFinite(sinceMs) ? new Date(sinceMs).toISOString() : null;
+        const untilIso = Number.isFinite(untilMs) ? new Date(untilMs).toISOString() : null;
+
         broadcast({
           type: 'session_start',
           index: si + 1,
@@ -245,16 +255,15 @@ async function handlePull(req, res) {
           folderId: session.folderId,
           name: session.name,
           dest: sessionDest,
+          since: sinceIso,
+          until: untilIso,
         });
 
         broadcast({ type: 'listing', folderId: session.folderId, dest: sessionDest });
         let files = await walkDriveFolder(drive, session.folderId);
         const listedTotal = files.length;
-        if (sinceIso) {
-          files = files.filter((f) => {
-            const t = Date.parse(f.createdTime || f.modifiedTime || '');
-            return Number.isFinite(t) && t >= sinceMs;
-          });
+        if (Number.isFinite(sinceMs) || Number.isFinite(untilMs)) {
+          files = filterFilesByWindow(files, sinceMs, untilMs);
         }
         const totalBytes = files.reduce((s, f) => s + f.size, 0);
         broadcast({
@@ -262,8 +271,9 @@ async function handlePull(req, res) {
           folderId: session.folderId,
           fileCount: files.length,
           listedTotal,
-          filtered: Boolean(sinceIso),
+          filtered: Boolean(sinceIso || untilIso),
           since: sinceIso,
+          until: untilIso,
           totalBytes,
           totalLabel: formatBytes(totalBytes),
         });
@@ -377,7 +387,7 @@ const server = http.createServer(async (req, res) => {
 
     const filesMatch = pathname.match(/^\/api\/sessions\/([^/]+)\/files$/);
     if (req.method === 'GET' && filesMatch) {
-      await handleSessionFiles(decodeURIComponent(filesMatch[1]), res);
+      await handleSessionFiles(decodeURIComponent(filesMatch[1]), url, res);
       return;
     }
 

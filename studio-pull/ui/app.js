@@ -20,11 +20,11 @@
   const tokenForm = $('token-form');
   const tokenFormError = $('token-form-error');
 
-  /** @type {Map<string, {folderId:string,name:string,modifiedTime:?string}>} */
+  /** @type {Map<string, object>} */
   const sessionMap = new Map();
   /** @type {Set<string>} */
   const selected = new Set();
-  let previewFolderId = null;
+  let previewSessionId = null;
   let destPath = '';
   let running = false;
   let currentFileIndex = 0;
@@ -76,7 +76,7 @@
     btnCancel.disabled = !running;
     btnPick.disabled = running;
     btnRefresh.disabled = running;
-    btnPreview.disabled = running || !previewFolderId;
+    btnPreview.disabled = running || !previewSessionId;
 
     if (!running && !canStart) {
       if (!selected.size && !destPath) setStatus('Zaznacz sesje i wybierz folder bazowy.');
@@ -109,64 +109,76 @@
       selected.clear();
       if (!list.length) {
         sessionsEl.textContent = 'Brak folderów sesji.';
-        previewFolderId = null;
+        previewSessionId = null;
         updateStartEnabled();
         return;
       }
 
       sessionsEl.innerHTML = '';
       for (const s of list) {
-        sessionMap.set(s.folderId, s);
+        const sid = s.id || s.folderId;
+        sessionMap.set(sid, s);
         const row = document.createElement('div');
         row.className = 'session-row';
         row.innerHTML = `
           <label class="session-check">
-            <input type="checkbox" data-id="${s.folderId}" />
+            <input type="checkbox" data-id="" />
             <span class="session-body">
               <span class="session-name"></span>
               <span class="session-meta"></span>
             </span>
           </label>
           <label class="session-preview-pick" title="Podgląd tej sesji">
-            <input type="radio" name="preview-session" value="${s.folderId}" />
+            <input type="radio" name="preview-session" value="" />
             Podgląd
           </label>`;
+        row.querySelector('input[type=checkbox]').dataset.id = sid;
+        row.querySelector('input[type=radio]').value = sid;
         row.querySelector('.session-name').textContent = s.name;
-        const whenRaw = s.lastActivity || s.modifiedTime || s.createdTime;
-        const when = whenRaw ? new Date(whenRaw).toLocaleString() : '—';
-        const bits = [`aktywność ${when}`];
-        if (s.progressStatus) bits.push(s.progressStatus);
+        const bits = [];
+        if (s.batch && s.fileCount != null) {
+          bits.push(`${s.fileCount} plików · ${s.totalLabel || ''}`);
+        }
+        if (s.since && s.until) {
+          bits.push(`dzień ${String(s.since).slice(0, 10)}`);
+        } else {
+          const whenRaw = s.lastActivity || s.modifiedTime || s.createdTime;
+          bits.push(whenRaw ? `aktywność ${new Date(whenRaw).toLocaleString()}` : '—');
+        }
         if (s.token) bits.push(`token:${s.token}`);
-        bits.push(s.folderId);
         row.querySelector('.session-meta').textContent = bits.join(' · ');
 
         const cb = row.querySelector('input[type=checkbox]');
         cb.addEventListener('change', () => {
-          if (cb.checked) selected.add(s.folderId);
-          else selected.delete(s.folderId);
+          if (cb.checked) selected.add(sid);
+          else selected.delete(sid);
           updateStartEnabled();
         });
 
         const radio = row.querySelector('input[type=radio]');
         radio.addEventListener('change', () => {
-          previewFolderId = s.folderId;
+          previewSessionId = sid;
           updateStartEnabled();
         });
 
         sessionsEl.appendChild(row);
       }
 
-      // Default: first session checked + preview focus
       const first = list[0];
-      const firstCb = sessionsEl.querySelector(`input[type=checkbox][data-id="${first.folderId}"]`);
-      const firstRadio = sessionsEl.querySelector(`input[type=radio][value="${first.folderId}"]`);
+      const firstId = first.id || first.folderId;
+      const firstCb = [...sessionsEl.querySelectorAll('input[type=checkbox]')].find(
+        (el) => el.dataset.id === firstId
+      );
+      const firstRadio = [...sessionsEl.querySelectorAll('input[type=radio]')].find(
+        (el) => el.value === firstId
+      );
       if (firstCb) {
         firstCb.checked = true;
-        selected.add(first.folderId);
+        selected.add(firstId);
       }
       if (firstRadio) {
         firstRadio.checked = true;
-        previewFolderId = first.folderId;
+        previewSessionId = firstId;
       }
       updateStartEnabled();
     } catch (err) {
@@ -175,25 +187,33 @@
   }
 
   async function loadPreview() {
-    if (!previewFolderId) return;
+    if (!previewSessionId) return;
+    const session = sessionMap.get(previewSessionId);
+    if (!session?.folderId) return;
     previewMeta.textContent = 'Ładowanie listy plików…';
     previewEl.classList.add('hidden');
     previewEl.innerHTML = '';
     try {
-      const res = await fetch(`/api/sessions/${encodeURIComponent(previewFolderId)}/files`);
+      const q = new URLSearchParams();
+      if (session.since) q.set('since', session.since);
+      if (session.until) q.set('until', session.until);
+      const qs = q.toString() ? `?${q}` : '';
+      const res = await fetch(
+        `/api/sessions/${encodeURIComponent(session.folderId)}/files${qs}`
+      );
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Błąd podglądu');
       previewMeta.textContent = `${data.fileCount} plików · ${data.totalLabel}`;
       const ul = document.createElement('ul');
       ul.className = 'preview-list';
-      for (const f of data.files.slice(0, 500)) {
+      for (const f of (data.files || []).slice(0, 500)) {
         const li = document.createElement('li');
         li.innerHTML = `<span class="p-path"></span><span class="p-size"></span>`;
         li.querySelector('.p-path').textContent = f.relativePath;
         li.querySelector('.p-size').textContent = f.sizeLabel;
         ul.appendChild(li);
       }
-      if (data.files.length > 500) {
+      if ((data.files || []).length > 500) {
         const more = document.createElement('li');
         more.className = 'muted';
         more.textContent = `… i ${data.files.length - 500} więcej`;
@@ -253,11 +273,18 @@
     if (!selected.size || !destPath || running) return;
     const sessions = [...selected].map((id) => {
       const s = sessionMap.get(id);
-      return { folderId: id, name: s?.name || id };
+      return {
+        folderId: s?.folderId || id,
+        name: s?.name || id,
+        since: s?.since || null,
+        until: s?.until || null,
+      };
     });
 
+    // Global "fresh only" only for rows without their own day window (stamped folders).
     let since = null;
-    if (freshOnlyEl?.checked) {
+    const needsGlobalFresh = sessions.some((s) => !s.since);
+    if (needsGlobalFresh && freshOnlyEl?.checked) {
       const local = freshSinceEl?.value;
       if (!local) {
         setStatus('Ustaw datę „Od” albo wyłącz filtr świeżych plików.', 'warn');
@@ -270,11 +297,7 @@
     updateStartEnabled();
     logEl.textContent = '';
     setProgress(0, 1);
-    setStatus(
-      since
-        ? `Start kolejki (${sessions.length}) — tylko pliki od ${new Date(since).toLocaleString()}…`
-        : `Start kolejki (${sessions.length} sesji)…`
-    );
+    setStatus(`Start kolejki (${sessions.length})…`);
 
     try {
       const res = await fetch('/api/pull', {
