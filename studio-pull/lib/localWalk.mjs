@@ -11,12 +11,13 @@ const SKIP_NAMES = new Set([
   '_uploader_tokens.json',
   '_uploader_progress.json',
   '_uploader_shares.json',
+  '_uploader_session.json',
   '_manifest.json',
   '_crash_log.txt',
 ]);
 
 /**
- * @returns {Array<{ relativePath: string, name: string, size: number, localPath: string }>}
+ * @returns {Array<{ relativePath: string, name: string, size: number, localPath: string, mtimeMs: number }>}
  */
 export function walkLocalFolder(rootDir) {
   const root = path.resolve(rootDir);
@@ -48,8 +49,11 @@ export function walkLocalFolder(rootDir) {
       if (!ent.isFile()) continue;
 
       let size = 0;
+      let mtimeMs = 0;
       try {
-        size = fs.statSync(abs).size;
+        const st = fs.statSync(abs);
+        size = st.size;
+        mtimeMs = st.mtimeMs;
       } catch {
         continue;
       }
@@ -57,6 +61,7 @@ export function walkLocalFolder(rootDir) {
         relativePath: rel.replace(/\\/g, '/'),
         name: ent.name,
         size,
+        mtimeMs,
         localPath: abs,
       });
     }

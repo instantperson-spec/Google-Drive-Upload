@@ -31,7 +31,6 @@ export async function GET(request, { params }) {
       share: {
         id: share.id,
         label: share.label || null,
-        token: share.token || null,
         createdAt: share.createdAt || null,
       },
       files: files.map((f) => ({

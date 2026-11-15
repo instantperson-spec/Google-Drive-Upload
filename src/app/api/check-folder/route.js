@@ -4,11 +4,13 @@ import { getAuthClient, isSessionFolder } from '@/lib/googleAuth';
 import { listSessionFilesRecursive } from '@/lib/listSessionFiles';
 import { partitionUploadQueue } from '@/lib/deltaMatch';
 import { rateLimit } from '@/lib/rateLimit';
+import { assertFolderOwnedByToken } from '@/lib/sessionOwnership';
 
 export async function POST(request) {
   const limited = rateLimit(request, 'check-folder', 30);
   if (limited) return limited;
-  if (!(await verifyUploadToken(request))) return unauthorizedResponse();
+  const token = await verifyUploadToken(request);
+  if (!token) return unauthorizedResponse();
 
   try {
     const body = await request.json();
@@ -23,6 +25,11 @@ export async function POST(request) {
     // Only session folders under the main folder may be listed
     if (!(await isSessionFolder(authClient, folderId))) {
       return NextResponse.json({ error: 'Invalid folder' }, { status: 403 });
+    }
+
+    const owned = await assertFolderOwnedByToken(authClient, folderId, token);
+    if (!owned.ok) {
+      return NextResponse.json({ error: owned.error }, { status: owned.status });
     }
 
     const allFiles = await listSessionFilesRecursive(authClient, folderId);

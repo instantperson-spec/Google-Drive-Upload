@@ -28,7 +28,7 @@ function ScopeRow({ scope, status }) {
   );
 }
 
-export default function AdminOAuthCheck() {
+export default function AdminOAuthCheck({ onScopeLabel }) {
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -44,16 +44,27 @@ export default function AdminOAuthCheck() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || 'Check failed');
       setReport(data);
+      const recommended = (data.scopes || []).find((s) => s.status === 'ok');
+      const label =
+        recommended?.scope?.includes('drive.file')
+          ? 'drive.file'
+          : data.summary?.level === 'ok'
+            ? 'drive.file'
+            : data.summary?.level === 'warn'
+              ? 'check'
+              : 'action';
+      if (typeof onScopeLabel === 'function') onScopeLabel(label);
     } catch (err) {
       setError(err.message);
       setReport(null);
+      if (typeof onScopeLabel === 'function') onScopeLabel('—');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <section className="admin-section">
+    <section className="admin-section glass-panel">
       <div className="admin-section-header-row">
         <h3 className="admin-section-title">OAuth scope test (VULN-05)</h3>
         <button

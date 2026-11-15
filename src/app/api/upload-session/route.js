@@ -3,12 +3,14 @@ import { verifyUploadToken, unauthorizedResponse } from '@/lib/auth';
 import { getAuthClient, isSessionFolder } from '@/lib/googleAuth';
 import { validateFileMetadata } from '@/lib/validation';
 import { rateLimit } from '@/lib/rateLimit';
+import { assertFolderOwnedByToken } from '@/lib/sessionOwnership';
 
 export async function POST(request) {
   // Generous limit: bulk folder uploads legitimately open one session per file
   const limited = rateLimit(request, 'upload-session', 300);
   if (limited) return limited;
-  if (!(await verifyUploadToken(request))) return unauthorizedResponse();
+  const token = await verifyUploadToken(request);
+  if (!token) return unauthorizedResponse();
 
   try {
     const { name, mimeType, size, folderId } = await request.json();
@@ -31,6 +33,11 @@ export async function POST(request) {
     // Only allow uploads into session folders created under the main folder
     if (!(await isSessionFolder(authClient, folderId))) {
       return NextResponse.json({ error: 'Invalid target folder' }, { status: 403 });
+    }
+
+    const owned = await assertFolderOwnedByToken(authClient, folderId, token);
+    if (!owned.ok) {
+      return NextResponse.json({ error: owned.error }, { status: owned.status });
     }
     
     // Direct POST request to initiate the resumable upload session

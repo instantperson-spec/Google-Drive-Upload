@@ -7,12 +7,21 @@ export const TOKEN_FILE_NAME = '_uploader_tokens.json';
 const CACHE_TTL_MS = 30_000;
 const TOKEN_SLUG_RE = /^[a-zA-Z0-9_-]{2,64}$/;
 
-/** @type {{ registry: object|null, loadedAt: number, fileId: string|null }} */
-const cache = { registry: null, loadedAt: 0, fileId: null };
+/** @type {{ registry: object|null, loadedAt: number, fileId: string|null, etag: string|null }} */
+const cache = { registry: null, loadedAt: 0, fileId: null, etag: null };
 
 function invalidateCache() {
   cache.registry = null;
   cache.loadedAt = 0;
+  cache.etag = null;
+}
+
+export class TokenStoreConflictError extends Error {
+  constructor(message = 'Token registry was modified concurrently. Retry.') {
+    super(message);
+    this.name = 'TokenStoreConflictError';
+    this.code = 409;
+  }
 }
 
 function bootstrapFromEnv() {
@@ -56,12 +65,27 @@ async function findTokenFile(drive) {
   return res.data.files?.[0] || null;
 }
 
+/** Drive v3: etag is not a valid `fields` selector — read HTTP ETag header. */
+function etagFromResponse(res) {
+  const h = res?.headers;
+  if (!h) return null;
+  if (typeof h.get === 'function') return h.get('etag') || h.get('ETag') || null;
+  return h.etag || h.ETag || null;
+}
+
 async function readFileJson(drive, fileId) {
+  const meta = await drive.files.get({
+    fileId,
+    fields: 'id',
+  });
   const res = await drive.files.get(
     { fileId, alt: 'media' },
     { responseType: 'text' }
   );
-  return JSON.parse(res.data);
+  return {
+    registry: JSON.parse(res.data),
+    etag: etagFromResponse(meta) || etagFromResponse(res),
+  };
 }
 
 async function createTokenFile(drive, registry) {
@@ -76,16 +100,34 @@ async function createTokenFile(drive, registry) {
     media: { mimeType: 'application/json', body },
     fields: 'id',
   });
-  return res.data.id;
+  return { fileId: res.data.id, etag: etagFromResponse(res) };
 }
 
-async function writeFileJson(drive, fileId, registry) {
+function isPreconditionFailed(err) {
+  const status = err?.code || err?.response?.status || err?.status;
+  return Number(status) === 412;
+}
+
+async function writeFileJson(drive, fileId, registry, etag) {
   registry.updatedAt = new Date().toISOString();
   const body = JSON.stringify(registry, null, 2);
-  await drive.files.update({
+  const params = {
     fileId,
     media: { mimeType: 'application/json', body },
-  });
+    fields: 'id',
+  };
+  if (etag) {
+    params.headers = { 'If-Match': etag };
+  }
+  try {
+    const res = await drive.files.update(params);
+    return etagFromResponse(res);
+  } catch (err) {
+    if (isPreconditionFailed(err)) {
+      throw new TokenStoreConflictError();
+    }
+    throw err;
+  }
 }
 
 /** @returns {Promise<object>} token registry */
@@ -100,16 +142,18 @@ export async function readRegistry(force = false) {
 
     if (!file) {
       const registry = bootstrapFromEnv();
-      const fileId = await createTokenFile(drive, registry);
+      const created = await createTokenFile(drive, registry);
       cache.registry = registry;
-      cache.fileId = fileId;
+      cache.fileId = created.fileId;
+      cache.etag = created.etag;
       cache.loadedAt = Date.now();
       return registry;
     }
 
-    const registry = await readFileJson(drive, file.id);
+    const { registry, etag } = await readFileJson(drive, file.id);
     cache.registry = registry;
     cache.fileId = file.id;
+    cache.etag = etag;
     cache.loadedAt = Date.now();
     return registry;
   } catch (err) {
@@ -127,15 +171,45 @@ async function saveRegistry(registry) {
   const drive = await getDrive();
   if (!cache.fileId) {
     const file = await findTokenFile(drive);
-    if (file) cache.fileId = file.id;
+    if (file) {
+      cache.fileId = file.id;
+      const meta = await drive.files.get({ fileId: file.id, fields: 'id' });
+      cache.etag = etagFromResponse(meta);
+    }
   }
   if (!cache.fileId) {
-    cache.fileId = await createTokenFile(drive, registry);
+    const created = await createTokenFile(drive, registry);
+    cache.fileId = created.fileId;
+    cache.etag = created.etag;
   } else {
-    await writeFileJson(drive, cache.fileId, registry);
+    cache.etag = await writeFileJson(drive, cache.fileId, registry, cache.etag);
   }
   cache.registry = registry;
   cache.loadedAt = Date.now();
+}
+
+/**
+ * Read → mutate → write with one retry on If-Match conflict (412).
+ * @param {(registry: object) => Promise<any>|any} mutator
+ */
+async function withRegistryMutation(mutator) {
+  let lastErr;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    invalidateCache();
+    const registry = await readRegistry(true);
+    const result = await mutator(registry);
+    try {
+      await saveRegistry(registry);
+      return result;
+    } catch (err) {
+      lastErr = err;
+      if (err instanceof TokenStoreConflictError && attempt === 0) {
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw lastErr || new TokenStoreConflictError();
 }
 
 function isRecordActive(record) {
@@ -199,48 +273,47 @@ export async function createToken({
     throw new Error('Type must be "retainer" or "one-time".');
   }
 
-  const registry = await readRegistry(true);
-  const duplicate = registry.tokens.find((t) => t.token === token && !t.revoked);
-  if (duplicate) {
-    throw new Error(`Token "${token}" already exists and is active.`);
-  }
+  return withRegistryMutation(async (registry) => {
+    const duplicate = registry.tokens.find((t) => t.token === token && !t.revoked);
+    if (duplicate) {
+      throw new Error(`Token "${token}" already exists and is active.`);
+    }
 
-  const now = new Date().toISOString();
-  const name = String(prefillName || clientName)
-    .trim()
-    .slice(0, 200);
-  const record = {
-    id: crypto.randomUUID(),
-    token,
-    clientName: clientName.trim(),
-    type,
-    notes: String(notes || '').slice(0, 500),
-    createdAt: now,
-    expiresAt: expiresAt || null,
-    revoked: false,
-    revokedAt: null,
-    // Bound to token — upload form does not ask the client for these.
-    prefillName: name,
-    prefillEmail: email,
-  };
+    const now = new Date().toISOString();
+    const name = String(prefillName || clientName)
+      .trim()
+      .slice(0, 200);
+    const record = {
+      id: crypto.randomUUID(),
+      token,
+      clientName: clientName.trim(),
+      type,
+      notes: String(notes || '').slice(0, 500),
+      createdAt: now,
+      expiresAt: expiresAt || null,
+      revoked: false,
+      revokedAt: null,
+      // Bound to token — upload form does not ask the client for these.
+      prefillName: name,
+      prefillEmail: email,
+    };
 
-  record.locale = normalizeLocale(locale);
+    record.locale = normalizeLocale(locale);
 
-  registry.tokens.push(record);
-  await saveRegistry(registry);
-  return record;
+    registry.tokens.push(record);
+    return record;
+  });
 }
 
 /** Revoke by token slug; used after one-time project upload completes. */
 export async function revokeTokenByValue(tokenString) {
-  const registry = await readRegistry(true);
-  const record = registry.tokens.find((t) => t.token === tokenString);
-  if (!record || record.revoked) return record ?? null;
-  record.revoked = true;
-  record.revokedAt = new Date().toISOString();
-  await saveRegistry(registry);
-  invalidateCache();
-  return record;
+  return withRegistryMutation(async (registry) => {
+    const record = registry.tokens.find((t) => t.token === tokenString);
+    if (!record || record.revoked) return record ?? null;
+    record.revoked = true;
+    record.revokedAt = new Date().toISOString();
+    return record;
+  });
 }
 
 export async function getTokenRecord(tokenString) {
@@ -285,71 +358,69 @@ export async function getTokenLocale(tokenString) {
 
 /** Set / repair client identity used by the locked upload form. */
 export async function setTokenIdentity(id, { clientName, clientEmail } = {}) {
-  const registry = await readRegistry(true);
-  const record = registry.tokens.find((t) => t.id === id);
-  if (!record) throw new Error('Token not found.');
+  return withRegistryMutation(async (registry) => {
+    const record = registry.tokens.find((t) => t.id === id);
+    if (!record) throw new Error('Token not found.');
 
-  const name = String(clientName || record.clientName || record.prefillName || '')
-    .trim()
-    .slice(0, 200);
-  const email = String(clientEmail || record.prefillEmail || '')
-    .trim()
-    .toLowerCase()
-    .slice(0, 200);
+    const name = String(clientName || record.clientName || record.prefillName || '')
+      .trim()
+      .slice(0, 200);
+    const email = String(clientEmail || record.prefillEmail || '')
+      .trim()
+      .toLowerCase()
+      .slice(0, 200);
 
-  if (!name) throw new Error('Client name is required.');
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    throw new Error('A valid client email is required.');
-  }
+    if (!name) throw new Error('Client name is required.');
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      throw new Error('A valid client email is required.');
+    }
 
-  record.clientName = name;
-  record.prefillName = name;
-  record.prefillEmail = email;
-  await saveRegistry(registry);
-  invalidateCache();
-  return record;
+    record.clientName = name;
+    record.prefillName = name;
+    record.prefillEmail = email;
+    return record;
+  });
 }
 
 export async function revokeToken(id) {
-  const registry = await readRegistry(true);
-  const record = registry.tokens.find((t) => t.id === id);
-  if (!record) throw new Error('Token not found.');
-  if (record.revoked) return record;
+  return withRegistryMutation(async (registry) => {
+    const record = registry.tokens.find((t) => t.id === id);
+    if (!record) throw new Error('Token not found.');
+    if (record.revoked) return record;
 
-  record.revoked = true;
-  record.revokedAt = new Date().toISOString();
-  await saveRegistry(registry);
-  invalidateCache(); // force immediate effect on auth checks
-  return record;
+    record.revoked = true;
+    record.revokedAt = new Date().toISOString();
+    return record;
+  });
 }
 
 export async function deleteToken(id) {
-  const registry = await readRegistry(true);
-  const initialLength = registry.tokens.length;
-  registry.tokens = registry.tokens.filter((t) => t.id !== id);
-  if (registry.tokens.length === initialLength) {
-    throw new Error('Token not found.');
-  }
-  await saveRegistry(registry);
-  invalidateCache();
-  return { success: true };
+  return withRegistryMutation(async (registry) => {
+    const initialLength = registry.tokens.length;
+    registry.tokens = registry.tokens.filter((t) => t.id !== id);
+    if (registry.tokens.length === initialLength) {
+      throw new Error('Token not found.');
+    }
+    return { success: true };
+  });
 }
 
 export async function restoreToken(id) {
-  const registry = await readRegistry(true);
-  const record = registry.tokens.find((t) => t.id === id);
-  if (!record) throw new Error('Token not found.');
+  return withRegistryMutation(async (registry) => {
+    const record = registry.tokens.find((t) => t.id === id);
+    if (!record) throw new Error('Token not found.');
 
-  const conflict = registry.tokens.find((t) => t.token === record.token && !t.revoked && t.id !== id);
-  if (conflict) {
-    throw new Error(`Cannot restore — token "${record.token}" is already active.`);
-  }
+    const conflict = registry.tokens.find(
+      (t) => t.token === record.token && !t.revoked && t.id !== id
+    );
+    if (conflict) {
+      throw new Error(`Cannot restore — token "${record.token}" is already active.`);
+    }
 
-  record.revoked = false;
-  record.revokedAt = null;
-  await saveRegistry(registry);
-  invalidateCache();
-  return record;
+    record.revoked = false;
+    record.revokedAt = null;
+    return record;
+  });
 }
 
 export function buildUploadUrl(origin, token) {

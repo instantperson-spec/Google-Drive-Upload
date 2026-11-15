@@ -4,13 +4,13 @@ overview: "Plan po MVP: najpierw usztywnienie sync/binding i lżejsze pobieranie
 todos:
   - id: p0-binding
     content: "P0: twardy binding + ostrzeżenie zagnieżdżenia ścieżek"
-    status: pending
+    status: completed
   - id: p0-download
     content: "P0: domyślnie plik-po-pliku do wskazanego folderu (File System Access); ZIP tylko jako opcja zapasowa"
-    status: pending
+    status: completed
   - id: p0-oos
     content: "P0: Out of sync rozdzielone dogrywki vs zmiany studia"
-    status: pending
+    status: completed
   - id: p1-rounds
     content: "P1: Delivery v2 — Opublikuj Draft N + diff na share"
     status: pending

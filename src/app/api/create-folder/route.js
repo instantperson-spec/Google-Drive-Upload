@@ -3,11 +3,13 @@ import { verifyUploadToken, unauthorizedResponse } from '@/lib/auth';
 import { getAuthClient } from '@/lib/googleAuth';
 import { rateLimit } from '@/lib/rateLimit';
 import { buildSessionFolderName } from '@/lib/sessionFolderName';
+import { writeSessionOwnership } from '@/lib/sessionOwnership';
 
 export async function POST(request) {
   const limited = rateLimit(request, 'create-folder', 10);
   if (limited) return limited;
-  if (!(await verifyUploadToken(request))) return unauthorizedResponse();
+  const token = await verifyUploadToken(request);
+  if (!token) return unauthorizedResponse();
 
   try {
     const { uploaderName, uploaderEmail, projectName } = await request.json();
@@ -56,8 +58,11 @@ export async function POST(request) {
       },
     });
 
+    const folderId = folderRes.data.id;
+    await writeSessionOwnership(authClient, folderId, token);
+
     return NextResponse.json({
-      folderId: folderRes.data.id,
+      folderId,
       folderName,
       projectName: projectName.trim(),
     });

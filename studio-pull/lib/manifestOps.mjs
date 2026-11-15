@@ -39,9 +39,13 @@ export function normalizeManifest(raw, folderId) {
     for (const [path, meta] of Object.entries(manifest.files)) {
       if (!meta || typeof meta !== 'object') continue;
       if (typeof meta.baselineSize === 'number') {
-        manifest.baseline[path] = meta.baselineSize;
+        manifest.baseline[path] = meta.baselineMd5
+          ? { size: meta.baselineSize, md5: meta.baselineMd5 }
+          : meta.baselineSize;
       } else if (meta.status === 'original' && typeof meta.size === 'number') {
-        manifest.baseline[path] = meta.size;
+        manifest.baseline[path] = meta.md5Checksum
+          ? { size: meta.size, md5: meta.md5Checksum }
+          : meta.size;
       }
     }
   }
@@ -110,13 +114,27 @@ export function hasBaseline(manifest) {
 /**
  * Classify one file vs immutable client baseline.
  */
-export function statusForFile(relativePath, size, baseline = {}) {
+export function statusForFile(relativePath, size, baseline = {}, opts = {}) {
   const rel = String(relativePath || '').replace(/\\/g, '/');
   if (!(rel in baseline)) return 'new';
-  const baseSize = Number(baseline[rel]);
+  const entry = baseline[rel];
+  const baseSize = typeof entry === 'object' && entry != null ? Number(entry.size) : Number(entry);
+  const baseMd5 = typeof entry === 'object' && entry != null ? entry.md5 || null : null;
   if (!Number.isFinite(baseSize)) return 'new';
-  if (Number(size) === baseSize) return 'original';
-  return 'modified';
+  if (Number(size) !== baseSize) return 'modified';
+  const md5 = opts.md5 || null;
+  if (baseMd5 && md5 && baseMd5 !== md5) return 'modified';
+  if (baseMd5 && md5 && baseMd5 === md5) return 'original';
+  const baselineAt = opts.baselineAt || null;
+  const modifiedTime = opts.modifiedTime || null;
+  if (baselineAt && modifiedTime) {
+    const baseMs = Date.parse(baselineAt);
+    const modMs = Date.parse(modifiedTime);
+    if (Number.isFinite(baseMs) && Number.isFinite(modMs) && modMs > baseMs + 2000) {
+      return 'modified';
+    }
+  }
+  return 'original';
 }
 
 /**
@@ -130,15 +148,20 @@ export function setBaselineFromFiles(fileList, { token = null, force = false, pr
   }
 
   const baseline = {};
+  const files = {};
   for (const f of fileList || []) {
     const rel = String(f.relativePath || '').replace(/\\/g, '/');
     if (!rel) continue;
-    baseline[rel] = Number(f.size) || 0;
-  }
-
-  const files = {};
-  for (const [path, size] of Object.entries(baseline)) {
-    files[path] = { size, status: 'original', baselineSize: size };
+    const size = Number(f.size) || 0;
+    const md5 = f.md5Checksum || f.md5 || null;
+    baseline[rel] = md5 ? { size, md5 } : size;
+    files[rel] = {
+      size,
+      status: 'original',
+      baselineSize: size,
+      baselineMd5: md5,
+      md5Checksum: md5,
+    };
   }
 
   return {
@@ -167,11 +190,32 @@ export function recomputeStatuses(manifest, currentFiles) {
   for (const f of currentFiles || []) {
     const rel = String(f.relativePath || '').replace(/\\/g, '/');
     const size = Number(f.size) || 0;
-    const status = statusForFile(rel, size, baseline);
+    const md5 = f.md5Checksum || f.md5 || null;
+    const modifiedTime =
+      f.modifiedTime ||
+      (Number.isFinite(f.mtimeMs) && f.mtimeMs > 0
+        ? new Date(f.mtimeMs).toISOString()
+        : null);
+    const status = statusForFile(rel, size, baseline, {
+      md5,
+      modifiedTime,
+      baselineAt: norm.baselineAt,
+    });
+    const baseEntry = baseline[rel];
+    const baselineSize =
+      typeof baseEntry === 'object' && baseEntry != null
+        ? baseEntry.size
+        : rel in baseline
+          ? baseEntry
+          : null;
+    const baselineMd5 =
+      typeof baseEntry === 'object' && baseEntry != null ? baseEntry.md5 || null : null;
     files[rel] = {
       size,
       status,
-      baselineSize: rel in baseline ? baseline[rel] : null,
+      baselineSize,
+      baselineMd5,
+      md5Checksum: md5,
     };
   }
   return {

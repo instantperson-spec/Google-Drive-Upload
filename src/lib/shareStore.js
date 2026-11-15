@@ -80,32 +80,61 @@ async function findManifest(drive, folderId) {
   return res.data.files?.[0] || null;
 }
 
-/** path → size the client originally uploaded */
+/**
+ * path → { size, md5? } the client originally uploaded.
+ * Legacy manifests store path → number (size only).
+ */
 function extractBaseline(manifest) {
   const baseline = {};
   if (manifest?.baseline && typeof manifest.baseline === 'object') {
-    for (const [path, size] of Object.entries(manifest.baseline)) {
-      baseline[path] = Number(size) || 0;
+    for (const [path, val] of Object.entries(manifest.baseline)) {
+      if (val && typeof val === 'object') {
+        baseline[path] = {
+          size: Number(val.size) || 0,
+          md5: typeof val.md5 === 'string' ? val.md5 : null,
+        };
+      } else {
+        baseline[path] = { size: Number(val) || 0, md5: null };
+      }
     }
   }
   if (Object.keys(baseline).length === 0 && manifest?.files) {
     for (const [path, meta] of Object.entries(manifest.files)) {
       if (!meta || typeof meta !== 'object') continue;
-      if (typeof meta.baselineSize === 'number') baseline[path] = meta.baselineSize;
-      else if (meta.status === 'original' && typeof meta.size === 'number') {
-        baseline[path] = meta.size;
+      if (typeof meta.baselineSize === 'number') {
+        baseline[path] = {
+          size: meta.baselineSize,
+          md5: typeof meta.baselineMd5 === 'string' ? meta.baselineMd5 : null,
+        };
+      } else if (meta.status === 'original' && typeof meta.size === 'number') {
+        baseline[path] = {
+          size: meta.size,
+          md5: typeof meta.md5Checksum === 'string' ? meta.md5Checksum : null,
+        };
       }
     }
   }
   return baseline;
 }
 
-function statusForFile(relativePath, size, baseline) {
+function statusForFile(relativePath, size, md5, modifiedTime, baseline, baselineAt) {
   if (!(relativePath in baseline)) return 'new';
-  const baseSize = Number(baseline[relativePath]);
+  const entry = baseline[relativePath];
+  const baseSize = Number(entry?.size);
   if (!Number.isFinite(baseSize)) return 'new';
-  if (Number(size) === baseSize) return 'original';
-  return 'modified';
+  if (Number(size) !== baseSize) return 'modified';
+  // Same size: prefer md5 when both sides have it (WAV same-size edits)
+  if (entry.md5 && md5 && entry.md5 !== md5) return 'modified';
+  if (entry.md5 && md5 && entry.md5 === md5) return 'original';
+  // Fallback: Drive modified after baseline capture → treat as studio edit
+  if (baselineAt && modifiedTime) {
+    const baseMs = Date.parse(baselineAt);
+    const modMs = Date.parse(modifiedTime);
+    if (Number.isFinite(baseMs) && Number.isFinite(modMs) && modMs > baseMs + 2000) {
+      return 'modified';
+    }
+  }
+  return 'original';
 }
 
 export async function readTeamManifest(folderId) {
@@ -124,6 +153,7 @@ const SKIP_NAMES = new Set([
   '_uploader_tokens.json',
   '_uploader_progress.json',
   '_uploader_shares.json',
+  '_uploader_session.json',
   '_team_manifest.json',
   '_manifest.json',
   '_crash_log.txt',
@@ -137,7 +167,7 @@ async function listChildren(drive, folderId) {
   do {
     const res = await drive.files.list({
       q: `'${folderId}' in parents and trashed = false`,
-      fields: 'nextPageToken, files(id, name, size, mimeType, modifiedTime)',
+      fields: 'nextPageToken, files(id, name, size, mimeType, modifiedTime, md5Checksum)',
       pageSize: 1000,
       pageToken,
     });
@@ -154,6 +184,7 @@ export async function listShareFiles(folderId) {
   const drive = await getDrive();
   const manifest = await readTeamManifest(folderId);
   const baseline = extractBaseline(manifest);
+  const baselineAt = manifest?.baselineAt || null;
   const out = [];
 
   async function walk(id, prefix) {
@@ -168,13 +199,14 @@ export async function listShareFiles(folderId) {
       if (item.mimeType?.startsWith('application/vnd.google-apps.')) continue;
 
       const size = Number(item.size) || 0;
+      const md5 = item.md5Checksum || null;
       let status;
       if (isFromClientPath(rel)) {
         status = 'fromClient';
       } else if (Object.keys(baseline).length === 0) {
         status = 'original';
       } else {
-        status = statusForFile(rel, size, baseline);
+        status = statusForFile(rel, size, md5, item.modifiedTime || null, baseline, baselineAt);
       }
 
       out.push({

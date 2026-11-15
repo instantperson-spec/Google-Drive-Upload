@@ -3,6 +3,7 @@ import { verifyUploadToken, unauthorizedResponse } from '@/lib/auth';
 import { getAuthClient, isSessionFolder } from '@/lib/googleAuth';
 import { upsertProgressSession, removeProgressSession } from '@/lib/progressStore';
 import { rateLimit } from '@/lib/rateLimit';
+import { assertFolderOwnedByToken } from '@/lib/sessionOwnership';
 
 const MAX_FILES = 2000;
 const MAX_NAME_LENGTH = 500;
@@ -58,10 +59,14 @@ export async function POST(request) {
       ? raw.sessionStatus
       : 'uploading';
 
-    // Verify folder belongs to our upload tree (skip on completed final ping if folder was valid)
+    // Verify folder belongs to our upload tree + this token
     const authClient = await getAuthClient();
     if (!(await isSessionFolder(authClient, raw.folderId))) {
       return NextResponse.json({ error: 'Invalid target folder.' }, { status: 403 });
+    }
+    const owned = await assertFolderOwnedByToken(authClient, raw.folderId, token);
+    if (!owned.ok) {
+      return NextResponse.json({ error: owned.error }, { status: owned.status });
     }
 
     const payload = {
@@ -76,7 +81,10 @@ export async function POST(request) {
       logs: Array.isArray(raw.logs) ? raw.logs.slice(-200).map(String) : [],
     };
 
-    await upsertProgressSession(payload);
+    const result = await upsertProgressSession(payload);
+    if (result?.ok === false) {
+      return NextResponse.json({ error: result.error }, { status: result.status || 403 });
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -87,14 +95,18 @@ export async function POST(request) {
 
 /** Optional: client may DELETE session after successful upload cleanup. */
 export async function DELETE(request) {
-  if (!(await verifyUploadToken(request))) return unauthorizedResponse();
+  const token = await verifyUploadToken(request);
+  if (!token) return unauthorizedResponse();
 
   try {
     const { sessionId } = await request.json();
     if (!isUuid(sessionId)) {
       return NextResponse.json({ error: 'Invalid sessionId.' }, { status: 400 });
     }
-    await removeProgressSession(sessionId);
+    const result = await removeProgressSession(sessionId, token);
+    if (result?.ok === false) {
+      return NextResponse.json({ error: result.error }, { status: result.status || 403 });
+    }
     return NextResponse.json({ success: true });
   } catch {
     return NextResponse.json({ error: 'Failed to remove session.' }, { status: 500 });

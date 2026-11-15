@@ -68,12 +68,20 @@ export async function isSessionFolder(authClient, folderId) {
       !f.trashed &&
       Array.isArray(f.parents) &&
       f.parents.includes(mainFolderId);
-    if (ok) sessionFolderCache.set(folderId, Date.now());
+    if (ok) {
+      sessionFolderCache.set(folderId, Date.now());
+      // Cap cache size
+      if (sessionFolderCache.size > 500) {
+        const oldest = sessionFolderCache.keys().next().value;
+        sessionFolderCache.delete(oldest);
+      }
+    } else {
+      sessionFolderCache.delete(folderId);
+    }
     return ok;
   } catch {
-    // Drive hiccup / rate limit: trust a previously verified folder (even stale)
-    // instead of failing the client's in-flight upload session.
-    if (cachedAt) return true;
+    // Fail closed on Drive errors — do not treat stale cache as proof of ownership.
+    // Callers with a valid in-flight session can retry; IDOR must not slip through.
     return false;
   }
 }

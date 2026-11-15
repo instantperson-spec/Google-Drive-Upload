@@ -1,0 +1,1278 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Console — Nowoczesny Mockup UI (2026)</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    :root {
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "SF Pro Display", Inter, Helvetica, Arial, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background-color: #07090e;
+      color: #f1f5f9;
+      min-height: 100vh;
+      overflow-x: hidden;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      transition: background 0.6s ease;
+    }
+
+    /* THEMES */
+    .bg-theme-aurora {
+      background: radial-gradient(circle at 50% 0%, #0d1224 0%, #06080e 100%);
+    }
+
+    .aurora-container {
+      position: fixed;
+      inset: 0;
+      overflow: hidden;
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.85;
+      transition: opacity 0.5s ease;
+    }
+
+    .aurora-blob {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(90px);
+      mix-blend-mode: screen;
+      animation: floatAurora 18s ease-in-out infinite alternate;
+    }
+
+    .aurora-blob-1 {
+      width: 580px;
+      height: 580px;
+      background: radial-gradient(circle, rgba(99, 102, 241, 0.42) 0%, rgba(99, 102, 241, 0) 70%);
+      top: -120px;
+      left: 12%;
+      animation-duration: 16s;
+    }
+
+    .aurora-blob-2 {
+      width: 680px;
+      height: 680px;
+      background: radial-gradient(circle, rgba(168, 85, 247, 0.34) 0%, rgba(168, 85, 247, 0) 70%);
+      top: 18%;
+      right: 8%;
+      animation-duration: 22s;
+      animation-delay: -5s;
+    }
+
+    .aurora-blob-3 {
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, rgba(6, 182, 212, 0.24) 0%, rgba(6, 182, 212, 0) 70%);
+      bottom: -110px;
+      left: 28%;
+      animation-duration: 20s;
+      animation-delay: -10s;
+    }
+
+    @keyframes floatAurora {
+      0% { transform: translate(0, 0) scale(1) rotate(0deg); }
+      50% { transform: translate(60px, 40px) scale(1.15) rotate(45deg); }
+      100% { transform: translate(-40px, 70px) scale(0.95) rotate(-30deg); }
+    }
+
+    .bg-theme-grid {
+      background-color: #08090d;
+      background-image:
+        radial-gradient(circle at var(--mouse-x, 50%) var(--mouse-y, 40%), rgba(99, 102, 241, 0.18) 0%, transparent 600px),
+        linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+      background-size: 100% 100%, 36px 36px, 36px 36px;
+    }
+
+    .bg-theme-nebula {
+      background:
+        radial-gradient(circle at 20% 30%, rgba(139, 92, 246, 0.22) 0%, transparent 45%),
+        radial-gradient(circle at 80% 70%, rgba(236, 72, 153, 0.18) 0%, transparent 50%),
+        radial-gradient(circle at 50% 50%, rgba(14, 165, 233, 0.15) 0%, transparent 55%),
+        #05060a;
+    }
+
+    .bg-theme-obsidian {
+      background: #090a0f;
+      background-image: radial-gradient(circle at 50% -20%, rgba(255, 255, 255, 0.06) 0%, transparent 65%);
+    }
+
+    .noise-overlay {
+      position: fixed;
+      inset: 0;
+      opacity: 0.025;
+      pointer-events: none;
+      z-index: 1;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+    }
+
+    /* SURFACES */
+    .modern-glass-card {
+      background: rgba(15, 20, 32, 0.74);
+      backdrop-filter: blur(26px) saturate(190%);
+      -webkit-backdrop-filter: blur(26px) saturate(190%);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow:
+        0 24px 64px -12px rgba(0, 0, 0, 0.65),
+        0 0 0 1px rgba(255, 255, 255, 0.04),
+        inset 0 1px 0 0 rgba(255, 255, 255, 0.14);
+      border-radius: 26px;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .modern-glass-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 8%;
+      right: 8%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.38), rgba(99, 102, 241, 0.55), rgba(255, 255, 255, 0.38), transparent);
+      pointer-events: none;
+    }
+
+    .kpi-tile {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 18px;
+      padding: 0.9rem 1rem;
+      transition: all 0.25s ease;
+    }
+
+    .kpi-tile:hover {
+      background: rgba(255, 255, 255, 0.055);
+      border-color: rgba(129, 140, 248, 0.35);
+      transform: translateY(-1px);
+    }
+
+    /* ============================================================
+       MODERN WEB GUIDANCE: RESPONSIVE TABLE & CUSTOM SCROLLBAR
+       ============================================================ */
+    .table-wrapper,
+    .scroller {
+      --scrollbar-thumb: #7c8ba1; /* > 5:1 contrast against dark track */
+      --scrollbar-track: #0b101c;
+
+      overflow: auto;
+      max-inline-size: 100%;
+      max-block-size: min(520px, 72vh);
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: #0c111e;
+      container-type: inline-size;
+
+      scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+      scrollbar-width: thin;
+    }
+
+    .table-wrapper:focus-visible {
+      outline: 2px solid #818cf8;
+      outline-offset: 2px;
+    }
+
+    @supports not (scrollbar-color: auto) {
+      .table-wrapper::-webkit-scrollbar,
+      .scroller::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+
+      .table-wrapper::-webkit-scrollbar-thumb,
+      .scroller::-webkit-scrollbar-thumb {
+        background: var(--scrollbar-thumb);
+        border-radius: 9999px;
+      }
+
+      .table-wrapper::-webkit-scrollbar-track,
+      .scroller::-webkit-scrollbar-track {
+        background: var(--scrollbar-track);
+      }
+    }
+
+    .admin-data-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      text-align: left;
+      font-size: 0.85rem;
+    }
+
+    .admin-data-table caption {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    .admin-data-table thead {
+      position: sticky;
+      inset-block-start: 0;
+      z-index: 2;
+      background: #131a2d;
+    }
+
+    .admin-data-table thead th {
+      padding: 0.78rem 1rem;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: #94a3b8;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+      white-space: nowrap;
+    }
+
+    .admin-data-table tbody tr {
+      transition: background-color 0.18s ease;
+    }
+
+    .admin-data-table tbody tr:hover td,
+    .admin-data-table tbody tr:hover th {
+      background-color: #131b2e;
+    }
+
+    .admin-data-table tbody th,
+    .admin-data-table tbody td {
+      padding: 0.9rem 1rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.055);
+      vertical-align: middle;
+    }
+
+    .admin-data-table tbody tr:last-child th,
+    .admin-data-table tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* Sticky row header column (desktop) with solid background so scroll doesn't bleed */
+    .admin-data-table tbody th {
+      position: sticky;
+      inset-inline-start: 0;
+      z-index: 1;
+      background: #0c111e;
+      font-weight: 600;
+      color: #f8fafc;
+    }
+
+    /* Labels for @container stacked cards */
+    .history-table {
+      --label-2: "Files";
+      --label-3: "Size";
+      --label-4: "Last Activity";
+      --label-5: "Drive";
+    }
+
+    .tokens-table {
+      --label-2: "Token";
+      --label-3: "Type & Locale";
+      --label-4: "Status & Expires";
+      --label-5: "Link";
+      --label-6: "Actions";
+    }
+
+    @container (width < 600px) {
+      .admin-data-table,
+      .admin-data-table thead,
+      .admin-data-table tbody,
+      .admin-data-table tr,
+      .admin-data-table th,
+      .admin-data-table td {
+        display: block;
+      }
+
+      .admin-data-table thead {
+        display: none;
+      }
+
+      .admin-data-table tbody {
+        padding: 0.65rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+
+      .admin-data-table tbody tr {
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 16px;
+        overflow: hidden;
+        background: rgba(255, 255, 255, 0.025);
+      }
+
+      .admin-data-table tbody th {
+        position: sticky;
+        inset-block-start: 0;
+        inset-inline-start: auto;
+        z-index: 2;
+        background: #141c30;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        padding: 0.85rem 1rem;
+      }
+
+      .admin-data-table tbody td {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        padding: 0.6rem 1rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.045);
+      }
+
+      .admin-data-table tbody td::before {
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: #94a3b8;
+        flex-shrink: 0;
+      }
+
+      .admin-data-table tbody td:nth-child(2)::before { content: var(--label-2) ": "; }
+      .admin-data-table tbody td:nth-child(3)::before { content: var(--label-3) ": "; }
+      .admin-data-table tbody td:nth-child(4)::before { content: var(--label-4) ": "; }
+      .admin-data-table tbody td:nth-child(5)::before { content: var(--label-5) ": "; }
+      .admin-data-table tbody td:nth-child(6)::before { content: var(--label-6) ": "; }
+    }
+
+    .pulse-dot {
+      display: inline-block;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #10b981;
+      box-shadow: 0 0 8px #10b981;
+      animation: pulseAnim 2s infinite;
+    }
+
+    .pulse-dot-amber {
+      background: #f59e0b;
+      box-shadow: 0 0 8px #f59e0b;
+    }
+
+    @keyframes pulseAnim {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+  </style>
+</head>
+<body class="bg-theme-aurora">
+
+  <!-- Ambient Background -->
+  <div class="aurora-container" id="auroraBg">
+    <div class="aurora-blob aurora-blob-1"></div>
+    <div class="aurora-blob aurora-blob-2"></div>
+    <div class="aurora-blob aurora-blob-3"></div>
+  </div>
+  <div class="noise-overlay"></div>
+
+  <!-- ============================================================
+       TOP NAVIGATION & CONTROLLER BAR
+       ============================================================ -->
+  <header class="sticky top-0 z-50 px-4 py-2.5 border-b border-white/10 bg-black/55 backdrop-blur-xl">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3 text-xs">
+
+      <!-- Brand & Screen Switcher -->
+      <div class="flex flex-wrap items-center gap-3">
+        <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center font-bold text-white shadow-lg shadow-indigo-500/30">
+          ▲
+        </div>
+
+        <nav aria-label="Mockup Screens" class="flex items-center bg-white/5 p-1 rounded-xl border border-white/10">
+          <a href="index.html" class="px-3 py-1 rounded-lg text-slate-400 hover:text-white transition flex items-center gap-1.5">
+            <span>📤 Upload</span>
+          </a>
+          <a href="share.html" class="px-3 py-1 rounded-lg text-slate-400 hover:text-white transition flex items-center gap-1.5">
+            <span>📦 Portal</span>
+          </a>
+          <span class="px-3 py-1 rounded-lg text-white font-semibold bg-indigo-600 shadow-sm flex items-center gap-1.5">
+            <span>🛡️ Admin</span>
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+          </span>
+          <a href="studio-console.html" class="px-3 py-1 rounded-lg text-slate-400 hover:text-white transition flex items-center gap-1.5">
+            <span>🖥️ Studio</span>
+          </a>
+        </nav>
+      </div>
+
+      <!-- Mockup Controls -->
+      <div class="flex flex-wrap items-center gap-2">
+        <!-- Layout Switcher -->
+        <div class="flex items-center bg-white/5 p-1 rounded-xl border border-white/10">
+          <button onclick="switchLayout('stack')" id="btn-layout-stack" class="px-2.5 py-1 rounded-lg text-white font-medium bg-indigo-600 shadow-sm transition">
+            Modern Glass Stack
+          </button>
+          <button onclick="switchLayout('bento')" id="btn-layout-bento" class="px-2.5 py-1 rounded-lg text-slate-400 hover:text-white font-medium transition">
+            Bento Command Grid
+          </button>
+          <button onclick="switchLayout('tabs')" id="btn-layout-tabs" class="px-2.5 py-1 rounded-lg text-slate-400 hover:text-white font-medium transition">
+            Tabbed Workspace
+          </button>
+        </div>
+
+        <!-- Background Themes -->
+        <div class="flex items-center bg-white/5 p-1 rounded-xl border border-white/10">
+          <button onclick="switchBg('aurora')" id="bg-aurora" class="px-2 py-1 rounded-lg text-white bg-white/15 transition flex items-center gap-1">
+            <span class="w-2 h-2 rounded-full bg-indigo-400"></span> Aurora
+          </button>
+          <button onclick="switchBg('grid')" id="bg-grid" class="px-2 py-1 rounded-lg text-slate-400 hover:text-white transition flex items-center gap-1">
+            <span class="w-2 h-2 rounded-full bg-cyan-400"></span> Grid
+          </button>
+          <button onclick="switchBg('nebula')" id="bg-nebula" class="px-2 py-1 rounded-lg text-slate-400 hover:text-white transition flex items-center gap-1">
+            <span class="w-2 h-2 rounded-full bg-purple-400"></span> Nebula
+          </button>
+          <button onclick="switchBg('obsidian')" id="bg-obsidian" class="px-2 py-1 rounded-lg text-slate-400 hover:text-white transition flex items-center gap-1">
+            <span class="w-2 h-2 rounded-full bg-zinc-400"></span> Obsidian
+          </button>
+        </div>
+
+        <!-- Live Upload Simulation Toggle -->
+        <button onclick="toggleLiveSimulation()" id="btn-sim-live" class="px-3 py-1 rounded-xl bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25 border border-emerald-500/30 font-medium transition flex items-center gap-1.5">
+          <span>⚡ Symuluj Live Upload</span>
+        </button>
+
+        <!-- Compare Modal Toggle -->
+        <button onclick="toggleCompareModal()" class="px-3 py-1 rounded-xl bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 border border-amber-500/30 font-medium transition flex items-center gap-1.5">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+          Porównaj z oryginałem
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- ============================================================
+       MAIN WORKSPACE
+       ============================================================ -->
+  <main id="workspace-root" class="relative z-10 flex-1 w-full max-w-5xl mx-auto px-4 py-6 md:px-6 md:py-8 transition-all duration-500 space-y-6">
+
+    <!-- UNIFIED HERO HEADER (Eliminates duplicate "Admin Console" title from original) -->
+    <section class="modern-glass-card p-6 md:p-7">
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-5">
+        <div class="space-y-2.5">
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-indigo-500/20 text-indigo-300 border border-indigo-500/35">
+              ADMIN PANEL • GOOGLE DRIVE
+            </span>
+            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 flex items-center gap-1.5">
+              <span class="pulse-dot"></span> Sesja aktywna
+            </span>
+          </div>
+          <div>
+            <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
+              Admin Console
+            </h1>
+            <p class="text-xs sm:text-sm text-slate-400 mt-0.5">
+              Session history from Google Drive, active client tokens and OAuth security diagnostics.
+            </p>
+          </div>
+          <!-- Sync Telemetry Pills -->
+          <div class="flex flex-wrap items-center gap-2 pt-1 text-[11px] text-slate-300">
+            <span class="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 font-mono">
+              Drive: <span id="sync-drive-time" class="text-white">15 lis 2026, 17:09</span>
+            </span>
+            <span class="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 font-mono">
+              Progress: <span id="sync-progress-time" class="text-white">15 lis 2026, 17:09</span>
+            </span>
+            <span class="px-2.5 py-1 rounded-lg bg-indigo-500/10 border border-indigo-500/25 text-indigo-300">
+              Auto-refresh: 60s
+            </span>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2.5 self-start md:self-center">
+          <button onclick="simulateRefresh()" id="btn-refresh-all" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-lg shadow-indigo-600/30 transition flex items-center gap-2">
+            <svg id="refresh-icon" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            <span id="refresh-label">Refresh all</span>
+          </button>
+          <button onclick="showToast('Symulacja wylogowania — sesja admina unieważniona po stronie serwera.')" class="px-4 py-2 rounded-xl bg-white/5 hover:bg-rose-500/20 text-slate-300 hover:text-rose-200 border border-white/10 hover:border-rose-500/30 text-xs font-semibold transition">
+            Logout
+          </button>
+        </div>
+      </div>
+
+      <!-- KPI Overview Row -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-6 pt-5 border-t border-white/10">
+        <div class="kpi-tile">
+          <div class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Completed Sessions</div>
+          <div class="mt-1 flex items-baseline gap-2">
+            <span class="text-2xl font-extrabold text-white" id="kpi-sessions-count">2</span>
+            <span class="text-xs text-emerald-400 font-medium" id="kpi-live-badge">Drive synced</span>
+          </div>
+        </div>
+        <div class="kpi-tile">
+          <div class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Stored Volume</div>
+          <div class="mt-1 flex items-baseline gap-2">
+            <span class="text-2xl font-extrabold text-white">3.75 GB</span>
+            <span class="text-xs text-slate-400">3,179 files</span>
+          </div>
+        </div>
+        <div class="kpi-tile">
+          <div class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Client Tokens</div>
+          <div class="mt-1 flex items-baseline gap-2">
+            <span class="text-2xl font-extrabold text-indigo-300" id="kpi-active-tokens">3 active</span>
+            <span class="text-xs text-slate-400" id="kpi-total-tokens">of 3 total</span>
+          </div>
+        </div>
+        <div class="kpi-tile">
+          <div class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">OAuth Scope Status</div>
+          <div class="mt-1 flex items-center gap-2">
+            <span class="text-lg font-bold text-emerald-300 font-mono" id="kpi-oauth-text">drive.file</span>
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">VULN-05 OK</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TABS BAR (Visible only in Tabbed Workspace layout) -->
+    <div id="tabs-nav" class="hidden flex flex-wrap items-center gap-2 p-1.5 rounded-2xl bg-slate-900/75 border border-white/10 backdrop-blur-xl">
+      <button onclick="selectTab('history')" id="tab-btn-history" class="px-4 py-2 rounded-xl text-xs font-semibold text-white bg-indigo-600 shadow-sm transition flex items-center gap-2">
+        <span>📂 History (Google Drive)</span>
+        <span class="px-1.5 py-0.5 rounded-full bg-white/20 text-[10px]" id="tab-badge-history">2</span>
+      </button>
+      <button onclick="selectTab('tokens')" id="tab-btn-tokens" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white transition flex items-center gap-2">
+        <span>🔑 Client Tokens</span>
+        <span class="px-1.5 py-0.5 rounded-full bg-indigo-500/25 text-indigo-300 text-[10px]" id="tab-badge-tokens">3 active</span>
+      </button>
+      <button onclick="selectTab('oauth')" id="tab-btn-oauth" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white transition flex items-center gap-2">
+        <span>🛡️ OAuth & Security (VULN-05)</span>
+      </button>
+    </div>
+
+    <!-- ============================================================
+         SECTIONS CONTAINER (Adapts between Stack, Bento & Tabs)
+         ============================================================ -->
+    <div id="workspace-grid" class="flex flex-col gap-6">
+
+      <!-- ========================================================
+           SECTION 1: HISTORY (GOOGLE DRIVE) + LIVE UPLOAD ROW
+           ======================================================== -->
+      <section id="card-history" class="modern-glass-card p-6 space-y-5">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-300">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+            </div>
+            <div>
+              <h2 id="history-heading" class="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                History (Google Drive)
+                <span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30" id="history-total-pill">2</span>
+              </h2>
+              <p class="text-xs text-slate-400">Sesje z folderu głównego Google Drive po odfiltrowaniu plików technicznych.</p>
+            </div>
+          </div>
+
+          <!-- Filter Pill -->
+          <div class="flex items-center gap-2 text-xs">
+            <input type="search" id="history-search" oninput="renderHistoryFilter()" placeholder="Szukaj klienta lub projektu…" class="px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500/60 w-48 sm:w-56">
+          </div>
+        </div>
+
+        <!-- LIVE IN-PROGRESS BLOCK (Toggled by Simulation Button) -->
+        <div id="live-upload-block" class="hidden rounded-2xl border border-emerald-500/30 bg-emerald-950/20 p-4 space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex items-center gap-2">
+              <span class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/35 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5">
+                <span class="pulse-dot"></span> Live Upload
+              </span>
+              <span class="text-sm font-bold text-white">Acoustic Session 2026</span>
+              <span class="text-xs text-slate-400">• CiaranCarty (ciarancarty@gmail.com)</span>
+            </div>
+            <div class="text-xs font-mono text-emerald-300">
+              <span id="live-files-label">17 / 25 files</span> · <span id="live-bytes-label">2.85 GB / 4.20 GB</span>
+            </div>
+          </div>
+          <div class="w-full h-2 rounded-full bg-black/50 overflow-hidden border border-white/10">
+            <div id="live-progress-bar" class="h-full bg-gradient-to-r from-emerald-500 via-teal-400 to-indigo-400 rounded-full transition-all duration-300" style="width: 68%;"></div>
+          </div>
+          <div class="flex items-center justify-between text-[11px] text-slate-400">
+            <span>Aktualny plik: <code class="text-slate-200">Stems/Vocal_Lead_Dry.wav</code></span>
+            <span class="font-bold text-emerald-300" id="live-pct-label">68%</span>
+          </div>
+        </div>
+
+        <!-- COMPLETED SUBHEADING -->
+        <div class="flex items-center justify-between">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+            Completed
+            <span class="px-2 py-0.5 rounded-full bg-white/10 text-slate-200 text-[11px]">2</span>
+          </h3>
+        </div>
+
+        <!-- RESPONSIVE TABLE: HISTORY -->
+        <div tabindex="0" role="region" aria-labelledby="history-heading" class="table-wrapper">
+          <table class="admin-data-table history-table" id="history-table">
+            <caption>Completed upload sessions stored in Google Drive</caption>
+            <thead>
+              <tr>
+                <th scope="col">Project &amp; Client</th>
+                <th scope="col">Files</th>
+                <th scope="col">Size</th>
+                <th scope="col">Last Activity</th>
+                <th scope="col" class="text-right">Drive</th>
+              </tr>
+            </thead>
+            <tbody id="history-tbody">
+              <tr data-search="diplomat marek szlosek">
+                <th scope="row">
+                  <div class="flex flex-col">
+                    <span class="text-sm font-bold text-white">Diplomat</span>
+                    <span class="text-xs text-slate-400 font-normal">Marek Szlosek</span>
+                  </div>
+                </th>
+                <td>
+                  <span class="font-mono font-semibold text-slate-100">3 179</span>
+                </td>
+                <td>
+                  <span class="font-mono font-semibold text-indigo-300">3.75 GB</span>
+                </td>
+                <td class="text-xs text-slate-400 whitespace-nowrap">14 lis 2026, 15:00</td>
+                <td class="text-right">
+                  <button onclick="showToast('Otwieranie folderu Diplomat w Google Drive…')" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-indigo-500/15 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-500/30 text-xs font-semibold transition whitespace-nowrap">
+                    Open ↗
+                  </button>
+                </td>
+              </tr>
+              <tr data-search="nortku jacek">
+                <th scope="row">
+                  <div class="flex flex-col">
+                    <span class="text-sm font-bold text-white">nortku</span>
+                    <span class="text-xs text-slate-400 font-normal">Jacek</span>
+                  </div>
+                </th>
+                <td>
+                  <div class="flex items-center gap-2">
+                    <span class="font-mono text-slate-400">0</span>
+                    <span class="px-2 py-0.5 rounded-md bg-slate-800 text-slate-400 text-[10px] border border-white/10">Empty</span>
+                  </div>
+                </td>
+                <td>
+                  <span class="font-mono text-slate-400">0 B</span>
+                </td>
+                <td class="text-xs text-slate-400 whitespace-nowrap">14 lis 2026, 09:55</td>
+                <td class="text-right">
+                  <button onclick="showToast('Otwieranie folderu nortku w Google Drive…')" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-indigo-500/15 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-500/30 text-xs font-semibold transition whitespace-nowrap">
+                    Open ↗
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ========================================================
+           SECTION 2: CLIENT TOKENS (No Horizontal White Scrollbar!)
+           ======================================================== -->
+      <section id="card-tokens" class="modern-glass-card p-6 space-y-5">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-xl bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-purple-300">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+            </div>
+            <div>
+              <h2 id="tokens-heading" class="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                Client tokens
+                <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30" id="tokens-active-pill">3 active</span>
+              </h2>
+              <p class="text-xs text-slate-400">
+                Stored in <code class="px-1.5 py-0.5 rounded bg-white/10 text-slate-200 font-mono text-[11px]">_uploader_tokens.json</code> on Google Drive. Revoke takes effect immediately.
+              </p>
+            </div>
+          </div>
+
+          <button onclick="toggleNewTokenForm()" id="btn-toggle-new-token" class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-lg shadow-indigo-600/25 transition flex items-center gap-1.5">
+            <span>+ New token</span>
+          </button>
+        </div>
+
+        <!-- COLLAPSIBLE NEW TOKEN FORM -->
+        <form id="new-token-form" onsubmit="handleCreateToken(event)" class="hidden rounded-2xl bg-slate-900/80 border border-indigo-500/30 p-4 space-y-4">
+          <div class="flex items-center justify-between border-b border-white/10 pb-2.5">
+            <span class="text-xs font-bold uppercase tracking-wider text-indigo-300">Utwórz nowy token klienta</span>
+            <button type="button" onclick="toggleNewTokenForm()" class="text-xs text-slate-400 hover:text-white">Anuluj</button>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
+            <label class="space-y-1 block">
+              <span class="text-slate-300 font-medium">Token (URL slug)</span>
+              <input id="nt-slug" required placeholder="StudioAlfa" class="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-white focus:outline-none focus:border-indigo-500">
+            </label>
+            <label class="space-y-1 block">
+              <span class="text-slate-300 font-medium">Client name</span>
+              <input id="nt-client" required placeholder="Studio Alfa Sp. z o.o." class="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-white focus:outline-none focus:border-indigo-500">
+            </label>
+            <label class="space-y-1 block">
+              <span class="text-slate-300 font-medium">Client email</span>
+              <input id="nt-email" type="email" required placeholder="client@studio.com" class="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-white focus:outline-none focus:border-indigo-500">
+            </label>
+            <label class="space-y-1 block">
+              <span class="text-slate-300 font-medium">Type</span>
+              <select id="nt-type" class="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-white focus:outline-none focus:border-indigo-500">
+                <option value="Retainer">Retainer (permanent)</option>
+                <option value="One-time">One-time project</option>
+              </select>
+            </label>
+            <label class="space-y-1 block">
+              <span class="text-slate-300 font-medium">Upload UI language</span>
+              <select id="nt-locale" class="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-white focus:outline-none focus:border-indigo-500">
+                <option value="EN">English (EN)</option>
+                <option value="PL">Polski (PL)</option>
+              </select>
+            </label>
+            <label class="space-y-1 block">
+              <span class="text-slate-300 font-medium">Expires (optional)</span>
+              <input id="nt-expires" type="date" class="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-white focus:outline-none focus:border-indigo-500">
+            </label>
+          </div>
+          <div class="flex justify-end">
+            <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition">
+              Create token &amp; copy link
+            </button>
+          </div>
+        </form>
+
+        <!-- RESPONSIVE TABLE: TOKENS (Compact 6 columns — zero horizontal overflow on desktop!) -->
+        <div tabindex="0" role="region" aria-labelledby="tokens-heading" class="table-wrapper">
+          <table class="admin-data-table tokens-table" id="tokens-table">
+            <caption>Client upload access tokens</caption>
+            <thead>
+              <tr>
+                <th scope="col">Client &amp; Email</th>
+                <th scope="col">Token</th>
+                <th scope="col">Type &amp; Locale</th>
+                <th scope="col">Status &amp; Expires</th>
+                <th scope="col">Link</th>
+                <th scope="col" class="text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="tokens-tbody">
+              <!-- Rendered dynamically by JS from real screenshot data -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ========================================================
+           SECTION 3: OAUTH SCOPE TEST (VULN-05)
+           ======================================================== -->
+      <section id="card-oauth" class="modern-glass-card p-6 space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-300">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+            </div>
+            <div>
+              <h2 class="text-base sm:text-lg font-bold text-white">OAuth scope test (VULN-05)</h2>
+              <p class="text-xs text-slate-400">
+                Checks whether the Google refresh token has the recommended <code class="px-1.5 py-0.5 rounded bg-white/10 text-slate-200 font-mono text-[11px]">drive.file</code> scope (not full Drive access). Same as <code class="px-1.5 py-0.5 rounded bg-white/10 text-slate-200 font-mono text-[11px]">npm run check-oauth-scopes</code>.
+              </p>
+            </div>
+          </div>
+
+          <button onclick="runOAuthTest()" id="btn-run-oauth" class="px-4 py-2 rounded-xl bg-white/10 hover:bg-emerald-600/80 text-white border border-white/15 hover:border-emerald-400/50 text-xs font-semibold transition flex items-center gap-2">
+            <span>Run test</span>
+          </button>
+        </div>
+
+        <!-- OAuth Report Output (Visible after clicking "Run test") -->
+        <div id="oauth-report" class="hidden rounded-2xl border border-emerald-500/30 bg-emerald-950/20 p-4 space-y-3">
+          <div class="flex items-start gap-3">
+            <span class="px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/35 text-xs font-bold">PASS</span>
+            <div>
+              <p class="text-xs sm:text-sm font-semibold text-white">Refresh token uses least-privilege <code class="text-emerald-300">drive.file</code> scope only.</p>
+              <p class="text-xs text-slate-400 mt-0.5">Access token obtained successfully · Expires in 3599s · No overly broad Drive scopes detected.</p>
+            </div>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs pt-1">
+            <div class="p-2.5 rounded-xl bg-black/30 border border-white/10">
+              <div class="text-[10px] uppercase tracking-wider text-slate-400">Client ID</div>
+              <div class="font-mono text-slate-200 mt-0.5 truncate">1084…apps.googleusercontent.com</div>
+            </div>
+            <div class="p-2.5 rounded-xl bg-black/30 border border-white/10">
+              <div class="text-[10px] uppercase tracking-wider text-slate-400">Main Folder ID</div>
+              <div class="font-mono text-slate-200 mt-0.5 truncate">1A9xK…_RootDriveFolder</div>
+            </div>
+            <div class="p-2.5 rounded-xl bg-black/30 border border-white/10">
+              <div class="text-[10px] uppercase tracking-wider text-slate-400">Active Scope</div>
+              <div class="font-mono text-emerald-300 mt-0.5 truncate">.../auth/drive.file</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- INLINE MODAL: SET EMAIL FOR TOKEN -->
+  <div id="email-modal" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="modern-glass-card max-w-md w-full p-6 space-y-4">
+      <h3 class="text-base font-bold text-white">Przypisz e-mail do tokena <span id="email-modal-token" class="text-indigo-300 font-mono"></span></h3>
+      <p class="text-xs text-slate-400">Po zapisaniu pole e-mail w formularzu uploadu będzie zablokowane i powiązane z tym adresem.</p>
+      <input id="email-modal-input" type="email" placeholder="np. jacek@studio.pl" class="w-full px-3.5 py-2.5 rounded-xl bg-black/50 border border-white/15 text-sm text-white focus:outline-none focus:border-indigo-500">
+      <div class="flex justify-end gap-2 pt-2">
+        <button onclick="closeEmailModal()" class="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 text-xs font-semibold">Anuluj</button>
+        <button onclick="saveTokenEmail()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold">Zapisz e-mail</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: COMPARE WITH ORIGINAL SCREENSHOT -->
+  <div id="compare-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden flex items-center justify-center p-4">
+    <div class="modern-glass-card max-w-5xl w-full p-6 max-h-[90vh] scroller">
+      <div class="flex items-center justify-between pb-4 border-b border-white/10 mb-6">
+        <div>
+          <h3 class="text-lg font-bold text-white">Porównanie: Admin Console (Oryginalny vs Mockup 2026)</h3>
+          <p class="text-xs text-slate-400">Oryginalny kod aplikacji (`src/*`) oraz pozostałe mockupy nie zostały zmienione.</p>
+        </div>
+        <button onclick="toggleCompareModal()" class="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 text-slate-300 flex items-center justify-center text-lg">✕</button>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+        <!-- Old Screenshot -->
+        <div class="space-y-3">
+          <div class="flex items-center justify-between text-xs font-semibold text-rose-300 px-1">
+            <span>Dotychczasowy wygląd (Twój zrzut ekranu)</span>
+            <span class="px-2 py-0.5 rounded bg-rose-500/20 text-[10px]">Stary styl</span>
+          </div>
+          <div class="rounded-2xl overflow-hidden border border-white/10 bg-slate-950 p-2 shadow-inner">
+            <img src="original_admin_screenshot.jpg" alt="Dotychczasowy Admin Console" class="w-full rounded-xl object-contain max-h-[480px]">
+          </div>
+          <ul class="text-xs text-slate-400 space-y-1.5 list-disc list-inside">
+            <li><strong>Podwójny nagłówek „Admin Console”</strong> jeden pod drugim</li>
+            <li><strong>Jaskrawy biały pasek przewijania poziomego</strong> pod tabelą Client tokens</li>
+            <li><strong>Ucięty przycisk „Set email”</strong> i zawijane akcje w kolumnie po prawej</li>
+            <li><strong>Brak kafelków KPI</strong> z podsumowaniem wolumenu i aktywnych tokenów</li>
+          </ul>
+        </div>
+
+        <!-- New Mockup Improvements -->
+        <div class="space-y-3">
+          <div class="flex items-center justify-between text-xs font-semibold text-emerald-300 px-1">
+            <span>Nowy Proponowany Mockup 2026</span>
+            <span class="px-2 py-0.5 rounded bg-emerald-500/20 text-[10px]">Nowoczesny</span>
+          </div>
+          <div class="rounded-2xl overflow-hidden border border-emerald-500/20 bg-slate-900/60 p-4 space-y-3.5 text-xs text-slate-300">
+            <div class="p-4 rounded-xl bg-indigo-500/10 border border-indigo-500/25 space-y-2">
+              <div class="font-bold text-indigo-300">✨ Co rozwiązuje nowy projekt:</div>
+              <p>1. <strong>Jeden Hero Header + 4 kafelki KPI:</strong> Natychmiastowy wgląd w liczbę sesji, zajętość (3.75 GB / 3 179 plików), aktywne tokeny oraz status OAuth.</p>
+              <p>2. <strong>Koniec z poziomym białym paskiem:</strong> Skonsolidowane 6 kolumn mieści się komfortowo w kontenerze, a ciemny cienki pasek przewijania (`scrollbar-color`) zachowuje kontrast &gt; 5:1.</p>
+              <p>3. <strong>Responsywne karty na wąskich ekranach:</strong> Dzięki `@container (width &lt; 600px)` tabele automatycznie przechodzą w czytelne karty z etykietami kolumn i przypiętym nagłówkiem klienta.</p>
+              <p>4. <strong>3 warianty układu do wyboru:</strong> Stack, Bento Command Grid oraz Tabbed Workspace + symulacja Live Upload i testu OAuth.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-6 pt-4 border-t border-white/10 flex justify-end">
+        <button onclick="toggleCompareModal()" class="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition">
+          Zamknij i wróć do mockupu
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST -->
+  <div id="toast" class="fixed bottom-5 right-5 z-50 px-4 py-2.5 rounded-xl bg-slate-900/95 border border-indigo-500/40 text-xs font-medium text-white shadow-2xl hidden"></div>
+
+  <script>
+    let currentLayout = 'stack';
+    let currentTab = 'history';
+    let currentBg = 'aurora';
+    let liveSimActive = false;
+    let liveInterval = null;
+    let livePct = 68;
+    let editingEmailTokenId = null;
+
+    const tokensState = [
+      {
+        id: 't1',
+        clientName: 'CiaranCarty',
+        email: 'ciarancarty@gmail.com',
+        token: 'CiaranCarty',
+        type: 'Retainer',
+        locale: 'EN',
+        status: 'active',
+        expiresAt: '—',
+        copied: false
+      },
+      {
+        id: 't2',
+        clientName: 'Jacek',
+        email: '',
+        token: 'Jacek',
+        type: 'Retainer',
+        locale: 'EN',
+        status: 'active',
+        expiresAt: '—',
+        copied: false
+      },
+      {
+        id: 't3',
+        clientName: 'Marek Szlosek',
+        email: 'biuro@unity-diplomat.pl',
+        token: 'MarekSzlosek',
+        type: 'Retainer',
+        locale: 'PL',
+        status: 'active',
+        expiresAt: '—',
+        copied: false
+      }
+    ];
+
+    function renderTokens() {
+      const tbody = document.getElementById('tokens-tbody');
+      if (!tbody) return;
+
+      const activeCount = tokensState.filter(t => t.status === 'active').length;
+      document.getElementById('tokens-active-pill').textContent = `${activeCount} active`;
+      document.getElementById('kpi-active-tokens').textContent = `${activeCount} active`;
+      document.getElementById('kpi-total-tokens').textContent = `of ${tokensState.length} total`;
+      document.getElementById('tab-badge-tokens').textContent = `${activeCount} active`;
+
+      tbody.innerHTML = tokensState.map(t => {
+        const isActive = t.status === 'active';
+        const statusBadge = isActive
+          ? `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"><span class="pulse-dot"></span> ACTIVE</span>`
+          : `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-500/15 text-rose-300 border border-rose-500/30">REVOKED</span>`;
+
+        const emailBlock = t.email
+          ? `<span class="text-xs text-slate-400 font-normal">${escapeHtml(t.email)}</span>`
+          : `<button onclick="openEmailModal('${t.id}')" class="mt-0.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 text-[11px] font-medium w-fit transition">+ Set email</button>`;
+
+        const copyBtn = isActive
+          ? `<button onclick="copyTokenLink('${t.id}')" class="px-3 py-1 rounded-lg ${t.copied ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' : 'bg-white/10 hover:bg-white/15 text-slate-200 border-white/15'} border text-xs font-semibold transition whitespace-nowrap">${t.copied ? '✓ Copied!' : 'Copy link'}</button>`
+          : `<span class="text-xs text-slate-500">—</span>`;
+
+        const toggleBtn = isActive
+          ? `<button onclick="toggleTokenStatus('${t.id}')" class="px-2.5 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/25 text-xs font-semibold transition">Revoke</button>`
+          : `<button onclick="toggleTokenStatus('${t.id}')" class="px-2.5 py-1 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/25 text-xs font-semibold transition">Restore</button>`;
+
+        return `
+          <tr class="${isActive ? '' : 'opacity-65'}">
+            <th scope="row">
+              <div class="flex flex-col">
+                <span class="text-sm font-bold text-white">${escapeHtml(t.clientName)}</span>
+                ${emailBlock}
+              </div>
+            </th>
+            <td>
+              <code class="px-2.5 py-1 rounded-lg bg-slate-900/90 border border-white/10 text-indigo-300 font-mono text-xs">${escapeHtml(t.token)}</code>
+            </td>
+            <td>
+              <div class="flex items-center gap-1.5 whitespace-nowrap">
+                <span class="text-xs text-slate-200">${escapeHtml(t.type)}</span>
+                <span class="px-1.5 py-0.5 rounded bg-white/10 text-[10px] font-bold text-slate-300">${escapeHtml(t.locale)}</span>
+              </div>
+            </td>
+            <td>
+              <div class="flex flex-col gap-1 items-start">
+                ${statusBadge}
+                <span class="text-[11px] text-slate-400">Expires: ${escapeHtml(t.expiresAt)}</span>
+              </div>
+            </td>
+            <td>${copyBtn}</td>
+            <td class="text-right">
+              <div class="inline-flex items-center justify-end gap-1.5 whitespace-nowrap">
+                ${toggleBtn}
+                <button onclick="deleteToken('${t.id}')" class="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-rose-500/25 text-slate-300 hover:text-rose-200 border border-white/10 hover:border-rose-500/35 text-xs font-semibold transition">Delete</button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function escapeHtml(str) {
+      return String(str ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+    }
+
+    function copyTokenLink(id) {
+      const item = tokensState.find(t => t.id === id);
+      if (!item) return;
+      item.copied = true;
+      renderTokens();
+      showToast(`Skopiowano link dla tokena „${item.token}”`);
+      setTimeout(() => {
+        item.copied = false;
+        renderTokens();
+      }, 2000);
+    }
+
+    function toggleTokenStatus(id) {
+      const item = tokensState.find(t => t.id === id);
+      if (!item) return;
+      item.status = item.status === 'active' ? 'revoked' : 'active';
+      renderTokens();
+      showToast(item.status === 'active' ? `Przywrócono token ${item.token}` : `Unieważniono token ${item.token}`);
+    }
+
+    function deleteToken(id) {
+      const idx = tokensState.findIndex(t => t.id === id);
+      if (idx === -1) return;
+      const [removed] = tokensState.splice(idx, 1);
+      renderTokens();
+      showToast(`Usunięto token „${removed.token}” (symulacja)`);
+    }
+
+    function toggleNewTokenForm() {
+      const form = document.getElementById('new-token-form');
+      if (form) form.classList.toggle('hidden');
+    }
+
+    function handleCreateToken(e) {
+      e.preventDefault();
+      const slug = document.getElementById('nt-slug').value.trim();
+      const client = document.getElementById('nt-client').value.trim();
+      const email = document.getElementById('nt-email').value.trim();
+      const type = document.getElementById('nt-type').value;
+      const locale = document.getElementById('nt-locale').value;
+      const expires = document.getElementById('nt-expires').value || '—';
+
+      if (!slug || !client) return;
+      tokensState.unshift({
+        id: 't-' + Date.now(),
+        clientName: client,
+        email,
+        token: slug,
+        type,
+        locale,
+        status: 'active',
+        expiresAt: expires,
+        copied: true
+      });
+      renderTokens();
+      e.target.reset();
+      toggleNewTokenForm();
+      showToast(`Utworzono token „${slug}” i skopiowano link.`);
+    }
+
+    function openEmailModal(id) {
+      const item = tokensState.find(t => t.id === id);
+      if (!item) return;
+      editingEmailTokenId = id;
+      document.getElementById('email-modal-token').textContent = item.token;
+      document.getElementById('email-modal-input').value = item.email || '';
+      document.getElementById('email-modal').classList.remove('hidden');
+      document.getElementById('email-modal-input').focus();
+    }
+
+    function closeEmailModal() {
+      editingEmailTokenId = null;
+      document.getElementById('email-modal').classList.add('hidden');
+    }
+
+    function saveTokenEmail() {
+      const item = tokensState.find(t => t.id === editingEmailTokenId);
+      const val = document.getElementById('email-modal-input').value.trim();
+      if (item && val) {
+        item.email = val;
+        renderTokens();
+        showToast(`Zapisano e-mail ${val} dla tokena ${item.token}`);
+      }
+      closeEmailModal();
+    }
+
+    function switchLayout(layout) {
+      currentLayout = layout;
+      const root = document.getElementById('workspace-root');
+      const grid = document.getElementById('workspace-grid');
+      const tabsNav = document.getElementById('tabs-nav');
+      const cardHistory = document.getElementById('card-history');
+      const cardTokens = document.getElementById('card-tokens');
+      const cardOauth = document.getElementById('card-oauth');
+
+      ['stack', 'bento', 'tabs'].forEach(name => {
+        const btn = document.getElementById('btn-layout-' + name);
+        if (btn) {
+          btn.className = name === layout
+            ? 'px-2.5 py-1 rounded-lg text-white font-medium bg-indigo-600 shadow-sm transition'
+            : 'px-2.5 py-1 rounded-lg text-slate-400 hover:text-white font-medium transition';
+        }
+      });
+
+      if (layout === 'stack') {
+        root.className = 'relative z-10 flex-1 w-full max-w-5xl mx-auto px-4 py-6 md:px-6 md:py-8 transition-all duration-500 space-y-6';
+        grid.className = 'flex flex-col gap-6';
+        cardHistory.className = 'modern-glass-card p-6 space-y-5';
+        cardTokens.className = 'modern-glass-card p-6 space-y-5';
+        cardOauth.className = 'modern-glass-card p-6 space-y-4';
+        tabsNav.classList.add('hidden');
+      } else if (layout === 'bento') {
+        root.className = 'relative z-10 flex-1 w-full max-w-7xl mx-auto px-4 py-6 md:px-6 md:py-8 transition-all duration-500 space-y-6';
+        grid.className = 'grid grid-cols-1 xl:grid-cols-12 gap-6 items-start';
+        cardHistory.className = 'modern-glass-card p-6 space-y-5 xl:col-span-5';
+        cardTokens.className = 'modern-glass-card p-6 space-y-5 xl:col-span-7';
+        cardOauth.className = 'modern-glass-card p-6 space-y-4 xl:col-span-12';
+        tabsNav.classList.add('hidden');
+      } else {
+        root.className = 'relative z-10 flex-1 w-full max-w-6xl mx-auto px-4 py-6 md:px-6 md:py-8 transition-all duration-500 space-y-6';
+        grid.className = 'flex flex-col gap-6';
+        tabsNav.classList.remove('hidden');
+        selectTab(currentTab);
+        return;
+      }
+
+      cardHistory.classList.remove('hidden');
+      cardTokens.classList.remove('hidden');
+      cardOauth.classList.remove('hidden');
+    }
+
+    function selectTab(tab) {
+      currentTab = tab;
+      const cards = {
+        history: document.getElementById('card-history'),
+        tokens: document.getElementById('card-tokens'),
+        oauth: document.getElementById('card-oauth')
+      };
+      Object.entries(cards).forEach(([k, el]) => {
+        if (el) el.classList.toggle('hidden', k !== tab);
+        const btn = document.getElementById('tab-btn-' + k);
+        if (btn) {
+          btn.className = k === tab
+            ? 'px-4 py-2 rounded-xl text-xs font-semibold text-white bg-indigo-600 shadow-sm transition flex items-center gap-2'
+            : 'px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white transition flex items-center gap-2';
+        }
+      });
+    }
+
+    function switchBg(theme) {
+      currentBg = theme;
+      document.body.className = 'bg-theme-' + theme;
+      const auroraEl = document.getElementById('auroraBg');
+      if (auroraEl) auroraEl.style.display = theme === 'aurora' ? 'block' : 'none';
+      ['aurora', 'grid', 'nebula', 'obsidian'].forEach(t => {
+        const btn = document.getElementById('bg-' + t);
+        if (btn) {
+          btn.className = t === theme
+            ? 'px-2 py-1 rounded-lg text-white bg-white/15 transition flex items-center gap-1'
+            : 'px-2 py-1 rounded-lg text-slate-400 hover:text-white transition flex items-center gap-1';
+        }
+      });
+    }
+
+    window.addEventListener('mousemove', (e) => {
+      if (currentBg === 'grid') {
+        document.body.style.setProperty('--mouse-x', `${(e.clientX / window.innerWidth) * 100}%`);
+        document.body.style.setProperty('--mouse-y', `${(e.clientY / window.innerHeight) * 100}%`);
+      }
+    });
+
+    function toggleLiveSimulation() {
+      liveSimActive = !liveSimActive;
+      const block = document.getElementById('live-upload-block');
+      const btn = document.getElementById('btn-sim-live');
+      const totalPill = document.getElementById('history-total-pill');
+      const tabBadge = document.getElementById('tab-badge-history');
+      const kpiBadge = document.getElementById('kpi-live-badge');
+
+      if (liveSimActive) {
+        block.classList.remove('hidden');
+        btn.classList.add('bg-emerald-500/35', 'text-white');
+        btn.innerHTML = '<span>⏹ Zatrzymaj Live</span>';
+        totalPill.textContent = '3 (1 live)';
+        tabBadge.textContent = '3';
+        kpiBadge.textContent = '1 live now';
+        livePct = 68;
+        clearInterval(liveInterval);
+        liveInterval = setInterval(() => {
+          livePct = livePct >= 99 ? 25 : livePct + 3;
+          const filesDone = Math.max(1, Math.round((livePct / 100) * 25));
+          const gbDone = ((livePct / 100) * 4.2).toFixed(2);
+          document.getElementById('live-progress-bar').style.width = livePct + '%';
+          document.getElementById('live-pct-label').textContent = livePct + '%';
+          document.getElementById('live-files-label').textContent = `${filesDone} / 25 files`;
+          document.getElementById('live-bytes-label').textContent = `${gbDone} GB / 4.20 GB`;
+        }, 700);
+      } else {
+        clearInterval(liveInterval);
+        block.classList.add('hidden');
+        btn.classList.remove('bg-emerald-500/35', 'text-white');
+        btn.innerHTML = '<span>⚡ Symuluj Live Upload</span>';
+        totalPill.textContent = '2';
+        tabBadge.textContent = '2';
+        kpiBadge.textContent = 'Drive synced';
+      }
+    }
+
+    function simulateRefresh() {
+      const icon = document.getElementById('refresh-icon');
+      const label = document.getElementById('refresh-label');
+      icon.classList.add('animate-spin');
+      label.textContent = 'Refreshing…';
+      setTimeout(() => {
+        icon.classList.remove('animate-spin');
+        label.textContent = 'Refresh all';
+        const now = new Intl.DateTimeFormat('pl-PL', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date());
+        document.getElementById('sync-drive-time').textContent = now;
+        document.getElementById('sync-progress-time').textContent = now;
+        showToast('Odświeżono sesje Google Drive i postęp aktywnych transferów.');
+      }, 650);
+    }
+
+    function runOAuthTest() {
+      const btn = document.getElementById('btn-run-oauth');
+      const report = document.getElementById('oauth-report');
+      btn.disabled = true;
+      btn.innerHTML = '<span>Checking…</span>';
+      setTimeout(() => {
+        btn.disabled = false;
+        btn.innerHTML = '<span>Re-run test</span>';
+        report.classList.remove('hidden');
+        showToast('Test OAuth VULN-05 zakończony pomyślnie: zakres drive.file potwierdzony.');
+      }, 550);
+    }
+
+    function renderHistoryFilter() {
+      const q = (document.getElementById('history-search').value || '').trim().toLowerCase();
+      document.querySelectorAll('#history-tbody tr').forEach(tr => {
+        const hay = tr.getAttribute('data-search') || '';
+        tr.classList.toggle('hidden', q && !hay.includes(q));
+      });
+    }
+
+    function toggleCompareModal() {
+      const modal = document.getElementById('compare-modal');
+      if (modal) modal.classList.toggle('hidden');
+    }
+
+    let toastTimer = null;
+    function showToast(msg) {
+      const el = document.getElementById('toast');
+      if (!el) return;
+      el.textContent = msg;
+      el.classList.remove('hidden');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => el.classList.add('hidden'), 3200);
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        document.getElementById('compare-modal')?.classList.add('hidden');
+        closeEmailModal();
+      }
+    });
+
+    renderTokens();
+  </script>
+</body>
+</html>

@@ -3,17 +3,21 @@ import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 
 export const ADMIN_COOKIE = 'admin_session';
+const SESSION_TTL_MS = 60 * 60 * 24 * 1000; // 24h
 
-/** Deterministic session token derived from ADMIN_SECRET — never sent to the client in env form. */
-function expectedSessionToken() {
-  const secret = process.env.ADMIN_SECRET;
-  if (!secret) return null;
-  return crypto.createHmac('sha256', secret).update('admin-session-v1').digest('hex');
-}
+/** In-memory denylist — works per warm instance; SECRET rotate invalidates all. */
+const revokedSessionIds = new Set();
+const MAX_REVOKED = 5000;
 
 function timingSafeEqual(a, b) {
   if (!a || !b || a.length !== b.length) return false;
   return crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b));
+}
+
+function signPayload(payload) {
+  const secret = process.env.ADMIN_SECRET;
+  if (!secret) return null;
+  return crypto.createHmac('sha256', secret).update(payload).digest('hex');
 }
 
 /** Verify raw password (login form) or x-admin-secret header. */
@@ -23,11 +27,29 @@ export function verifyAdminPassword(provided) {
   return timingSafeEqual(provided, secret);
 }
 
-/** Verify signed session cookie value. */
+/**
+ * Parse `sessionId.exp.sig` cookie value.
+ * @returns {{ sessionId: string, exp: number } | null}
+ */
+export function parseAdminSessionToken(token) {
+  if (!token || typeof token !== 'string') return null;
+  const parts = token.split('.');
+  if (parts.length !== 3) return null;
+  const [sessionId, expStr, sig] = parts;
+  if (!/^[a-f0-9]{32}$/i.test(sessionId)) return null;
+  const exp = Number(expStr);
+  if (!Number.isFinite(exp)) return null;
+  const payload = `${sessionId}.${expStr}`;
+  const expected = signPayload(payload);
+  if (!expected || !timingSafeEqual(sig, expected)) return null;
+  if (Date.now() > exp) return null;
+  if (revokedSessionIds.has(sessionId)) return null;
+  return { sessionId, exp };
+}
+
+/** Verify signed session cookie value (random id + TTL + HMAC). */
 export function verifyAdminSessionToken(token) {
-  const expected = expectedSessionToken();
-  if (!expected || !token) return false;
-  return timingSafeEqual(token, expected);
+  return Boolean(parseAdminSessionToken(token));
 }
 
 /**
@@ -59,10 +81,36 @@ export function adminSessionCookieOptions() {
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'strict',
     path: '/',
-    maxAge: 60 * 60 * 24, // 24 hours
+    maxAge: Math.floor(SESSION_TTL_MS / 1000),
   };
 }
 
+/** Fresh random session id + expiry + HMAC (logout can revoke by id). */
 export function createAdminSessionToken() {
-  return expectedSessionToken();
+  const sessionId = crypto.randomBytes(16).toString('hex');
+  const exp = Date.now() + SESSION_TTL_MS;
+  const payload = `${sessionId}.${exp}`;
+  const sig = signPayload(payload);
+  if (!sig) throw new Error('ADMIN_SECRET missing');
+  return `${payload}.${sig}`;
+}
+
+/** Invalidate a session id (best-effort on this instance). */
+export function revokeAdminSessionToken(token) {
+  const parsed = (() => {
+    if (!token || typeof token !== 'string') return null;
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    const [sessionId, expStr, sig] = parts;
+    const payload = `${sessionId}.${expStr}`;
+    const expected = signPayload(payload);
+    if (!expected || !timingSafeEqual(sig, expected)) return null;
+    return sessionId;
+  })();
+  if (!parsed) return;
+  if (revokedSessionIds.size >= MAX_REVOKED) {
+    const first = revokedSessionIds.values().next().value;
+    revokedSessionIds.delete(first);
+  }
+  revokedSessionIds.add(parsed);
 }

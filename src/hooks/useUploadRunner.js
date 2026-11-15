@@ -317,6 +317,10 @@ export function useUploadRunner({
     } catch (error) {
       console.error('Upload Error:', error);
       await sendProgressHeartbeat('error');
+
+      // Capture refs before clearing — crash log needs them
+      const crashSessionId = uploadSessionIdRef.current;
+      const crashFolderId = uploadFolderIdRef.current;
       uploadSessionIdRef.current = null;
       uploadFolderIdRef.current = null;
 
@@ -327,15 +331,14 @@ export function useUploadRunner({
       }
 
       pushLog(`Sesja przerwana z błędem: ${error.message}`);
-      
-      // Dump crash log to Google Drive
-      if (uploadFolderIdRef.current) {
+
+      if (crashFolderId) {
         fetch('/api/upload-log', {
           method: 'POST',
           headers: apiHeaders(),
           body: JSON.stringify({
-            sessionId: uploadSessionIdRef.current,
-            folderId: uploadFolderIdRef.current,
+            sessionId: crashSessionId,
+            folderId: crashFolderId,
             errorMessage: error.message,
           }),
         }).catch(() => {});

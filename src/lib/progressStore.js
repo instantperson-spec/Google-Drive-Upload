@@ -1,6 +1,6 @@
 /**
- * Live upload progress store (Phase B).
- * Persisted in `_uploader_progress.json` on Google Drive so admin works on Vercel serverless.
+ * Live upload progress store.
+ * Persisted in `_uploader_progress.json` on Google Drive (If-Match / ETag).
  */
 
 import { google } from 'googleapis';
@@ -12,8 +12,8 @@ export const ACTIVE_STALE_MS = 3 * 60 * 1000;
 const RECENTLY_COMPLETED_MS = 2 * 60 * 1000;
 const CACHE_TTL_MS = 30_000;
 
-/** @type {{ registry: object|null, loadedAt: number, fileId: string|null }} */
-const cache = { registry: null, loadedAt: 0, fileId: null };
+/** @type {{ registry: object|null, loadedAt: number, fileId: string|null, etag: string|null }} */
+const cache = { registry: null, loadedAt: 0, fileId: null, etag: null };
 
 function emptyRegistry() {
   return { version: 1, updatedAt: new Date().toISOString(), sessions: {} };
@@ -45,9 +45,29 @@ async function findProgressFile(drive) {
   return res.data.files?.[0] || null;
 }
 
+function isPreconditionFailed(err) {
+  const status = err?.code || err?.response?.status || err?.status;
+  return Number(status) === 412;
+}
+
+/** Drive v3: etag is not a valid `fields` selector — read HTTP ETag header. */
+function etagFromResponse(res) {
+  const h = res?.headers;
+  if (!h) return null;
+  if (typeof h.get === 'function') return h.get('etag') || h.get('ETag') || null;
+  return h.etag || h.ETag || null;
+}
+
 async function readFileJson(drive, fileId) {
-  const res = await drive.files.get({ fileId, alt: 'media' }, { responseType: 'text' });
-  return JSON.parse(res.data);
+  const meta = await drive.files.get({ fileId, fields: 'id' });
+  const res = await drive.files.get(
+    { fileId, alt: 'media' },
+    { responseType: 'text' }
+  );
+  return {
+    registry: JSON.parse(res.data),
+    etag: etagFromResponse(meta) || etagFromResponse(res),
+  };
 }
 
 async function createProgressFile(drive, registry) {
@@ -62,16 +82,20 @@ async function createProgressFile(drive, registry) {
     media: { mimeType: 'application/json', body },
     fields: 'id',
   });
-  return res.data.id;
+  return { fileId: res.data.id, etag: etagFromResponse(res) };
 }
 
-async function writeFileJson(drive, fileId, registry) {
+async function writeFileJson(drive, fileId, registry, etag) {
   registry.updatedAt = new Date().toISOString();
   const body = JSON.stringify(registry, null, 2);
-  await drive.files.update({
+  const params = {
     fileId,
     media: { mimeType: 'application/json', body },
-  });
+    fields: 'id',
+  };
+  if (etag) params.headers = { 'If-Match': etag };
+  const res = await drive.files.update(params);
+  return etagFromResponse(res);
 }
 
 async function readRegistry(force = false) {
@@ -90,20 +114,22 @@ async function readRegistry(force = false) {
 
     if (!fileId) {
       const registry = emptyRegistry();
-      fileId = await createProgressFile(drive, registry);
+      const created = await createProgressFile(drive, registry);
       cache.registry = registry;
-      cache.fileId = fileId;
+      cache.fileId = created.fileId;
+      cache.etag = created.etag;
       cache.loadedAt = Date.now();
       return registry;
     }
 
-    const registry = await readFileJson(drive, fileId);
+    const { registry, etag } = await readFileJson(drive, fileId);
     if (!registry.sessions || typeof registry.sessions !== 'object') {
       registry.sessions = {};
     }
     pruneSessions(registry);
     cache.registry = registry;
     cache.fileId = fileId;
+    cache.etag = etag;
     cache.loadedAt = Date.now();
     return registry;
   } catch (err) {
@@ -117,8 +143,6 @@ async function readRegistry(force = false) {
 
 async function saveRegistry(registry) {
   pruneSessions(registry);
-  cache.registry = registry;
-  cache.loadedAt = Date.now();
 
   try {
     const drive = await getDrive();
@@ -126,13 +150,40 @@ async function saveRegistry(registry) {
     if (!fileId) {
       const file = await findProgressFile(drive);
       fileId = file?.id ?? null;
+      if (fileId) {
+        const meta = await drive.files.get({ fileId, fields: 'id' });
+        cache.etag = etagFromResponse(meta);
+      }
     }
     if (!fileId) {
-      fileId = await createProgressFile(drive, registry);
+      const created = await createProgressFile(drive, registry);
+      cache.fileId = created.fileId;
+      cache.etag = created.etag;
     } else {
-      await writeFileJson(drive, fileId, registry);
+      try {
+        cache.etag = await writeFileJson(drive, fileId, registry, cache.etag);
+        cache.fileId = fileId;
+      } catch (err) {
+        if (isPreconditionFailed(err)) {
+          const fresh = await readFileJson(drive, fileId);
+          Object.assign(fresh.registry.sessions, registry.sessions);
+          pruneSessions(fresh.registry);
+          cache.etag = await writeFileJson(
+            drive,
+            fileId,
+            fresh.registry,
+            fresh.etag
+          );
+          cache.fileId = fileId;
+          cache.registry = fresh.registry;
+          cache.loadedAt = Date.now();
+          return;
+        }
+        throw err;
+      }
     }
-    cache.fileId = fileId;
+    cache.registry = registry;
+    cache.loadedAt = Date.now();
   } catch (err) {
     console.error('Progress registry write failed:', err.message || err);
   }
@@ -150,6 +201,10 @@ function normalizeSessionStatus(status) {
  */
 export async function upsertProgressSession(data) {
   const registry = await readRegistry(true);
+  const existing = registry.sessions[data.sessionId];
+  if (existing && existing.token && existing.token !== data.token) {
+    return { ok: false, status: 403, error: 'Session ID belongs to another token.' };
+  }
   registry.sessions[data.sessionId] = {
     sessionId: data.sessionId,
     token: data.token,
@@ -163,14 +218,20 @@ export async function upsertProgressSession(data) {
     updatedAt: new Date().toISOString(),
   };
   await saveRegistry(registry);
+  return { ok: true };
 }
 
-export async function removeProgressSession(sessionId) {
+export async function removeProgressSession(sessionId, token = null) {
   const registry = await readRegistry(true);
-  if (registry.sessions[sessionId]) {
+  const existing = registry.sessions[sessionId];
+  if (existing) {
+    if (existing.token && token && existing.token !== token) {
+      return { ok: false, status: 403, error: 'Session belongs to another token.' };
+    }
     delete registry.sessions[sessionId];
     await saveRegistry(registry);
   }
+  return { ok: true };
 }
 
 export async function getSession(sessionId) {
@@ -193,7 +254,8 @@ export async function getActiveSessions(staleMs = ACTIVE_STALE_MS) {
     const updated = new Date(session.updatedAt).getTime();
     const isLive =
       updated >= activeCutoff &&
-      (session.sessionStatus === 'uploading' || LIVE_SESSION_STATUSES.has(session.sessionStatus));
+      (session.sessionStatus === 'uploading' ||
+        LIVE_SESSION_STATUSES.has(session.sessionStatus));
     const isRecentlyDone =
       session.sessionStatus === 'completed' && updated >= completedCutoff;
 

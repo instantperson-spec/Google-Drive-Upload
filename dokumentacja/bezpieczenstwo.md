@@ -1,6 +1,8 @@
 # Bezpieczeństwo — stan aktualny
 
-> Skrót na 2026-11-15. Pełne raporty VULN z IX 2026: [`archiwum/analiza_bezpieczenstwa.md`](./archiwum/analiza_bezpieczenstwa.md), [`archiwum/analiza_kodu.md`](./archiwum/analiza_kodu.md).
+> Skrót na 2026-11-15 (jedyny żywy dokument stanu).  
+> Historia: [`archiwum/audyt-bezpieczenstwa.md`](./archiwum/audyt-bezpieczenstwa.md), [`archiwum/audyt-powdrozeniowy.md`](./archiwum/audyt-powdrozeniowy.md), VULN IX: [`archiwum/analiza_bezpieczenstwa.md`](./archiwum/analiza_bezpieczenstwa.md).  
+> Plan remediacji (done): [`archiwum/plany/security_audit_remediation.plan.md`](./archiwum/plany/security_audit_remediation.plan.md).
 
 ---
 
@@ -18,39 +20,50 @@ Lokalnie: Studio Console (Tauri / localhost) — nie jest publicznym API Vercel.
 
 ---
 
-## Naprawione — nie otwierać ponownie bez powodu
+## Naprawione (VULN IX + audyt 2026-11-15)
 
-| ID | Temat | Stan |
-|---|---|---|
-| VULN-01 | Auth na API uploadu | ✅ token server-side |
-| VULN-02 | Open SMTP relay | ✅ whitelist vs `prefillEmail` |
-| VULN-03 | SMTP `secure` vs port | ✅ |
-| VULN-04 | Rate limiting | ✅ in-memory per IP |
-| VULN-05 | Scope OAuth | ✅ `drive.file` — [`oauth_drive_file.md`](./oauth_drive_file.md) |
-| VULN-06 | Logowanie PII | ✅ |
-| VULN-07 | noindex | ✅ |
-| VULN-08 | Weryfikacja emaila klienta (OTP) | ⚠️ celowo pominięte (B2B bez kont) |
-
-Dodatkowo: czarna lista rozszerzeń server-side, weryfikacja `folderId` sesji, rzadki heartbeat progress (admin History).
+| Temat | Stan |
+|---|---|
+| VULN-01 Auth upload API | ✅ |
+| VULN-02 Open SMTP relay | ✅ whitelist `prefillEmail` |
+| VULN-03 SMTP secure/port | ✅ |
+| VULN-04 Rate limiting | ✅ (IP: vercel / cf / bezpieczny XFF) |
+| VULN-05 OAuth `drive.file` | ✅ — [`oauth_drive_file.md`](./oauth_drive_file.md) |
+| VULN-06 PII w logach | ✅ |
+| VULN-07 noindex | ✅ |
+| VULN-08 OTP klienta | ⚠️ celowo pominięte (B2B) |
+| Share GET bez upload `token` | ✅ |
+| Token ↔ folder (`_uploader_session.json`) + cache ownership | ✅ |
+| Console: Host/Origin/token; `Origin: null` zablokowany; `?consoleToken=` tylko SSE | ✅ |
+| Tauri fingerprint `:8787` | ✅ |
+| WAV: md5/mtime w sync + baseline/share | ✅ |
+| Crash log przed `ref = null` | ✅ |
+| Admin session: losowy id + TTL + revoke | ✅ |
+| notify: escape email + ownership | ✅ |
+| Share download plik-po-pliku; ZIP tylko małe | ✅ |
+| Share upload quota | ✅ |
+| Progress/tokeny: Drive + ETag (nagłówek HTTP; **bez Redis/KV**) | ✅ |
+| Share file `request.signal`; `folderCache` TTL | ✅ |
+| sessionId ownership w upload-progress | ✅ |
+| SKIP_NAMES (`_uploader_session.json`, manifesty) | ✅ |
+| `.gitignore` `.tmp*`; `isSessionFolder` fail-closed | ✅ |
 
 ---
 
 ## Świadome ograniczenia
 
-- **Progress / rate-limit in-memory** — przy wielu workerach Vercel „In progress” w History może być puste mimo trwającego uploadu; wtedy widać sesję w Completed z rosnącym `fileCount` po Refresh. KV = backlog.
-- **Live Monitor usunięty** — nie dawał wiarygodnego podglądu multi-instance; zastąpiony prostym merge active → History.
-- **Share / upload token = sekret URL** — kto ma link, ma dostęp. Revoke w Console / `/admin`.
-
-UI klienta **nie** reklamuje TLS/Bridge jako badge’e bezpieczeństwa (świadomie odchudzone).
+- Rate-limit, shareQuota, revoke admin — per warm instance Vercel.  
+- Progress na Drive+ETag (opóźnienie Drive OK; bez płatnego Redis).  
+- Share id = sekret URL.  
+- Stare foldery bez `_uploader_session.json` → nowa sesja uploadu.  
+- Live Monitor usunięty (nieskuteczny multi-instance).
 
 ---
 
-## Otwarty backlog hardening (niski priorytet)
+## Backlog (niski)
 
-- `formatDate` / `formatBytes` w adminie → wspólne `lib/`
-- Email regex → `isValidEmail()` w `lib/validation.js`
-- Inline styles w `AdminTokenManager` → CSS
-- Admin: recovery UI z `_manifest.json`
-- Vercel KV dla progress store
+- Wspólny moduł Drive + rozbicie monolitów UI (P3)  
+- ETag na `_uploader_shares.json` / `_team_manifest.json`  
+- Drobne: `formatBytes`/`isValidEmail` wspólne, CSS admina, recovery UI manifest  
 
-Produkt (binding, plik-po-pliku, rundy): [`produkt_i_backlog.md`](./produkt_i_backlog.md), [`plany/post-mvp_roadmap_05ad683d.plan.md`](./plany/post-mvp_roadmap_05ad683d.plan.md).
+Produkt: [`produkt_i_backlog.md`](./produkt_i_backlog.md), rundy: [`plany/post-mvp_roadmap_05ad683d.plan.md`](./plany/post-mvp_roadmap_05ad683d.plan.md).

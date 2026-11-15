@@ -13,10 +13,31 @@ const MAX_TRACKED_KEYS = 10000;
 
 const hits = new Map(); // key -> array of timestamps within the window
 
+/**
+ * Prefer platform-trusted client IP. Never trust a client-spoofable
+ * X-Forwarded-For chain as the sole key.
+ */
 function getClientIp(request) {
+  const vercel = request.headers.get('x-vercel-forwarded-for');
+  if (vercel) return vercel.split(',')[0].trim();
+
+  // Vercel also sets x-real-ip from the edge connection
+  const realIp = request.headers.get('x-real-ip');
+  if (realIp) return realIp.trim();
+
+  const cfIp = request.headers.get('cf-connecting-ip');
+  if (cfIp) return cfIp.trim();
+
+  // Reverse proxy appends the peer IP to X-Forwarded-For (rightmost is hardest to spoof)
   const forwarded = request.headers.get('x-forwarded-for');
-  if (forwarded) return forwarded.split(',')[0].trim();
-  return request.headers.get('x-real-ip') || 'unknown';
+  if (forwarded) {
+    const parts = forwarded.split(',').map((s) => s.trim()).filter(Boolean);
+    if (parts.length) {
+      return process.env.NODE_ENV !== 'production' ? parts[0] : parts[parts.length - 1];
+    }
+  }
+
+  return 'unknown';
 }
 
 /**

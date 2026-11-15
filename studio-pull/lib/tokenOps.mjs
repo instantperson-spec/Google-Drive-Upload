@@ -1,8 +1,8 @@
 /**
  * Local Drive token registry ops (same _uploader_tokens.json as web admin).
+ * Writes use If-Match + one retry on 412.
  */
 import crypto from 'crypto';
-import { google } from 'googleapis';
 import { createDriveClient } from './auth.mjs';
 
 const TOKEN_FILE_NAME = '_uploader_tokens.json';
@@ -16,6 +16,11 @@ function statusOf(t) {
   if (t.revoked) return 'revoked';
   if (t.expiresAt && new Date(t.expiresAt) < new Date()) return 'expired';
   return 'active';
+}
+
+function isPreconditionFailed(err) {
+  const status = err?.code || err?.response?.status || err?.status;
+  return Number(status) === 412;
 }
 
 async function findTokenFile(drive, mainFolderId) {
@@ -32,16 +37,34 @@ async function readRegistry(drive, mainFolderId) {
   if (!file) {
     return {
       fileId: null,
+      etag: null,
       registry: { version: 1, updatedAt: new Date().toISOString(), tokens: [] },
     };
   }
-  const res = await drive.files.get({ fileId: file.id, alt: 'media' }, { responseType: 'text' });
+  // Drive v3: etag is not a valid `fields` selector — use HTTP ETag header.
+  const meta = await drive.files.get({ fileId: file.id, fields: 'id' });
+  const res = await drive.files.get(
+    { fileId: file.id, alt: 'media' },
+    { responseType: 'text' }
+  );
   const registry = JSON.parse(res.data);
   if (!Array.isArray(registry.tokens)) registry.tokens = [];
-  return { fileId: file.id, registry };
+  const headers = meta.headers || {};
+  const etag =
+    (typeof headers.get === 'function'
+      ? headers.get('etag') || headers.get('ETag')
+      : headers.etag || headers.ETag) || null;
+  return { fileId: file.id, etag, registry };
 }
 
-async function writeRegistry(drive, mainFolderId, fileId, registry) {
+function etagFromResponse(res) {
+  const h = res?.headers;
+  if (!h) return null;
+  if (typeof h.get === 'function') return h.get('etag') || h.get('ETag') || null;
+  return h.etag || h.ETag || null;
+}
+
+async function writeRegistry(drive, mainFolderId, fileId, etag, registry) {
   registry.updatedAt = new Date().toISOString();
   const body = JSON.stringify(registry, null, 2);
   if (!fileId) {
@@ -54,17 +77,52 @@ async function writeRegistry(drive, mainFolderId, fileId, registry) {
       media: { mimeType: 'application/json', body },
       fields: 'id',
     });
-    return created.data.id;
+    return { fileId: created.data.id, etag: etagFromResponse(created) };
   }
-  await drive.files.update({
+  const params = {
     fileId,
     media: { mimeType: 'application/json', body },
-  });
-  return fileId;
+    fields: 'id',
+  };
+  if (etag) params.headers = { 'If-Match': etag };
+  try {
+    const updated = await drive.files.update(params);
+    return { fileId, etag: etagFromResponse(updated) };
+  } catch (err) {
+    if (isPreconditionFailed(err)) {
+      const conflict = new Error(
+        'Token registry was modified concurrently. Retry.'
+      );
+      conflict.code = 409;
+      throw conflict;
+    }
+    throw err;
+  }
+}
+
+async function withMutation(mutator) {
+  const { drive, mainFolderId, env } = createDriveClient();
+  let lastErr;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const { fileId, etag, registry } = await readRegistry(drive, mainFolderId);
+    const result = await mutator(registry, env);
+    try {
+      await writeRegistry(drive, mainFolderId, fileId, etag, registry);
+      return result;
+    } catch (err) {
+      lastErr = err;
+      if (Number(err.code) === 409 && attempt === 0) continue;
+      throw err;
+    }
+  }
+  throw lastErr;
 }
 
 function publicOrigin(env = {}) {
-  return (env.PUBLIC_UPLOAD_URL || 'https://drive-uploader-three.vercel.app').replace(/\/$/, '');
+  return (env.PUBLIC_UPLOAD_URL || 'https://drive-uploader-three.vercel.app').replace(
+    /\/$/,
+    ''
+  );
 }
 
 export function buildUploadUrl(token, env = {}) {
@@ -83,126 +141,132 @@ export async function listTokensLocal() {
 }
 
 export async function createTokenLocal(input) {
-  const { drive, mainFolderId, env } = createDriveClient();
+  return withMutation((registry, env) => {
+    const token = String(input.token || '').trim();
+    const clientName = String(input.clientName || '').trim();
+    const clientEmail = String(input.clientEmail || input.prefillEmail || '')
+      .trim()
+      .toLowerCase();
+    const type = input.type === 'one-time' ? 'one-time' : 'retainer';
+    const locale = normalizeLocale(input.locale);
 
-  const token = String(input.token || '').trim();
-  const clientName = String(input.clientName || '').trim();
-  const clientEmail = String(input.clientEmail || input.prefillEmail || '')
-    .trim()
-    .toLowerCase();
-  const type = input.type === 'one-time' ? 'one-time' : 'retainer';
-  const locale = normalizeLocale(input.locale);
+    if (!TOKEN_SLUG_RE.test(token)) {
+      throw new Error(
+        'Token must be 2–64 characters: letters, numbers, hyphen, underscore.'
+      );
+    }
+    if (!clientName) throw new Error('Client name is required.');
+    if (!clientEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clientEmail)) {
+      throw new Error('A valid client email is required (locked on the upload form).');
+    }
 
-  if (!TOKEN_SLUG_RE.test(token)) {
-    throw new Error('Token must be 2–64 characters: letters, numbers, hyphen, underscore.');
-  }
-  if (!clientName) throw new Error('Client name is required.');
-  if (!clientEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clientEmail)) {
-    throw new Error('A valid client email is required (locked on the upload form).');
-  }
+    const duplicate = registry.tokens.find((t) => t.token === token && !t.revoked);
+    if (duplicate) throw new Error(`Token "${token}" already exists and is active.`);
 
-  const { fileId, registry } = await readRegistry(drive, mainFolderId);
-  const duplicate = registry.tokens.find((t) => t.token === token && !t.revoked);
-  if (duplicate) throw new Error(`Token "${token}" already exists and is active.`);
+    const now = new Date().toISOString();
+    const record = {
+      id: crypto.randomUUID(),
+      token,
+      clientName,
+      type,
+      notes: String(input.notes || '').slice(0, 500),
+      createdAt: now,
+      expiresAt: String(input.expiresAt || '').trim() || null,
+      revoked: false,
+      revokedAt: null,
+      locale,
+      prefillName: clientName.slice(0, 200),
+      prefillEmail: clientEmail.slice(0, 200),
+    };
 
-  const now = new Date().toISOString();
-  const record = {
-    id: crypto.randomUUID(),
-    token,
-    clientName,
-    type,
-    notes: String(input.notes || '').slice(0, 500),
-    createdAt: now,
-    expiresAt: String(input.expiresAt || '').trim() || null,
-    revoked: false,
-    revokedAt: null,
-    locale,
-    prefillName: clientName.slice(0, 200),
-    prefillEmail: clientEmail.slice(0, 200),
-  };
-
-  registry.tokens.push(record);
-  await writeRegistry(drive, mainFolderId, fileId, registry);
-  return {
-    ...record,
-    status: 'active',
-    uploadUrl: buildUploadUrl(record.token, env),
-  };
+    registry.tokens.push(record);
+    return {
+      ...record,
+      status: 'active',
+      uploadUrl: buildUploadUrl(record.token, env),
+    };
+  });
 }
 
 export async function patchTokenLocal(id, action) {
-  const { drive, mainFolderId, env } = createDriveClient();
-  const { fileId, registry } = await readRegistry(drive, mainFolderId);
-  const record = registry.tokens.find((t) => t.id === id);
-  if (!record) throw new Error('Token not found.');
+  return withMutation((registry, env) => {
+    const record = registry.tokens.find((t) => t.id === id);
+    if (!record) throw new Error('Token not found.');
 
-  if (action === 'revoke') {
-    record.revoked = true;
-    record.revokedAt = new Date().toISOString();
-  } else if (action === 'restore') {
-    const conflict = registry.tokens.find(
-      (t) => t.token === record.token && !t.revoked && t.id !== id
-    );
-    if (conflict) throw new Error(`Cannot restore — token "${record.token}" is already active.`);
-    record.revoked = false;
-    record.revokedAt = null;
-  } else {
-    throw new Error('Unsupported action. Use revoke or restore.');
-  }
+    if (action === 'revoke') {
+      record.revoked = true;
+      record.revokedAt = new Date().toISOString();
+    } else if (action === 'restore') {
+      const conflict = registry.tokens.find(
+        (t) => t.token === record.token && !t.revoked && t.id !== id
+      );
+      if (conflict) {
+        throw new Error(`Cannot restore — token "${record.token}" is already active.`);
+      }
+      record.revoked = false;
+      record.revokedAt = null;
+    } else {
+      throw new Error('Unsupported action. Use revoke or restore.');
+    }
 
-  await writeRegistry(drive, mainFolderId, fileId, registry);
-  return { ...record, status: statusOf(record), uploadUrl: buildUploadUrl(record.token, env) };
+    return {
+      ...record,
+      status: statusOf(record),
+      uploadUrl: buildUploadUrl(record.token, env),
+    };
+  });
 }
 
 export async function setTokenIdentityLocal(id, { clientName, clientEmail } = {}) {
-  const { drive, mainFolderId, env } = createDriveClient();
-  const { fileId, registry } = await readRegistry(drive, mainFolderId);
-  const record = registry.tokens.find((t) => t.id === id);
-  if (!record) throw new Error('Token not found.');
+  return withMutation((registry, env) => {
+    const record = registry.tokens.find((t) => t.id === id);
+    if (!record) throw new Error('Token not found.');
 
-  const name = String(clientName || record.clientName || record.prefillName || '')
-    .trim()
-    .slice(0, 200);
-  const email = String(clientEmail || record.prefillEmail || '')
-    .trim()
-    .toLowerCase()
-    .slice(0, 200);
+    const name = String(clientName || record.clientName || record.prefillName || '')
+      .trim()
+      .slice(0, 200);
+    const email = String(clientEmail || record.prefillEmail || '')
+      .trim()
+      .toLowerCase()
+      .slice(0, 200);
 
-  if (!name) throw new Error('Client name is required.');
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    throw new Error('A valid client email is required.');
-  }
+    if (!name) throw new Error('Client name is required.');
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      throw new Error('A valid client email is required.');
+    }
 
-  record.clientName = name;
-  record.prefillName = name;
-  record.prefillEmail = email;
-  await writeRegistry(drive, mainFolderId, fileId, registry);
-  return {
-    ...record,
-    status: statusOf(record),
-    locale: normalizeLocale(record.locale),
-    uploadUrl: buildUploadUrl(record.token, env),
-  };
+    record.clientName = name;
+    record.prefillName = name;
+    record.prefillEmail = email;
+    return {
+      ...record,
+      status: statusOf(record),
+      locale: normalizeLocale(record.locale),
+      uploadUrl: buildUploadUrl(record.token, env),
+    };
+  });
 }
 
 export async function setTokenLocaleLocal(id, locale) {
-  const { drive, mainFolderId, env } = createDriveClient();
-  const { fileId, registry } = await readRegistry(drive, mainFolderId);
-  const record = registry.tokens.find((t) => t.id === id);
-  if (!record) throw new Error('Token not found.');
-  record.locale = normalizeLocale(locale);
-  await writeRegistry(drive, mainFolderId, fileId, registry);
-  return { ...record, status: statusOf(record), uploadUrl: buildUploadUrl(record.token, env) };
+  return withMutation((registry, env) => {
+    const record = registry.tokens.find((t) => t.id === id);
+    if (!record) throw new Error('Token not found.');
+    record.locale = normalizeLocale(locale);
+    return {
+      ...record,
+      status: statusOf(record),
+      uploadUrl: buildUploadUrl(record.token, env),
+    };
+  });
 }
 
 export async function deleteTokenLocal(id) {
-  const { drive, mainFolderId } = createDriveClient();
-  const { fileId, registry } = await readRegistry(drive, mainFolderId);
-  const initialLength = registry.tokens.length;
-  registry.tokens = registry.tokens.filter((t) => t.id !== id);
-  if (registry.tokens.length === initialLength) {
-    throw new Error('Token not found.');
-  }
-  await writeRegistry(drive, mainFolderId, fileId, registry);
-  return { success: true };
+  return withMutation((registry) => {
+    const initialLength = registry.tokens.length;
+    registry.tokens = registry.tokens.filter((t) => t.id !== id);
+    if (registry.tokens.length === initialLength) {
+      throw new Error('Token not found.');
+    }
+    return { success: true };
+  });
 }

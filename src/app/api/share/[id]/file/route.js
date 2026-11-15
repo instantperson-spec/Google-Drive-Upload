@@ -46,6 +46,22 @@ export async function GET(request, { params }) {
     }
 
     const { stream, name, mimeType, size } = await getDriveDownloadStream(fileId);
+
+    // Stop Drive download if the client aborts (tab close / cancel)
+    const onAbort = () => {
+      try {
+        if (typeof stream.destroy === 'function') stream.destroy();
+        else if (typeof stream.cancel === 'function') stream.cancel();
+      } catch {
+        /* ignore */
+      }
+    };
+    if (request.signal?.aborted) {
+      onAbort();
+      return new Response(null, { status: 499 });
+    }
+    request.signal?.addEventListener('abort', onAbort, { once: true });
+
     const headers = new Headers({
       'Content-Type': mimeType,
       'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(name)}`,

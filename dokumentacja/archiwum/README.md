@@ -1,15 +1,17 @@
-# Archiwum dokumentacji (IX–X 2026)
+# Archiwum dokumentacji
 
-Pliki sprzed reorganizacji 2026-11-14 (+ kontekst historyczny). **Nie traktuj jako stanu produkcji.**
+**Nie traktuj jako stanu produkcji.** Żywy skrót: [`../bezpieczenstwo.md`](../bezpieczenstwo.md) · operacje: [`../operacje.md`](../operacje.md).
 
-| Plik | Było |
+| Plik | Opis |
 |---|---|
-| `analiza_bezpieczenstwa.md` | Pełny audyt VULN-01–08 |
-| `analiza_kodu.md` | Przegląd jakości + status napraw |
-| `kierunki_rozwoju.md` | Backlog sprzed Console / share / Nebula |
-| `operacje_tokeny_i_linki.md` | Stary runbook tokenów → żywy: [`../operacje.md`](../operacje.md) |
-| `plan_konsola_admina.md` | Plan faz A/B/C admina Vercel — wdrożony; Live Monitor później usunięty |
-| `regeneracja_oauth_scope.md` | Kopia → żywy: [`../oauth_drive_file.md`](../oauth_drive_file.md) |
-| `wdrozenie_security_hardening.md` | Checklista deploy `security-hardening` |
+| `analiza_bezpieczenstwa.md` / `analiza_kodu.md` | Audyt VULN IX 2026 |
+| `audyt-bezpieczenstwa.md` | Audyt 2026-11-15 (share/Console/WAV…) + status remediacji |
+| `audyt-powdrozeniowy.md` | Hotfix po remediacji (scalone do `bezpieczenstwo.md`) |
+| `kierunki_rozwoju.md` | Stary backlog |
+| `operacje_tokeny_i_linki.md` | Stary runbook → [`../operacje.md`](../operacje.md) |
+| `plan_konsola_admina.md` | Fazy admina Vercel |
+| `regeneracja_oauth_scope.md` | Kopia → [`../oauth_drive_file.md`](../oauth_drive_file.md) |
+| `wdrozenie_security_hardening.md` | Checklista starego hardeningu |
+| [`plany/`](./plany/) | Wdrożone plany Cursor (team sync, portal, Nebula, security) |
 
-Aktualna mapa: [`../README.md`](../README.md).
+Aktywny roadmap: [`../plany/post-mvp_roadmap_05ad683d.plan.md`](../plany/post-mvp_roadmap_05ad683d.plan.md).

@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Studio Console — Modern Glass + Nebula</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    :root {
+      --font-sans: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Helvetica, Arial, sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--font-sans);
+      color: #f1f5f9;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at 20% 30%, rgba(139, 92, 246, 0.22) 0%, transparent 45%),
+        radial-gradient(circle at 80% 70%, rgba(236, 72, 153, 0.18) 0%, transparent 50%),
+        radial-gradient(circle at 50% 50%, rgba(14, 165, 233, 0.15) 0%, transparent 55%),
+        #05060a;
+    }
+    .noise-overlay {
+      position: fixed; inset: 0; opacity: 0.025; pointer-events: none; z-index: 1;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+    .modern-glass-card {
+      background: rgba(15, 20, 32, 0.74);
+      backdrop-filter: blur(26px) saturate(190%);
+      -webkit-backdrop-filter: blur(26px) saturate(190%);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow:
+        0 24px 64px -12px rgba(0, 0, 0, 0.65),
+        0 0 0 1px rgba(255, 255, 255, 0.04),
+        inset 0 1px 0 0 rgba(255, 255, 255, 0.14);
+      border-radius: 26px;
+      position: relative;
+      overflow: hidden;
+    }
+    .modern-glass-card::before {
+      content: '';
+      position: absolute; top: 0; left: 8%; right: 8%; height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.38), rgba(99,102,241,0.55), rgba(255,255,255,0.38), transparent);
+      pointer-events: none;
+    }
+    .session-row {
+      display: grid;
+      grid-template-columns: auto 1fr auto auto;
+      gap: 0.75rem 1rem;
+      align-items: center;
+      padding: 0.85rem 1rem;
+      border-radius: 16px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+    .session-row.oos {
+      border-color: rgba(251, 191, 36, 0.45);
+      box-shadow: inset 3px 0 0 #fbbf24;
+    }
+    .menu-pop {
+      position: absolute; right: 0; top: calc(100% + 6px); z-index: 20;
+      min-width: 180px; padding: 0.35rem;
+      border-radius: 12px; background: #0c111e; border: 1px solid rgba(255,255,255,0.12);
+      box-shadow: 0 16px 40px rgba(0,0,0,0.45);
+    }
+    .menu-pop button {
+      display: block; width: 100%; text-align: left;
+      padding: 0.55rem 0.75rem; border: 0; border-radius: 8px;
+      background: transparent; color: #e2e8f0; font-size: 0.8rem; cursor: pointer;
+    }
+    .menu-pop button:hover { background: rgba(255,255,255,0.06); }
+    .menu-pop button.danger { color: #fda4af; }
+    .panel.hidden { display: none; }
+  </style>
+</head>
+<body>
+  <div class="noise-overlay"></div>
+
+  <header class="sticky top-0 z-50 px-4 py-2.5 border-b border-white/10 bg-black/55 backdrop-blur-xl relative z-10">
+    <div class="max-w-5xl mx-auto flex flex-wrap items-center justify-between gap-3 text-xs">
+      <div class="flex items-center gap-3">
+        <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center font-bold text-white shadow-lg shadow-indigo-500/30">▲</div>
+        <nav aria-label="Mockup Screens" class="flex items-center bg-white/5 p-1 rounded-xl border border-white/10">
+          <a href="index.html" class="px-3 py-1 rounded-lg text-slate-400 hover:text-white transition">📤 Upload</a>
+          <a href="share.html" class="px-3 py-1 rounded-lg text-slate-400 hover:text-white transition">📦 Portal</a>
+          <a href="admin.html" class="px-3 py-1 rounded-lg text-slate-400 hover:text-white transition">🛡️ Admin</a>
+          <span class="px-3 py-1 rounded-lg text-white font-semibold bg-indigo-600 shadow-sm">🖥️ Studio Console</span>
+        </nav>
+      </div>
+      <span class="px-2.5 py-1 rounded-lg bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-medium">Mockup · Stack + tabs</span>
+    </div>
+  </header>
+
+  <main class="relative z-10 max-w-5xl mx-auto px-4 py-6 md:px-6 md:py-8 space-y-6">
+    <!-- Hero -->
+    <section class="modern-glass-card p-6 md:p-7">
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-5">
+        <div class="space-y-2.5">
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-indigo-500/20 text-indigo-300 border border-indigo-500/35">LOCAL · :8787</span>
+            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">Sidecar OK</span>
+          </div>
+          <div>
+            <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">Studio Console</h1>
+            <p class="text-xs sm:text-sm text-slate-400 mt-0.5">Pobierz → Sync → Wyślij link klientowi.</p>
+          </div>
+        </div>
+        <button type="button" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-lg shadow-indigo-600/30 self-start md:self-center">
+          Odśwież
+        </button>
+      </div>
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-6 pt-5 border-t border-white/10">
+        <div class="rounded-2xl bg-white/[0.03] border border-white/10 p-3">
+          <div class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Sesje</div>
+          <div class="text-2xl font-extrabold text-white mt-1">2</div>
+        </div>
+        <div class="rounded-2xl bg-white/[0.03] border border-white/10 p-3">
+          <div class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Out of sync</div>
+          <div class="text-2xl font-extrabold text-amber-300 mt-1">1</div>
+        </div>
+        <div class="rounded-2xl bg-white/[0.03] border border-white/10 p-3">
+          <div class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Share aktywne</div>
+          <div class="text-2xl font-extrabold text-indigo-300 mt-1">1</div>
+        </div>
+        <div class="rounded-2xl bg-white/[0.03] border border-white/10 p-3">
+          <div class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Tokeny</div>
+          <div class="text-2xl font-extrabold text-white mt-1">3</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tabs -->
+    <div class="flex flex-wrap items-center gap-2 p-1.5 rounded-2xl bg-slate-900/75 border border-white/10 backdrop-blur-xl w-fit">
+      <button type="button" id="tab-projekty" class="px-4 py-2 rounded-xl text-xs font-semibold text-white bg-indigo-600 shadow-sm" onclick="showTab('projekty')">Projekty</button>
+      <button type="button" id="tab-tokeny" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white" onclick="showTab('tokeny')">Tokeny</button>
+    </div>
+
+    <div id="panel-projekty" class="panel space-y-6">
+      <!-- Sessions -->
+      <section class="modern-glass-card p-6 space-y-4">
+        <div>
+          <h2 class="text-lg font-bold text-white flex items-center gap-2">
+            Sesje na Drive
+            <span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">2</span>
+          </h2>
+          <p class="text-xs text-slate-400 mt-1">Pobierz → Sync → link. Dogrywki: OOS + Pobierz od klienta.</p>
+        </div>
+
+        <div class="space-y-3">
+          <!-- Synced row -->
+          <div class="session-row">
+            <label class="flex items-center"><input type="checkbox" checked class="rounded border-white/20 bg-white/5" /></label>
+            <div class="min-w-0">
+              <div class="font-semibold text-white">Diplomat</div>
+              <div class="text-[11px] text-slate-400 font-mono mt-0.5">3 179 plików · 3.75 GB · aktywność 14 lis, 15:00</div>
+              <div class="text-[11px] text-emerald-400 mt-1 truncate">/Volumes/ENV/untitled folder/diplomat</div>
+              <div class="mt-1.5"><span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">Zsynchronizowano</span></div>
+            </div>
+            <div class="flex flex-wrap items-center gap-2 justify-end">
+              <button class="px-3 py-1.5 rounded-xl text-xs font-semibold border border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/10">Sync → Drive</button>
+              <button class="px-3 py-1.5 rounded-xl text-xs font-semibold border border-white/15 text-slate-200 hover:bg-white/5">Kopiuj link</button>
+              <div class="relative">
+                <button class="px-2.5 py-1.5 rounded-xl text-xs border border-white/15 text-slate-300" onclick="toggleMenu('m1')">⋯</button>
+                <div id="m1" class="menu-pop hidden">
+                  <button type="button">Zmień folder sync</button>
+                  <button type="button" class="danger">Cofnij link</button>
+                </div>
+              </div>
+            </div>
+            <label class="text-[11px] text-slate-400 flex items-center gap-1.5 whitespace-nowrap">
+              <input type="radio" name="preview" checked /> Podgląd
+            </label>
+          </div>
+
+          <!-- OOS row -->
+          <div class="session-row oos">
+            <label class="flex items-center"><input type="checkbox" class="rounded border-white/20 bg-white/5" /></label>
+            <div class="min-w-0">
+              <div class="font-semibold text-white">nortku</div>
+              <div class="text-[11px] text-slate-400 font-mono mt-0.5">12 plików · dogrywki:3 · token:nortku</div>
+              <div class="text-[11px] text-emerald-400 mt-1 truncate">/Volumes/ENV/Projekty/nortku</div>
+              <div class="mt-1.5 flex flex-wrap gap-1.5">
+                <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/35">Dogrywki do pobrania</span>
+                <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/35">Zmiany na Drive</span>
+              </div>
+            </div>
+            <div class="flex flex-wrap items-center gap-2 justify-end">
+              <button class="px-3 py-1.5 rounded-xl text-xs font-semibold border border-amber-500/45 text-amber-300 hover:bg-amber-500/10">Pobierz od klienta</button>
+              <button class="px-3 py-1.5 rounded-xl text-xs font-semibold border border-white/15 text-slate-200 hover:bg-white/5">Wyślij link</button>
+              <div class="relative">
+                <button class="px-2.5 py-1.5 rounded-xl text-xs border border-white/15 text-slate-300" onclick="toggleMenu('m2')">⋯</button>
+                <div id="m2" class="menu-pop hidden">
+                  <button type="button">Zmień folder sync</button>
+                  <button type="button">Sync → Drive</button>
+                </div>
+              </div>
+            </div>
+            <label class="text-[11px] text-slate-400 flex items-center gap-1.5 whitespace-nowrap">
+              <input type="radio" name="preview" /> Podgląd
+            </label>
+          </div>
+        </div>
+      </section>
+
+      <!-- Preview -->
+      <section class="modern-glass-card p-6">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 class="text-lg font-bold text-white">Podgląd plików</h2>
+            <p class="text-xs text-slate-400 mt-1">Zaznacz sesję (radio) i kliknij „Pokaż pliki”.</p>
+          </div>
+          <button class="px-3.5 py-2 rounded-xl bg-white/5 border border-white/10 text-xs font-semibold text-slate-200 hover:bg-white/10">Pokaż pliki</button>
+        </div>
+      </section>
+
+      <!-- Dest -->
+      <section class="modern-glass-card p-6 space-y-3">
+        <h2 class="text-lg font-bold text-white">Folder projektu</h2>
+        <p class="text-xs text-slate-400">Tylko <code class="px-1.5 py-0.5 rounded bg-white/10 font-mono text-[11px]">/Volumes/…</code> — sesja → <code class="px-1.5 py-0.5 rounded bg-white/10 font-mono text-[11px]">folder / Nazwa/</code>.</p>
+        <div class="flex flex-wrap gap-2">
+          <input type="text" value="/Volumes/ENV/untitled folder/diplomat" class="flex-1 min-w-[200px] px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-slate-100" />
+          <button class="px-3.5 py-2 rounded-xl bg-white/5 border border-white/10 text-xs font-semibold">Wybierz folder…</button>
+        </div>
+        <div class="flex flex-wrap gap-2 pt-2">
+          <button class="px-4 py-2.5 rounded-xl bg-indigo-600 text-white text-xs font-semibold shadow-lg shadow-indigo-600/25">Pobierz zaznaczone</button>
+          <button class="px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-xs font-semibold text-slate-300">Anuluj</button>
+        </div>
+      </section>
+    </div>
+
+    <div id="panel-tokeny" class="panel hidden space-y-6">
+      <section class="modern-glass-card p-6 space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 class="text-lg font-bold text-white">Client tokens <span class="ml-1 px-2 py-0.5 rounded-full text-xs bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">3 active</span></h2>
+            <p class="text-xs text-slate-400 mt-1">Stored in <code class="px-1.5 py-0.5 rounded bg-white/10 font-mono text-[11px]">_uploader_tokens.json</code>.</p>
+          </div>
+          <button class="px-3.5 py-2 rounded-xl bg-indigo-600 text-white text-xs font-semibold">+ New token</button>
+        </div>
+        <div class="rounded-2xl border border-white/10 overflow-hidden bg-[#0c111e]">
+          <table class="w-full text-left text-sm">
+            <thead class="bg-[#131a2d] text-[11px] uppercase tracking-wider text-slate-400">
+              <tr>
+                <th class="px-4 py-3">Client</th>
+                <th class="px-4 py-3">Token</th>
+                <th class="px-4 py-3">Status</th>
+                <th class="px-4 py-3 text-right">Link</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-white/5">
+              <tr>
+                <td class="px-4 py-3 font-semibold">Studio Alfa</td>
+                <td class="px-4 py-3 font-mono text-indigo-300 text-xs">StudioAlfa</td>
+                <td class="px-4 py-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">active</span></td>
+                <td class="px-4 py-3 text-right"><button class="text-xs text-indigo-300 font-semibold">Copy</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    function showTab(name) {
+      document.getElementById('panel-projekty').classList.toggle('hidden', name !== 'projekty');
+      document.getElementById('panel-tokeny').classList.toggle('hidden', name !== 'tokeny');
+      document.getElementById('tab-projekty').className = name === 'projekty'
+        ? 'px-4 py-2 rounded-xl text-xs font-semibold text-white bg-indigo-600 shadow-sm'
+        : 'px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white';
+      document.getElementById('tab-tokeny').className = name === 'tokeny'
+        ? 'px-4 py-2 rounded-xl text-xs font-semibold text-white bg-indigo-600 shadow-sm'
+        : 'px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white';
+    }
+    function toggleMenu(id) {
+      document.querySelectorAll('.menu-pop').forEach((el) => {
+        if (el.id !== id) el.classList.add('hidden');
+      });
+      document.getElementById(id).classList.toggle('hidden');
+    }
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.relative')) {
+        document.querySelectorAll('.menu-pop').forEach((el) => el.classList.add('hidden'));
+      }
+    });
+  </script>
+</body>
+</html>

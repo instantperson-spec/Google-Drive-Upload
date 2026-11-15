@@ -3,6 +3,7 @@ const SKIP_NAMES = new Set([
   '_uploader_tokens.json',
   '_uploader_progress.json',
   '_uploader_shares.json',
+  '_uploader_session.json',
   '_team_manifest.json',
   '_manifest.json',
   '_crash_log.txt',
@@ -14,7 +15,8 @@ async function listChildren(drive, folderId) {
   do {
     const res = await drive.files.list({
       q: `'${folderId}' in parents and trashed = false`,
-      fields: 'nextPageToken, files(id, name, size, mimeType, createdTime, modifiedTime)',
+      fields:
+        'nextPageToken, files(id, name, size, mimeType, createdTime, modifiedTime, md5Checksum)',
       pageSize: 1000,
       pageToken,
       supportsAllDrives: true,
@@ -52,6 +54,7 @@ export async function walkDriveFolder(drive, rootFolderId) {
         size: Number(item.size) || 0,
         createdTime: item.createdTime || null,
         modifiedTime: item.modifiedTime || null,
+        md5Checksum: item.md5Checksum || null,
       });
     }
   }

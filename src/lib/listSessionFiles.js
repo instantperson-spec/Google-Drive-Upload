@@ -1,5 +1,15 @@
 import { google } from 'googleapis';
 
+const SKIP_NAMES = new Set([
+  '_uploader_tokens.json',
+  '_uploader_progress.json',
+  '_uploader_shares.json',
+  '_uploader_session.json',
+  '_team_manifest.json',
+  '_manifest.json',
+  '_crash_log.txt',
+]);
+
 /**
  * List all non-folder files under a session folder (recursive).
  * @returns {Promise<Array<{ id: string, name: string, size: number, relativePath: string }>>}
@@ -23,6 +33,7 @@ export async function listSessionFilesRecursive(authClient, sessionFolderId) {
           const childPrefix = prefix ? `${prefix}/${item.name}` : item.name;
           await walk(item.id, childPrefix);
         } else {
+          if (SKIP_NAMES.has(item.name)) continue;
           const relativePath = prefix ? `${prefix}/${item.name}` : item.name;
           results.push({
             id: item.id,

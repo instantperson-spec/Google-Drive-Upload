@@ -7,23 +7,53 @@
   <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
+  <div class="noise-overlay" aria-hidden="true"></div>
   <main class="wrap">
     <div id="flash" class="flash hidden" role="status"></div>
-    <header>
-      <h1>Studio Console</h1>
-      <p class="sub">Pobierz → Sync → Wyślij link klientowi.</p>
-      <nav class="tabs" role="tablist">
-        <button type="button" class="tab active" data-tab="pull">Projekty</button>
-        <button type="button" class="tab" data-tab="tokens">Tokeny</button>
-      </nav>
-    </header>
+
+    <section class="hero-card">
+      <div class="hero-top">
+        <div class="hero-copy">
+          <div class="hero-pills">
+            <span class="pill pill-accent">LOCAL · :8787</span>
+            <span class="pill pill-ok">Studio Console</span>
+          </div>
+          <h1>Studio Console</h1>
+          <p class="sub">Pobierz → Sync → Wyślij link klientowi.</p>
+        </div>
+        <button type="button" id="btn-refresh" class="btn primary">Odśwież</button>
+      </div>
+      <div class="kpi-row" id="kpi-row">
+        <div class="kpi-tile">
+          <div class="kpi-label">Sesje</div>
+          <div class="kpi-value" id="kpi-sessions">—</div>
+        </div>
+        <div class="kpi-tile">
+          <div class="kpi-label">Out of sync</div>
+          <div class="kpi-value kpi-warn" id="kpi-oos">—</div>
+        </div>
+        <div class="kpi-tile">
+          <div class="kpi-label">Share aktywne</div>
+          <div class="kpi-value kpi-accent" id="kpi-shares">—</div>
+        </div>
+        <div class="kpi-tile">
+          <div class="kpi-label">Tokeny</div>
+          <div class="kpi-value" id="kpi-tokens">—</div>
+        </div>
+      </div>
+    </section>
+
+    <nav class="tabs" role="tablist">
+      <button type="button" class="tab active" data-tab="pull">Projekty</button>
+      <button type="button" class="tab" data-tab="tokens">Tokeny</button>
+    </nav>
 
     <div id="panel-pull" class="panel">
       <section class="card">
         <div class="row">
-          <h2>Sesje na Drive</h2>
-          <div class="row-actions">
-            <button type="button" id="btn-refresh" class="btn secondary">Odśwież</button>
+          <div class="section-title-row">
+            <h2>Sesje na Drive</h2>
+            <span id="sessions-count" class="section-count hidden"></span>
           </div>
         </div>
         <p class="hint">Pobierz → Sync → Wyślij link. Dogrywki klienta: alert <em>Out of sync</em> + <strong>Pobierz od klienta</strong> (FromClient/).</p>

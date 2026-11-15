@@ -62,6 +62,8 @@ export default function AdminDashboard() {
   const [fetchedAt, setFetchedAt] = useState(null);
   const [loading, setLoading] = useState(false);
   const [fetchError, setFetchError] = useState('');
+  const [tokenStats, setTokenStats] = useState({ active: 0, total: 0 });
+  const [oauthScopeLabel, setOauthScopeLabel] = useState('—');
 
   const fetchActive = useCallback(async () => {
     setActiveLoading(true);
@@ -107,6 +109,21 @@ export default function AdminDashboard() {
     }
   }, []);
 
+  const fetchTokenStats = useCallback(async () => {
+    try {
+      const res = await fetch('/api/admin/tokens', { credentials: 'include' });
+      if (!res.ok) return;
+      const data = await res.json();
+      const list = data.tokens || [];
+      setTokenStats({
+        active: list.filter((t) => t.status === 'active').length,
+        total: list.length,
+      });
+    } catch {
+      /* non-critical */
+    }
+  }, []);
+
   useEffect(() => {
     (async () => {
       try {
@@ -114,7 +131,7 @@ export default function AdminDashboard() {
         const data = await res.json().catch(() => ({}));
         if (data.authenticated) {
           setAuthenticated(true);
-          await Promise.all([fetchActive(), fetchSessions()]);
+          await Promise.all([fetchActive(), fetchSessions(), fetchTokenStats()]);
         } else {
           setAuthenticated(false);
         }
@@ -122,7 +139,7 @@ export default function AdminDashboard() {
         setAuthenticated(false);
       }
     })();
-  }, [fetchActive, fetchSessions]);
+  }, [fetchActive, fetchSessions, fetchTokenStats]);
 
   // Passive refresh: Drive history + active progress every 60s
   useEffect(() => {
@@ -210,7 +227,7 @@ export default function AdminDashboard() {
       if (!res.ok) throw new Error(data.error || 'Login failed');
       setPassword('');
       setAuthenticated(true);
-      await Promise.all([fetchActive(), fetchSessions()]);
+      await Promise.all([fetchActive(), fetchSessions(), fetchTokenStats()]);
     } catch (err) {
       setLoginError(err.message);
     } finally {
@@ -234,7 +251,7 @@ export default function AdminDashboard() {
 
   if (authenticated === null) {
     return (
-      <div className="admin-loading">
+      <div className="admin-loading glass-panel admin-login-card">
         <p>Loading…</p>
       </div>
     );
@@ -242,7 +259,10 @@ export default function AdminDashboard() {
 
   if (!authenticated) {
     return (
-      <form className="admin-login-form" onSubmit={handleLogin}>
+      <form className="admin-login-form glass-panel admin-login-card" onSubmit={handleLogin}>
+        <div className="admin-hero-pills">
+          <span className="admin-pill admin-pill-accent">ADMIN PANEL</span>
+        </div>
         <h2>Admin Login</h2>
         <p className="admin-login-hint">Enter the admin password to view upload sessions.</p>
         <input
@@ -264,38 +284,99 @@ export default function AdminDashboard() {
   }
 
   const historyCount = inProgressRows.length + completedSessions.length;
-  const metaParts = [];
-  if (fetchedAt) metaParts.push(`Drive ${formatDate(fetchedAt)}`);
-  if (activeFetchedAt) metaParts.push(`progress ${formatDate(activeFetchedAt)}`);
-  metaParts.push('auto-refresh 60s');
+  const storedBytes = completedSessions.reduce(
+    (sum, s) => sum + (Number(s.totalSize) || 0),
+    0
+  );
+  const storedFiles = completedSessions.reduce(
+    (sum, s) => sum + (Number(s.fileCount) || 0),
+    0
+  );
 
   return (
     <div className="admin-dashboard">
-      <div className="admin-toolbar">
-        <div>
-          <h2>Admin Console</h2>
-          <p className="admin-meta">{metaParts.join(' · ')}</p>
+      <section className="admin-hero glass-panel">
+        <div className="admin-hero-top">
+          <div className="admin-hero-copy">
+            <div className="admin-hero-pills">
+              <span className="admin-pill admin-pill-accent">ADMIN PANEL · GOOGLE DRIVE</span>
+              <span className="admin-pill admin-pill-ok">
+                <span className="admin-pulse-dot" aria-hidden="true" />
+                Sesja aktywna
+              </span>
+            </div>
+            <h1>Admin Console</h1>
+            <p className="admin-hero-sub">
+              Session history from Google Drive, active client tokens and OAuth security diagnostics.
+            </p>
+            <div className="admin-telemetry">
+              <span className="admin-telemetry-pill">
+                Drive: <strong>{fetchedAt ? formatDate(fetchedAt) : '—'}</strong>
+              </span>
+              <span className="admin-telemetry-pill">
+                Progress: <strong>{activeFetchedAt ? formatDate(activeFetchedAt) : '—'}</strong>
+              </span>
+              <span className="admin-telemetry-pill admin-telemetry-accent">Auto-refresh: 60s</span>
+            </div>
+          </div>
+          <div className="admin-toolbar-actions">
+            <button
+              type="button"
+              className="btn admin-btn-primary"
+              onClick={() => {
+                refreshAll();
+                fetchTokenStats();
+              }}
+              disabled={loading || activeLoading}
+            >
+              {loading || activeLoading ? 'Refreshing…' : 'Refresh all'}
+            </button>
+            <button type="button" className="btn admin-btn-secondary" onClick={handleLogout}>
+              Logout
+            </button>
+          </div>
         </div>
-        <div className="admin-toolbar-actions">
-          <button
-            type="button"
-            className="btn admin-btn-secondary"
-            onClick={refreshAll}
-            disabled={loading || activeLoading}
-          >
-            {loading || activeLoading ? 'Refreshing…' : 'Refresh all'}
-          </button>
-          <button type="button" className="btn admin-btn-secondary" onClick={handleLogout}>
-            Logout
-          </button>
-        </div>
-      </div>
 
-      <section className="admin-section">
+        <div className="admin-kpi-row">
+          <div className="admin-kpi-tile">
+            <div className="admin-kpi-label">Completed Sessions</div>
+            <div className="admin-kpi-value">
+              {completedSessions.length}
+              <span className="admin-kpi-hint">{inProgressRows.length ? `${inProgressRows.length} live` : 'Drive synced'}</span>
+            </div>
+          </div>
+          <div className="admin-kpi-tile">
+            <div className="admin-kpi-label">Stored Volume</div>
+            <div className="admin-kpi-value">
+              {formatBytes(storedBytes)}
+              <span className="admin-kpi-hint">{storedFiles.toLocaleString('pl-PL')} files</span>
+            </div>
+          </div>
+          <div className="admin-kpi-tile">
+            <div className="admin-kpi-label">Client Tokens</div>
+            <div className="admin-kpi-value admin-kpi-accent">
+              {tokenStats.active} active
+              <span className="admin-kpi-hint">of {tokenStats.total} total</span>
+            </div>
+          </div>
+          <div className="admin-kpi-tile">
+            <div className="admin-kpi-label">OAuth Scope</div>
+            <div className="admin-kpi-value admin-kpi-ok">
+              {oauthScopeLabel}
+              <span className="admin-kpi-hint">VULN-05</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="admin-section glass-panel">
         <h3 className="admin-section-title">
           History (Google Drive)
           {historyCount > 0 && <span className="admin-section-count">{historyCount}</span>}
         </h3>
+        <p className="admin-empty-inline" style={{ marginTop: 0 }}>
+          Sesje z folderu głównego Google Drive po odfiltrowaniu plików technicznych.
+        </p>
 
         {fetchError && <p className="admin-error admin-error-banner">{fetchError}</p>}
 
@@ -313,7 +394,7 @@ export default function AdminDashboard() {
               <table className="admin-table">
                 <thead>
                   <tr>
-                    <th>Client</th>
+                    <th>Project &amp; Client</th>
                     <th>Email</th>
                     <th>Progress</th>
                     <th>Size</th>
@@ -356,7 +437,7 @@ export default function AdminDashboard() {
               <table className="admin-table">
                 <thead>
                   <tr>
-                    <th>Client</th>
+                    <th>Project &amp; Client</th>
                     <th>Email</th>
                     <th>Files</th>
                     <th>Size</th>
@@ -382,17 +463,10 @@ export default function AdminDashboard() {
             </div>
           </div>
         )}
-
-        {(fetchedAt || activeFetchedAt) && (
-          <p className="admin-footnote">
-            Drive history updated {formatDate(fetchedAt)}
-            {activeFetchedAt ? ` · progress ${formatDate(activeFetchedAt)}` : null}
-          </p>
-        )}
       </section>
 
-      <AdminTokenManager />
-      <AdminOAuthCheck />
+      <AdminTokenManager onStatsChange={setTokenStats} />
+      <AdminOAuthCheck onScopeLabel={setOauthScopeLabel} />
     </div>
   );
 }

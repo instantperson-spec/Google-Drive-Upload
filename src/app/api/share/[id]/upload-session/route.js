@@ -3,6 +3,7 @@ import { getActiveShare, ensureFromClientFolder } from '@/lib/shareStore';
 import { getAuthClient, isSessionFolder } from '@/lib/googleAuth';
 import { validateFileMetadata } from '@/lib/validation';
 import { rateLimit } from '@/lib/rateLimit';
+import { assertShareUploadAllowed } from '@/lib/shareQuota';
 
 export const runtime = 'nodejs';
 
@@ -36,6 +37,11 @@ export async function POST(request, { params }) {
     const validationError = validateFileMetadata(baseName, size);
     if (validationError) {
       return NextResponse.json({ error: validationError }, { status: 400 });
+    }
+
+    const quota = assertShareUploadAllowed(id, size);
+    if (!quota.ok) {
+      return NextResponse.json({ error: quota.error }, { status: 429 });
     }
 
     const fromClientId = await ensureFromClientFolder(share.folderId);

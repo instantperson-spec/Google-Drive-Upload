@@ -32,6 +32,7 @@ import {
   setLastClientPull,
 } from './lib/projectBindings.mjs';
 import { computeSyncStatus } from './lib/syncStatus.mjs';
+import { detectNestedSessionPath } from './lib/pathHints.mjs';
 import { walkLocalFolder } from './lib/localWalk.mjs';
 import { planSync } from './lib/syncDelta.mjs';
 import { uploadFiles } from './lib/upload.mjs';
@@ -49,11 +50,17 @@ import {
   createShareLocal,
   revokeShareLocal,
 } from './lib/shareOps.mjs';
+import {
+  ensureConsoleAuthToken,
+  assertConsoleRequest,
+} from './lib/consoleAuth.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const UI_DIR = path.join(__dirname, 'ui');
 const HOST = '127.0.0.1';
 const PORT = 8787;
+
+const { token: CONSOLE_TOKEN, fingerprint: CONSOLE_FP } = ensureConsoleAuthToken();
 
 /** @type {Set<import('http').ServerResponse>} */
 const sseClients = new Set();
@@ -121,6 +128,21 @@ function serveStatic(req, res) {
     'Content-Type': contentType(filePath),
     'Cache-Control': filePath.endsWith('.jpg') ? 'public, max-age=86400' : 'no-store',
   };
+
+  // Inject local auth token into HTML so same-origin UI can call /api/*
+  if (filePath.endsWith('.html')) {
+    let html = fs.readFileSync(filePath, 'utf8');
+    const meta = `<meta name="studio-console-token" content="${CONSOLE_TOKEN}">`;
+    if (html.includes('</head>')) {
+      html = html.replace('</head>', `${meta}\n</head>`);
+    } else {
+      html = meta + html;
+    }
+    res.writeHead(200, headers);
+    res.end(html);
+    return;
+  }
+
   res.writeHead(200, headers);
   fs.createReadStream(filePath).pipe(res);
 }
@@ -176,9 +198,11 @@ async function handleSessions(res) {
             folderId,
             {
               syncStatus: 'unknown',
+              reasons: { fromClientPending: false, studioRemoteNewer: false },
               fromClientCount: 0,
               missingLocalFromClient: 0,
               remoteChangedAt: null,
+              nestedWarning: null,
             },
           ];
         }
@@ -191,14 +215,23 @@ async function handleSessions(res) {
     const st = statusByFolder.get(s.folderId);
     if (st) {
       s.syncStatus = st.syncStatus;
+      s.syncReasons = st.reasons || {
+        fromClientPending: false,
+        studioRemoteNewer: false,
+      };
       s.fromClientCount = st.fromClientCount;
       s.missingLocalFromClient = st.missingLocalFromClient;
       s.remoteChangedAt = st.remoteChangedAt;
+      s.nestedWarning = st.nestedWarning || null;
       if (st.lastClientPullAt) s.lastClientPullAt = st.lastClientPullAt;
     } else {
       s.syncStatus = s.localPath ? 'ok' : 'unknown';
+      s.syncReasons = { fromClientPending: false, studioRemoteNewer: false };
       s.fromClientCount = 0;
       s.missingLocalFromClient = 0;
+      s.nestedWarning = s.localPath
+        ? detectNestedSessionPath(s.localPath, s.bindingLabel || s.name || null)
+        : null;
     }
   }
 
@@ -435,7 +468,17 @@ async function handlePull(req, res) {
             localPath: sessionDest,
             label: session.name,
           });
-          const localFiles = walkLocalFolder(sessionDest);
+          const driveByRel = new Map(
+            files.map((df) => [String(df.relativePath || '').replace(/\\/g, '/'), df])
+          );
+          const localFiles = walkLocalFolder(sessionDest).map((lf) => {
+            const rel = String(lf.relativePath || '').replace(/\\/g, '/');
+            const df = driveByRel.get(rel);
+            if (df?.md5Checksum && Number(lf.size) === Number(df.size)) {
+              return { ...lf, md5Checksum: df.md5Checksum };
+            }
+            return lf;
+          });
           const { fileId: manId, manifest: prevMan } = await readManifest(
             drive,
             session.folderId
@@ -525,57 +568,60 @@ async function handleSync(req, res) {
   }
 
   let binding = getBinding(folderId);
-  // Sync only the folder recorded at pull (download = sync). Ignore guessed parents.
-  let localPath = binding?.localPath || null;
-  if (body.localPath && binding?.localPath) {
+  // Hard binding: Sync only uses the path recorded at Pobierz / Zmień folder.
+  if (!binding?.localPath) {
+    sendJson(res, 400, {
+      error:
+        'Brak folderu projektu — najpierw Pobierz sesję albo „Zmień folder” (Sync nie ustawia ścieżki).',
+    });
+    return;
+  }
+
+  const bound = path.resolve(binding.localPath);
+  if (body.localPath) {
     const requested = path.resolve(String(body.localPath).trim());
-    const bound = path.resolve(binding.localPath);
     if (requested !== bound) {
       sendJson(res, 400, {
         error: `Sync tylko z folderu po Pobierz:\n${bound}\n(nie ${requested})`,
       });
       return;
     }
-    localPath = bound;
-  } else if (body.localPath && !binding) {
-    localPath = String(body.localPath).trim();
-  }
-  if (!localPath) {
-    sendJson(res, 400, {
-      error: 'Brak folderu projektu — najpierw Pobierz sesję (download = sync).',
-    });
-    return;
   }
 
   let dest;
   try {
-    ({ dest } = assertSafeDest(localPath, { create: false }));
+    ({ dest } = assertSafeDest(bound, { create: false }));
   } catch (err) {
     sendJson(res, 400, { error: err.message || String(err) });
     return;
   }
 
-  if (!binding || binding.localPath !== dest) {
-    binding = upsertBinding({
-      folderId,
-      token: body.token || binding?.token || null,
-      localPath: dest,
-      label: body.label || binding?.label || null,
-    });
-  }
+  const nestedWarning = detectNestedSessionPath(
+    dest,
+    body.label || binding.label || null
+  );
 
   jobRunning = true;
   cancelRequested = false;
-  sendJson(res, 202, { ok: true, folderId, localPath: dest });
+  sendJson(res, 202, {
+    ok: true,
+    folderId,
+    localPath: dest,
+    nestedWarning: nestedWarning || null,
+  });
 
   setImmediate(async () => {
     try {
       const { drive } = createDriveClient();
+      if (nestedWarning) {
+        broadcast({ type: 'log', message: `⚠ ${nestedWarning}` });
+      }
       broadcast({
         type: 'sync_start',
         folderId,
         dest,
         label: binding.label || folderId,
+        nestedWarning: nestedWarning || null,
       });
 
       broadcast({ type: 'listing', folderId, dest });
@@ -610,7 +656,7 @@ async function handleSync(req, res) {
         });
       }
 
-      const { upload, skip } = planSync(localFiles, driveFiles);
+      const { upload, skip } = await planSync(localFiles, driveFiles);
 
       broadcast({
         type: 'listing_done',
@@ -907,6 +953,34 @@ const server = http.createServer(async (req, res) => {
   try {
     const url = new URL(req.url, `http://${HOST}:${PORT}`);
     const { pathname } = url;
+
+    // Public health for Tauri fingerprint check (Host still validated)
+    if (req.method === 'GET' && pathname === '/api/health') {
+      const gate = assertConsoleRequest(req, {
+        token: CONSOLE_TOKEN,
+        allowUnauthedPath: true,
+      });
+      if (!gate.ok) {
+        sendJson(res, gate.status, { error: gate.error });
+        return;
+      }
+      sendJson(res, 200, { ok: true, app: 'studio-console', fp: CONSOLE_FP });
+      return;
+    }
+
+    if (pathname.startsWith('/api/')) {
+      const allowQueryToken =
+        req.method === 'GET' &&
+        (pathname === '/api/pull/events' || pathname === '/api/sync/events');
+      const gate = assertConsoleRequest(req, {
+        token: CONSOLE_TOKEN,
+        allowQueryToken,
+      });
+      if (!gate.ok) {
+        sendJson(res, gate.status, { error: gate.error });
+        return;
+      }
+    }
 
     if (req.method === 'GET' && pathname === '/api/sessions') {
       await handleSessions(res);

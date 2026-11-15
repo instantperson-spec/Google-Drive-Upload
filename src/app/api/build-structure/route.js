@@ -4,11 +4,13 @@ import { getAuthClient, isSessionFolder } from '@/lib/googleAuth';
 import { buildSessionStructure } from '@/lib/buildStructure';
 import { parseManifestPayload } from '@/lib/pathManifest';
 import { rateLimit } from '@/lib/rateLimit';
+import { assertFolderOwnedByToken } from '@/lib/sessionOwnership';
 
 export async function POST(request) {
   const limited = rateLimit(request, 'build-structure', 10);
   if (limited) return limited;
-  if (!(await verifyUploadToken(request))) return unauthorizedResponse();
+  const token = await verifyUploadToken(request);
+  if (!token) return unauthorizedResponse();
 
   try {
     const body = await request.json();
@@ -22,6 +24,11 @@ export async function POST(request) {
 
     if (!(await isSessionFolder(authClient, folderId))) {
       return NextResponse.json({ error: 'Invalid target folder' }, { status: 403 });
+    }
+
+    const owned = await assertFolderOwnedByToken(authClient, folderId, token);
+    if (!owned.ok) {
+      return NextResponse.json({ error: owned.error }, { status: owned.status });
     }
 
     const result = await buildSessionStructure(authClient, folderId, entries);

@@ -103,10 +103,55 @@ fn port_open() -> bool {
   .is_ok()
 }
 
+fn auth_fp_path() -> PathBuf {
+  let home = std::env::var("HOME").unwrap_or_else(|_| "/tmp".into());
+  PathBuf::from(home)
+    .join("Library/Application Support/StudioConsole")
+    .join("console_auth.fp")
+}
+
+/// Confirm :8787 is our Studio Console (fingerprint), not a foreign process.
+fn is_our_console() -> bool {
+  let expected = match std::fs::read_to_string(auth_fp_path()) {
+    Ok(s) => s.trim().to_string(),
+    Err(_) => return false,
+  };
+  if expected.len() < 8 {
+    return false;
+  }
+  let out = Command::new("curl")
+    .args([
+      "-sS",
+      "--max-time",
+      "2",
+      "http://127.0.0.1:8787/api/health",
+    ])
+    .output();
+  let Ok(out) = out else {
+    return false;
+  };
+  if !out.status.success() {
+    return false;
+  }
+  let body = String::from_utf8_lossy(&out.stdout);
+  body.contains("\"app\":\"studio-console\"") && body.contains(&format!("\"fp\":\"{expected}\""))
+}
+
 fn wait_for_port(timeout_ms: u64) -> bool {
   let start = Instant::now();
   while start.elapsed() < Duration::from_millis(timeout_ms) {
     if port_open() {
+      return true;
+    }
+    std::thread::sleep(Duration::from_millis(150));
+  }
+  false
+}
+
+fn wait_for_our_console(timeout_ms: u64) -> bool {
+  let start = Instant::now();
+  while start.elapsed() < Duration::from_millis(timeout_ms) {
+    if port_open() && is_our_console() {
       return true;
     }
     std::thread::sleep(Duration::from_millis(150));
@@ -123,8 +168,14 @@ fn log_path() -> PathBuf {
 
 fn start_sidecar() -> Result<Option<Child>, String> {
   if port_open() {
-    // Already running (e.g. npm run studio-console) — reuse it.
-    return Ok(None);
+    if is_our_console() {
+      // Already running (e.g. npm run studio-console) — reuse only if fingerprint matches.
+      return Ok(None);
+    }
+    return Err(
+      "Port :8787 jest zajęty przez obcy proces (nie Studio Console). Zamknij go i spróbuj ponownie."
+        .into(),
+    );
   }
 
   let root = resolve_project_root().ok_or_else(|| {
@@ -157,7 +208,7 @@ fn start_sidecar() -> Result<Option<Child>, String> {
     .spawn()
     .map_err(|e| format!("Nie uruchomiono ui-server: {e}"))?;
 
-  if !wait_for_port(12_000) {
+  if !wait_for_our_console(12_000) {
     return Err(
       "Serwer Studio Console nie wystartował na :8787. Sprawdź ~/Library/Logs/StudioConsole.log"
         .into(),

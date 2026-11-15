@@ -13,9 +13,9 @@
 | UI upload: Nebula + glass, wymagana nazwa projektu, sticky Start, identity badge | ✅ |
 | Flat upload + `/api/build-structure` + `_manifest.json` | ✅ |
 | Czarna lista rozszerzeń (server) | ✅ |
-| `/admin` — History (In progress / Completed), tokeny, OAuth test | ✅ |
-| Studio Console (pull, Sync, share, FromClient, Out of sync) | ✅ |
-| Portal `/share/<id>` — lista, KPI-filtry, ZIP download, dogrywki | ✅ |
+| `/admin` — Modern Glass + Nebula (hero/KPI), History, tokeny, OAuth test | ✅ |
+| Studio Console — Modern Glass + Nebula (hero/KPI, wiersze sesji + menu ⋯) | ✅ |
+| Portal `/share/<id>` — lista, KPI-filtry, pobieranie plik-po-pliku (ZIP tylko małe), dogrywki | ✅ |
 | UI share: nagłówek „Portal projektu” (PL/EN), Nebula + glass | ✅ |
 | noindex / rate limit / drive.file | ✅ |
 
@@ -23,16 +23,17 @@
 
 ---
 
-## UI klienta (Nebula Centered)
+## UI (Nebula + Modern Glass)
 
-Wspólny język wizualny upload + share (mockupy: [`../mockups/`](../mockups/)):
+Wspólny język wizualny (mockupy: [`../mockups/`](../mockups/)):
 
-- Tło **Nebula**, karta **glass**, akcent slate + indigo  
-- **Bez** Bridge / TLS / API v3 / MB/s / ETA w UI  
-- Upload: placeholder projektu `nowy projekt` / `new project`; success → opcjonalnie Open Drive  
-- Share: H1 „Portal projektu” / „Project portal”; pasek „Projekt: …”; język z przeglądarki (`pl*` → PL)
+- Tło **Nebula**, karty **modern glass**, akcent indigo / emerald  
+- Upload + share: [`index.html`](../mockups/index.html), [`share.html`](../mockups/share.html)  
+- Admin Vercel: [`admin.html`](../mockups/admin.html)  
+- Studio Console (lokal): [`studio-console.html`](../mockups/studio-console.html) — Stack + tabs, wiersz sesji z primary + ⋯  
+- **Bez** Bridge / TLS / API v3 / MB/s / ETA w UI klienta  
 
-Plan: [`plany/upload_ui_nebula_centered.plan.md`](./plany/upload_ui_nebula_centered.plan.md) (wdrożony).
+Plan upload (archiwum): [`archiwum/plany/upload_ui_nebula_centered.plan.md`](./archiwum/plany/upload_ui_nebula_centered.plan.md).
 
 ---
 
@@ -51,12 +52,14 @@ Plan: [`plany/upload_ui_nebula_centered.plan.md`](./plany/upload_ui_nebula_cente
 
 | Plan | Stan |
 |---|---|
-| [`team_project_sync_…`](./plany/team_project_sync_76d281ab.plan.md) | ✅ wdrożony (kontekst) |
-| [`client_portal_mvp_…`](./plany/client_portal_mvp_97952dbb.plan.md) | ✅ wdrożony (kontekst) |
-| [`upload_ui_nebula_centered…`](./plany/upload_ui_nebula_centered.plan.md) | ✅ wdrożony |
-| Admin: bez Live Monitor + History split | ✅ wdrożony |
-| Upload: wymagana nazwa + sticky Start | ✅ wdrożony |
-| [`post-mvp_roadmap_…`](./plany/post-mvp_roadmap_05ad683d.plan.md) | ⏳ **aktywny** — P0 binding, pobieranie plik-po-pliku, OOS; P1 rundy; P2 mail; P3 feedback |
+| [`team_project_sync_…`](./archiwum/plany/team_project_sync_76d281ab.plan.md) | ✅ → archiwum |
+| [`client_portal_mvp_…`](./archiwum/plany/client_portal_mvp_97952dbb.plan.md) | ✅ → archiwum |
+| [`upload_ui_nebula_centered…`](./archiwum/plany/upload_ui_nebula_centered.plan.md) | ✅ → archiwum |
+| Admin: bez Live Monitor + History split | ✅ |
+| Upload: wymagana nazwa + sticky Start | ✅ |
+| [`post-mvp_roadmap_…`](./plany/post-mvp_roadmap_05ad683d.plan.md) | ⏳ **aktywny** — P0 ✅; **następne: P1 rundy** |
+| Security remediacja 2026-11-15 (P0–P2) | ✅ → [`archiwum/plany/security_audit_…`](./archiwum/plany/security_audit_remediation.plan.md) |
+| Binding+OOS + progress Drive+ETag | ✅ (bez Redis/KV) |
 
 **Poza planem:** konta klienta, dwukierunkowy sync z konfliktami, auto-watch folderu, ACL Drive na email klienta, pełny player NLE.
 

@@ -4,13 +4,14 @@
 import fs from 'fs';
 import path from 'path';
 import { walkDriveFolder } from './driveWalk.mjs';
+import { detectNestedSessionPath } from './pathHints.mjs';
 
 const FROM_CLIENT_PREFIX = 'FromClient/';
 
 /**
  * @param {object} drive
  * @param {string} folderId
- * @param {{ localPath?: string|null, lastSyncedAt?: string|null, lastClientPullAt?: string|null }|null} binding
+ * @param {{ localPath?: string|null, lastSyncedAt?: string|null, lastClientPullAt?: string|null, label?: string|null }|null} binding
  */
 export async function computeSyncStatus(drive, folderId, binding) {
   const files = await walkDriveFolder(drive, folderId);
@@ -57,16 +58,26 @@ export async function computeSyncStatus(drive, folderId, binding) {
       studioRemoteChangedAt &&
       new Date(studioRemoteChangedAt) > new Date(lastSyncedAt)
   );
+  const fromClientPending = missingLocalFromClient > 0;
 
   const syncStatus =
-    missingLocalFromClient > 0 || studioRemoteNewer ? 'out_of_sync' : 'ok';
+    fromClientPending || studioRemoteNewer ? 'out_of_sync' : 'ok';
+
+  const nestedWarning = localRoot
+    ? detectNestedSessionPath(localRoot, binding?.label || null)
+    : null;
 
   return {
     syncStatus,
+    reasons: {
+      fromClientPending,
+      studioRemoteNewer,
+    },
     lastSyncedAt,
     lastClientPullAt: binding?.lastClientPullAt || null,
     remoteChangedAt,
     fromClientCount: fromClientFiles.length,
     missingLocalFromClient,
+    nestedWarning,
   };
 }

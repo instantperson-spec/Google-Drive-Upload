@@ -26,12 +26,34 @@ function guessMime(fileName) {
   return MIME_BY_EXT[ext] || 'application/octet-stream';
 }
 
-/** Cache: `${parentId}::${name}` → folderId */
+/** Cache: `${parentId}::${name}` → { id, at } */
 const folderCache = new Map();
+const FOLDER_CACHE_TTL_MS = 10 * 60 * 1000;
+const FOLDER_CACHE_MAX = 500;
+
+function getCachedFolder(key) {
+  const entry = folderCache.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.at > FOLDER_CACHE_TTL_MS) {
+    folderCache.delete(key);
+    return null;
+  }
+  return entry.id;
+}
+
+function setCachedFolder(key, id) {
+  if (!id) return;
+  folderCache.set(key, { id, at: Date.now() });
+  if (folderCache.size > FOLDER_CACHE_MAX) {
+    const oldest = folderCache.keys().next().value;
+    folderCache.delete(oldest);
+  }
+}
 
 async function findChildFolder(drive, parentId, name) {
   const key = `${parentId}::${name}`;
-  if (folderCache.has(key)) return folderCache.get(key);
+  const cached = getCachedFolder(key);
+  if (cached) return cached;
 
   const escaped = String(name).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
   const res = await drive.files.list({
@@ -42,7 +64,7 @@ async function findChildFolder(drive, parentId, name) {
     includeItemsFromAllDrives: true,
   });
   const id = res.data.files?.[0]?.id || null;
-  if (id) folderCache.set(key, id);
+  if (id) setCachedFolder(key, id);
   return id;
 }
 
@@ -60,7 +82,7 @@ async function ensureFolder(drive, parentId, name) {
     supportsAllDrives: true,
   });
   const id = created.data.id;
-  folderCache.set(`${parentId}::${name}`, id);
+  setCachedFolder(`${parentId}::${name}`, id);
   return id;
 }
 

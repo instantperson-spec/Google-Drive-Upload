@@ -8,6 +8,16 @@ import { parseSessionFolderName } from '@/lib/sessionFolderName';
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 100;
 
+const SKIP_NAMES = new Set([
+  '_uploader_tokens.json',
+  '_uploader_progress.json',
+  '_uploader_shares.json',
+  '_uploader_session.json',
+  '_team_manifest.json',
+  '_manifest.json',
+  '_crash_log.txt',
+]);
+
 async function listAllFilesInFolder(drive, folderId) {
   let files = [];
   let pageToken = null;
@@ -56,7 +66,9 @@ export async function GET(request) {
     const sessions = await Promise.all(
       folders.map(async (folder) => {
         const allItems = await listAllFilesInFolder(drive, folder.id);
-        const regularFiles = allItems.filter(f => f.mimeType !== 'application/vnd.google-apps.folder');
+        const regularFiles = allItems.filter(
+          f => f.mimeType !== 'application/vnd.google-apps.folder' && !SKIP_NAMES.has(f.name)
+        );
         const totalSize = regularFiles.reduce((sum, f) => sum + (Number(f.size) || 0), 0);
         const latestFileTime = regularFiles.reduce((max, f) => {
           const t = f.modifiedTime || '';

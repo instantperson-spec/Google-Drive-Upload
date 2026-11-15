@@ -209,27 +209,87 @@ function SharePageInner({ shareId }) {
       return;
     }
 
+    const total = list.length;
+    const totalBytes = list.reduce((s, f) => s + (Number(f.size) || 0), 0);
+    const ZIP_MAX_FILES = 40;
+    const ZIP_MAX_BYTES = 500 * 1024 * 1024;
+    const canUseDirPicker = typeof window.showDirectoryPicker === 'function';
+    const zipOk = total <= ZIP_MAX_FILES && totalBytes <= ZIP_MAX_BYTES;
+
     setBusy(true);
     setJob({
       phase: 'start',
       title: actionLabel || 'Pobieranie',
-      detail: `Start — ${list.length} plików…`,
+      detail: `Start — ${total} plików…`,
       pct: 2,
     });
     await yieldToUi();
 
     try {
-      const zip = new JSZip();
-      const total = list.length;
+      // Default: file-by-file into a chosen folder (avoids ZIP OOM)
+      if (canUseDirPicker) {
+        const rootHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
 
+        async function ensureDir(parts) {
+          let dir = rootHandle;
+          for (const part of parts) {
+            if (!part) continue;
+            dir = await dir.getDirectoryHandle(part, { create: true });
+          }
+          return dir;
+        }
+
+        for (let i = 0; i < total; i += 1) {
+          const f = list[i];
+          setJob({
+            phase: 'fetch',
+            title: 'Pobieranie',
+            detail: `${i + 1} / ${total}: ${f.name || f.relativePath}`,
+            pct: Math.max(3, Math.round(((i + 0.2) / total) * 97)),
+          });
+          await yieldToUi();
+
+          const res = await fetch(
+            `/api/share/${encodeURIComponent(shareId)}/file?fileId=${encodeURIComponent(f.id)}`
+          );
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.error || `Błąd: ${f.relativePath}`);
+          }
+          const blob = await res.blob();
+          const rel = String(f.relativePath || f.name || `file-${i}`).replace(/\\/g, '/');
+          const parts = rel.split('/').filter(Boolean);
+          const fileName = parts.pop() || `file-${i}`;
+          const dir = await ensureDir(parts);
+          const fileHandle = await dir.getFileHandle(fileName, { create: true });
+          const writable = await fileHandle.createWritable();
+          await writable.write(blob);
+          await writable.close();
+        }
+
+        setJob({
+          phase: 'done',
+          title: 'Gotowe',
+          detail: `Zapisano ${total} plików do wybranego folderu.`,
+          pct: 100,
+        });
+        return;
+      }
+
+      if (!zipOk) {
+        throw new Error(
+          'Ta paczka jest za duża na ZIP w przeglądarce. Użyj Chrome/Edge (wybór folderu) albo pobierz mniejszą kategorię.'
+        );
+      }
+
+      const zip = new JSZip();
       for (let i = 0; i < total; i += 1) {
         const f = list[i];
-        const fetchPct = Math.round(((i + 0.15) / total) * 85);
         setJob({
           phase: 'fetch',
           title: 'Pobieranie',
           detail: `${i + 1} / ${total}: ${f.name || f.relativePath}`,
-          pct: Math.max(3, fetchPct),
+          pct: Math.max(3, Math.round(((i + 0.15) / total) * 85)),
         });
         await yieldToUi();
 
@@ -242,14 +302,6 @@ function SharePageInner({ shareId }) {
         }
         const blob = await res.blob();
         zip.file(f.relativePath, blob);
-
-        setJob({
-          phase: 'fetch',
-          title: 'Pobieranie',
-          detail: `OK ${i + 1} / ${total}: ${f.name || f.relativePath}`,
-          pct: Math.round(((i + 1) / total) * 85),
-        });
-        await yieldToUi();
       }
 
       setJob({
@@ -273,14 +325,6 @@ function SharePageInner({ shareId }) {
         }
       );
 
-      setJob({
-        phase: 'save',
-        title: 'Zapisywanie',
-        detail: `Pobieranie „${zipName}”…`,
-        pct: 99,
-      });
-      await yieldToUi();
-
       const a = document.createElement('a');
       a.href = URL.createObjectURL(out);
       a.download = zipName;
@@ -296,12 +340,21 @@ function SharePageInner({ shareId }) {
         pct: 100,
       });
     } catch (err) {
-      setJob({
-        phase: 'error',
-        title: 'Błąd pobierania',
-        detail: err.message || String(err),
-        pct: 0,
-      });
+      if (err?.name === 'AbortError') {
+        setJob({
+          phase: 'error',
+          title: 'Anulowano',
+          detail: 'Nie wybrano folderu.',
+          pct: 0,
+        });
+      } else {
+        setJob({
+          phase: 'error',
+          title: 'Błąd pobierania',
+          detail: err.message || String(err),
+          pct: 0,
+        });
+      }
     } finally {
       setBusy(false);
     }

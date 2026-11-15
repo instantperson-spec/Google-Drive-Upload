@@ -3,6 +3,8 @@ import nodemailer from 'nodemailer';
 import { verifyUploadToken, unauthorizedResponse } from '@/lib/auth';
 import { getTokenRecord } from '@/lib/tokenStore';
 import { rateLimit } from '@/lib/rateLimit';
+import { getAuthClient, isSessionFolder } from '@/lib/googleAuth';
+import { assertFolderOwnedByToken } from '@/lib/sessionOwnership';
 
 const MAX_FILES_IN_NOTIFICATION = 2000;
 const MAX_NAME_LENGTH = 200;
@@ -25,7 +27,8 @@ const isValidFolderId = (value) =>
 export async function POST(request) {
   const limited = rateLimit(request, 'notify', 5);
   if (limited) return limited;
-  if (!(await verifyUploadToken(request))) return unauthorizedResponse();
+  const token = await verifyUploadToken(request);
+  if (!token) return unauthorizedResponse();
 
   try {
     const raw = await request.json();
@@ -40,13 +43,27 @@ export async function POST(request) {
     // Sanitized view of the request used everywhere below
     const plainName = String(raw.uploaderName || 'Unknown').slice(0, MAX_NAME_LENGTH);
     const plainProject = String(raw.projectName || '').slice(0, 120);
+    const plainEmail = isValidEmail(raw.uploaderEmail) ? String(raw.uploaderEmail) : '';
+    let folderId = isValidFolderId(raw.folderId) ? raw.folderId : '';
+
+    if (folderId) {
+      const authClient = await getAuthClient();
+      if (!(await isSessionFolder(authClient, folderId))) {
+        folderId = '';
+      } else {
+        const owned = await assertFolderOwnedByToken(authClient, folderId, token);
+        if (!owned.ok) folderId = '';
+      }
+    }
+
     const data = {
       plainName, // for plain-text contexts: subjects, webhook
       plainProject,
       projectName: escapeHtml(plainProject),
       uploaderName: escapeHtml(plainName), // for HTML email bodies
-      uploaderEmail: raw.uploaderEmail || '',
-      folderId: isValidFolderId(raw.folderId) ? raw.folderId : '',
+      uploaderEmail: plainEmail,
+      uploaderEmailHtml: escapeHtml(plainEmail),
+      folderId,
     };
     const files = raw.files.map(f => ({
       name: escapeHtml(String(f?.name || 'unnamed').slice(0, MAX_NAME_LENGTH)),
@@ -119,7 +136,7 @@ export async function POST(request) {
             <div style="font-family: sans-serif; padding: 20px; color: #333;">
               <h2 style="color: #0056b3;">You have received new files!</h2>
               ${data.projectName ? `<p><strong>Project:</strong> ${data.projectName}</p>` : ''}
-              <p>User <strong>${data.uploaderName}</strong> (<a href="mailto:${data.uploaderEmail}">${data.uploaderEmail}</a>) has just uploaded a batch of files via your application.</p>
+              <p>User <strong>${data.uploaderName}</strong> (<a href="mailto:${data.uploaderEmailHtml}">${data.uploaderEmailHtml}</a>) has just uploaded a batch of files via your application.</p>
               
               <h3 style="margin-top: 20px; border-bottom: 1px solid #ddd; padding-bottom: 5px;">File list (${files.length}):</h3>
               <ul style="padding-left: 20px;">

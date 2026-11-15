@@ -17,7 +17,7 @@ function StatusBadge({ status }) {
   return <span className={`admin-token-badge ${cls}`}>{status}</span>;
 }
 
-export default function AdminTokenManager() {
+export default function AdminTokenManager({ onStatsChange }) {
   const [tokens, setTokens] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -45,13 +45,20 @@ export default function AdminTokenManager() {
         throw new Error(data.error || 'Failed to load tokens');
       }
       const data = await res.json();
-      setTokens(data.tokens || []);
+      const list = data.tokens || [];
+      setTokens(list);
+      if (typeof onStatsChange === 'function') {
+        onStatsChange({
+          active: list.filter((t) => t.status === 'active').length,
+          total: list.length,
+        });
+      }
     } catch (err) {
       setError(err.message);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [onStatsChange]);
 
   useEffect(() => {
     fetchTokens();
@@ -158,7 +165,7 @@ export default function AdminTokenManager() {
   const activeCount = tokens.filter((t) => t.status === 'active').length;
 
   return (
-    <section className="admin-section">
+    <section className="admin-section glass-panel">
       <div className="admin-section-header-row">
         <h3 className="admin-section-title">
           Client tokens
@@ -166,7 +173,7 @@ export default function AdminTokenManager() {
         </h3>
         <button
           type="button"
-          className="btn admin-btn-secondary"
+          className="btn admin-btn-primary"
           onClick={() => setShowForm((v) => !v)}
         >
           {showForm ? 'Cancel' : '+ New token'}
