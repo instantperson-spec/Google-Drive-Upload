@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import JSZip from 'jszip';
 import { CHUNK_SIZE, uploadChunk } from '@/lib/chunkUpload';
+import { LocaleProvider, useT } from '@/context/LocaleContext';
+import { normalizeLocale } from '@/lib/locales';
 
 function formatBytes(n) {
   if (n >= 1024 ** 3) return `${(n / 1024 ** 3).toFixed(2)} GB`;
@@ -16,6 +18,19 @@ function statusLabel(status) {
   if (status === 'modified') return 'Zmienione przez studio';
   if (status === 'new') return 'Nowe od studia';
   return 'Twoje (oryginał)';
+}
+
+function fileExt(nameOrPath) {
+  const base = String(nameOrPath || '').split('/').pop() || '';
+  const parts = base.split('.');
+  if (parts.length < 2) return 'FILE';
+  return parts.pop().slice(0, 4).toUpperCase();
+}
+
+function folderOf(relativePath) {
+  const parts = String(relativePath || '').split('/');
+  if (parts.length < 2) return '';
+  return parts.slice(0, -1).join('/');
 }
 
 /** Let React paint before the next heavy step. */
@@ -107,25 +122,40 @@ function FileSection({ title, hint, items, downloadLabel, onDownload, busy }) {
       </div>
       {hint ? <p className="share-section-hint">{hint}</p> : null}
       <ul className="share-file-list">
-        {items.map((f) => (
-          <li key={f.id} className={`share-file status-${f.status}`}>
-            <span className="share-file-path" title={f.relativePath}>
-              {f.relativePath}
-            </span>
-            <span className="share-file-meta">
-              <span className={`share-badge share-badge-${f.status}`}>
-                {statusLabel(f.status)}
+        {items.map((f) => {
+          const name = f.name || String(f.relativePath || '').split('/').pop();
+          const folder = folderOf(f.relativePath);
+          return (
+            <li key={f.id} className={`share-file status-${f.status}`}>
+              <div className="share-file-main">
+                <span className="share-file-ext" aria-hidden="true">
+                  {fileExt(name)}
+                </span>
+                <div className="share-file-text">
+                  <span className="share-file-name" title={f.relativePath}>
+                    {name}
+                  </span>
+                  {folder ? (
+                    <span className="share-file-folder">📁 {folder}/</span>
+                  ) : null}
+                </div>
+              </div>
+              <span className="share-file-meta">
+                <span className={`share-badge share-badge-${f.status}`}>
+                  {statusLabel(f.status)}
+                </span>
+                <span className="share-file-size">{formatBytes(f.size)}</span>
               </span>
-              <span className="share-file-size">{formatBytes(f.size)}</span>
-            </span>
-          </li>
-        ))}
+            </li>
+          );
+        })}
       </ul>
     </section>
   );
 }
 
-export default function SharePage({ shareId }) {
+function SharePageInner({ shareId }) {
+  const t = useT();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [share, setShare] = useState(null);
@@ -133,6 +163,7 @@ export default function SharePage({ shareId }) {
   const [busy, setBusy] = useState(false);
   const [job, setJob] = useState(null);
   const [dragOver, setDragOver] = useState(false);
+  const [filter, setFilter] = useState('all');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -182,7 +213,7 @@ export default function SharePage({ shareId }) {
     setJob({
       phase: 'start',
       title: actionLabel || 'Pobieranie',
-      detail: `Start — ${list.length} plików. Proszę czekać…`,
+      detail: `Start — ${list.length} plików…`,
       pct: 2,
     });
     await yieldToUi();
@@ -196,7 +227,7 @@ export default function SharePage({ shareId }) {
         const fetchPct = Math.round(((i + 0.15) / total) * 85);
         setJob({
           phase: 'fetch',
-          title: 'Pobieranie plików z serwera',
+          title: 'Pobieranie',
           detail: `${i + 1} / ${total}: ${f.name || f.relativePath}`,
           pct: Math.max(3, fetchPct),
         });
@@ -214,7 +245,7 @@ export default function SharePage({ shareId }) {
 
         setJob({
           phase: 'fetch',
-          title: 'Pobieranie plików z serwera',
+          title: 'Pobieranie',
           detail: `OK ${i + 1} / ${total}: ${f.name || f.relativePath}`,
           pct: Math.round(((i + 1) / total) * 85),
         });
@@ -223,8 +254,8 @@ export default function SharePage({ shareId }) {
 
       setJob({
         phase: 'zip',
-        title: 'Pakowanie ZIP',
-        detail: 'Składanie archiwum — to może chwilę potrwać przy dużych plikach…',
+        title: 'Przygotowanie paczki',
+        detail: 'Składanie plików…',
         pct: 86,
       });
       await yieldToUi();
@@ -235,8 +266,8 @@ export default function SharePage({ shareId }) {
           const zipPct = 86 + Math.round((meta.percent || 0) * 0.13);
           setJob({
             phase: 'zip',
-            title: 'Pakowanie ZIP',
-            detail: `Kompresja ${Math.round(meta.percent || 0)}% — nie zamykaj karty`,
+            title: 'Przygotowanie paczki',
+            detail: `${Math.round(meta.percent || 0)}% — nie zamykaj karty`,
             pct: Math.min(99, zipPct),
           });
         }
@@ -244,8 +275,8 @@ export default function SharePage({ shareId }) {
 
       setJob({
         phase: 'save',
-        title: 'Zapisywanie pliku',
-        detail: `Pobieranie „${zipName}” do folderu Pobrane…`,
+        title: 'Zapisywanie',
+        detail: `Pobieranie „${zipName}”…`,
         pct: 99,
       });
       await yieldToUi();
@@ -261,7 +292,7 @@ export default function SharePage({ shareId }) {
       setJob({
         phase: 'done',
         title: 'Gotowe',
-        detail: `Zapisano ${zipName} (${total} plików). Sprawdź folder Pobrane.`,
+        detail: `Zapisano ${zipName} (${total} plików).`,
         pct: 100,
       });
     } catch (err) {
@@ -317,6 +348,7 @@ export default function SharePage({ shareId }) {
         detail: 'Studio zobaczy pliki w Console (FromClient).',
         pct: 100,
       });
+      setFilter('client');
       await load();
     } catch (err) {
       setJob({
@@ -333,7 +365,7 @@ export default function SharePage({ shareId }) {
   if (loading) {
     return (
       <div className="glass-panel share-panel">
-        <p className="share-muted">Ładowanie projektu…</p>
+        <p className="share-muted">{t('share.loading')}</p>
       </div>
     );
   }
@@ -341,46 +373,96 @@ export default function SharePage({ shareId }) {
   if (error) {
     return (
       <div className="glass-panel share-panel">
-        <h1 className="share-title">Link niedostępny</h1>
+        <div className="share-portal-header">
+          <p className="share-access-label">{t('share.accessLabel')}</p>
+          <h1 className="share-portal-title">{t('share.portalTitle')}</h1>
+        </div>
+        <h2 className="share-title">{t('share.unavailableTitle')}</h2>
         <p className="share-error">{error}</p>
       </div>
     );
   }
 
-  const title = share?.label || 'Pliki projektu';
+  const projectName = share?.label || t('share.fallbackProject');
   const zipBase =
-    String(title)
+    String(projectName)
       .replace(/[\/\\?%*:|"<>]/g, '-')
       .slice(0, 80) || 'project';
 
+  const showAllHero = filter === 'all';
+  const showStudio = filter === 'all' || filter === 'studio';
+  const showOriginal = filter === 'all' || filter === 'original';
+  const showClient = filter === 'all' || filter === 'client';
+
   return (
     <div className="glass-panel share-panel">
-      <header className="share-header">
-        <p className="share-eyebrow">Portal projektu</p>
-        <h1 className="share-title">{title}</h1>
-        <p className="share-muted">
-          Pobierz materiały od studia albo dograj własne pliki. Po kliknięciu
-          „Pobierz” zobaczysz pasek postępu — pakowanie ZIP może potrwać.
-        </p>
+      <header className="share-portal-header">
+        <div className="share-portal-header-top">
+          <div className="share-portal-brand">
+            <span className="share-portal-icon" aria-hidden="true">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2.2"
+                  d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+                />
+              </svg>
+            </span>
+            <div>
+              <div className="share-portal-meta">
+                <span className="share-access-label">{t('share.accessLabel')}</span>
+                <span className="share-active-pill">
+                  <span className="share-active-dot" aria-hidden="true" />
+                  {t('share.active')}
+                </span>
+              </div>
+              <h1 className="share-portal-title">{t('share.portalTitle')}</h1>
+            </div>
+          </div>
+        </div>
+
+        <div className="share-project-bar">
+          <span className="share-project-label">{t('share.projectLabel')}</span>
+          <span className="share-project-name">{projectName}</span>
+        </div>
+
+        <p className="share-muted share-intro">{t('share.intro')}</p>
       </header>
 
-      <div className="share-stats" aria-label="Podsumowanie">
-        <div className="share-stat">
+      <div className="share-stats" aria-label="Podsumowanie i filtry">
+        <button
+          type="button"
+          className={`share-stat${filter === 'all' ? ' is-active' : ''}`}
+          onClick={() => setFilter('all')}
+        >
           <strong>{files.length}</strong>
           <span>wszystkie</span>
-        </div>
-        <div className="share-stat">
+        </button>
+        <button
+          type="button"
+          className={`share-stat${filter === 'original' ? ' is-active' : ''}`}
+          onClick={() => setFilter('original')}
+        >
           <strong>{yourFiles.length}</strong>
           <span>Twoje</span>
-        </div>
-        <div className="share-stat">
+        </button>
+        <button
+          type="button"
+          className={`share-stat${filter === 'studio' ? ' is-active' : ''}`}
+          onClick={() => setFilter('studio')}
+        >
           <strong>{studioFiles.length}</strong>
           <span>od studia</span>
-        </div>
-        <div className="share-stat">
+        </button>
+        <button
+          type="button"
+          className={`share-stat${filter === 'client' ? ' is-active' : ''}`}
+          onClick={() => setFilter('client')}
+        >
           <strong>{fromClientFiles.length}</strong>
           <span>dogrywki</span>
-        </div>
+        </button>
       </div>
 
       <ProgressPanel job={job} />
@@ -416,7 +498,7 @@ export default function SharePage({ shareId }) {
         </label>
       </div>
 
-      {files.length ? (
+      {showAllHero && files.length ? (
         <section className="share-section">
           <div className="share-section-head">
             <div className="share-section-title-row">
@@ -435,49 +517,70 @@ export default function SharePage({ shareId }) {
             </button>
           </div>
           <p className="share-section-hint">
-            Cały projekt w jednym ZIP — oryginały, studio i dogrywki.
+            Cały projekt — oryginały, studio i dogrywki.
           </p>
         </section>
       ) : null}
 
-      <FileSection
-        title="Od studia"
-        hint="Nowe i zmienione przez studio."
-        items={studioFiles}
-        busy={busy}
-        downloadLabel="Pobierz od studia"
-        onDownload={() =>
-          downloadSet(studioFiles, `${zipBase}-od-studia.zip`, 'Pobierz od studia')
-        }
-      />
-      <FileSection
-        title="Twoje pliki (oryginał)"
-        hint="To, co wysłałeś na początku."
-        items={yourFiles}
-        busy={busy}
-        downloadLabel="Pobierz oryginały"
-        onDownload={() =>
-          downloadSet(yourFiles, `${zipBase}-oryginal.zip`, 'Pobierz oryginały')
-        }
-      />
-      <FileSection
-        title="Twoje dogrywki"
-        hint="Pliki dodane później przez ten portal."
-        items={fromClientFiles}
-        busy={busy}
-        downloadLabel="Pobierz dogrywki"
-        onDownload={() =>
-          downloadSet(
-            fromClientFiles,
-            `${zipBase}-dogrywki.zip`,
-            'Pobierz dogrywki'
-          )
-        }
-      />
+      {showStudio ? (
+        <FileSection
+          title="Od studia"
+          hint="Nowe i zmienione przez studio."
+          items={studioFiles}
+          busy={busy}
+          downloadLabel="Pobierz od studia"
+          onDownload={() =>
+            downloadSet(studioFiles, `${zipBase}-od-studia.zip`, 'Pobierz od studia')
+          }
+        />
+      ) : null}
+      {showOriginal ? (
+        <FileSection
+          title="Twoje pliki (oryginał)"
+          hint="To, co wysłałeś na początku."
+          items={yourFiles}
+          busy={busy}
+          downloadLabel="Pobierz oryginały"
+          onDownload={() =>
+            downloadSet(yourFiles, `${zipBase}-oryginal.zip`, 'Pobierz oryginały')
+          }
+        />
+      ) : null}
+      {showClient ? (
+        <FileSection
+          title="Twoje dogrywki"
+          hint="Pliki dodane później przez ten portal."
+          items={fromClientFiles}
+          busy={busy}
+          downloadLabel="Pobierz dogrywki"
+          onDownload={() =>
+            downloadSet(
+              fromClientFiles,
+              `${zipBase}-dogrywki.zip`,
+              'Pobierz dogrywki'
+            )
+          }
+        />
+      ) : null}
 
       {!files.length ? (
         <p className="share-muted share-empty">Brak plików w tym projekcie.</p>
       ) : null}
     </div>
+  );
+}
+
+export default function SharePage({ shareId }) {
+  const [locale, setLocale] = useState('en');
+
+  useEffect(() => {
+    const browser = typeof navigator !== 'undefined' ? navigator.language : 'en';
+    setLocale(normalizeLocale(browser?.toLowerCase().startsWith('pl') ? 'pl' : 'en'));
+  }, []);
+
+  return (
+    <LocaleProvider locale={locale}>
+      <SharePageInner shareId={shareId} />
+    </LocaleProvider>
   );
 }

@@ -233,6 +233,20 @@
 
       <!-- Controls Group -->
       <div class="flex flex-wrap items-center gap-2">
+        <!-- Portal Header Styler -->
+        <div class="flex items-center bg-white/5 p-1 rounded-xl border border-white/10" title="Wybierz styl wyróżnienia nagłówka Portal Projektu">
+          <span class="text-[10px] uppercase font-bold text-indigo-400 px-2 hidden lg:inline">Styl nagłówka:</span>
+          <button onclick="setPortalHeaderStyle('hero')" id="hdr-style-hero" class="px-2.5 py-1 rounded-lg text-white font-medium bg-indigo-600 shadow-sm transition">
+            ★ Hero Banner
+          </button>
+          <button onclick="setPortalHeaderStyle('neon')" id="hdr-style-neon" class="px-2.5 py-1 rounded-lg text-slate-400 hover:text-white font-medium transition">
+            ⚡ Neon 36px
+          </button>
+          <button onclick="setPortalHeaderStyle('compact')" id="hdr-style-compact" class="px-2.5 py-1 rounded-lg text-slate-400 hover:text-white font-medium transition">
+            ✦ Studio Pill
+          </button>
+        </div>
+
         <!-- Layout Switcher -->
         <div class="flex items-center bg-white/5 p-1 rounded-xl border border-white/10">
           <button onclick="switchLayout('centered')" id="btn-layout-centered" class="px-2.5 py-1 rounded-lg text-white font-medium bg-indigo-600 shadow-sm transition">
@@ -283,26 +297,92 @@
     <section id="layout-centered" class="w-full max-w-2xl transition-all duration-500">
       <div class="modern-glass-card p-6 md:p-9 shadow-2xl">
         
-        <!-- Eyebrow Badge -->
-        <div class="flex items-center justify-between mb-4">
-          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-semibold tracking-wider uppercase">
-            <span class="pulse-dot-green"></span>
-            Portal Projektu
-          </div>
-          <span class="text-xs text-slate-500 font-mono flex items-center gap-1">
-            <svg class="w-3.5 h-3.5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-            Aktywna sesja
-          </span>
-        </div>
+        <!-- ========================================================
+             ULTRA-PROMINENT "PORTAL PROJEKTU" HEADER (3 STYLES)
+             ======================================================== -->
 
-        <!-- Title & Subtitle -->
-        <div class="mb-6">
-          <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight bg-gradient-to-r from-white via-slate-100 to-indigo-200 bg-clip-text text-transparent break-words">
-            nortku - Jacek - 2026-11-14 08:55
-          </h1>
-          <p class="text-slate-400 text-xs mt-2 leading-relaxed">
+        <!-- STYLE 1: HERO BANNER (DEFAULT) -->
+        <div id="portal-header-hero" class="portal-header-variant mb-6 p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-indigo-950/70 via-purple-950/50 to-slate-900/70 border border-indigo-500/35 shadow-xl shadow-indigo-500/10 relative overflow-hidden">
+          <div class="absolute -right-8 -top-8 w-36 h-36 bg-indigo-500/25 rounded-full blur-3xl pointer-events-none"></div>
+          
+          <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+            <div class="flex items-center gap-3">
+              <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 via-purple-600 to-pink-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/40 flex-shrink-0">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" strokeWidth="2.2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+              </div>
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="text-[10px] font-black uppercase tracking-widest text-indigo-300">OFICJALNY DOSTĘP KLIENTA</span>
+                  <span class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-bold border border-emerald-500/30 flex items-center gap-1">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> AKTYWNY
+                  </span>
+                </div>
+                <h1 class="text-2xl sm:text-3xl font-black tracking-tight text-white flex items-center gap-2">
+                  PORTAL PROJEKTU
+                </h1>
+              </div>
+            </div>
+
+            <div class="px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-[11px] text-slate-300 font-mono flex items-center gap-1.5">
+              <svg class="w-3.5 h-3.5 text-emerald-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z" clip-rule="evenodd"/></svg>
+              <span>Szyfrowanie TLS 1.3</span>
+            </div>
+          </div>
+
+          <!-- Project Identifier Box -->
+          <div class="p-3 rounded-xl bg-black/45 border border-white/10 flex flex-wrap items-center justify-between gap-2.5">
+            <div class="flex items-center gap-2 min-w-0">
+              <span class="text-xs font-semibold text-slate-400">Projekt:</span>
+              <span class="text-sm font-bold text-indigo-200 truncate font-mono">nortku - Jacek</span>
+              <span class="text-xs text-slate-500 font-mono hidden sm:inline">• 2026-11-14 08:55</span>
+            </div>
+            <div class="flex items-center gap-2 text-xs">
+              <span class="px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 font-mono text-[10px] border border-indigo-500/30">Google Drive Bridge</span>
+            </div>
+          </div>
+
+          <p class="text-slate-300 text-xs mt-3 leading-relaxed">
             Pobierz materiały od studia albo dograj własne pliki. Po kliknięciu „Pobierz” zobaczysz pasek postępu — pakowanie ZIP może potrwać.
           </p>
+        </div>
+
+        <!-- STYLE 2: NEON 36PX (EXTRA BOLD & GLOWING) -->
+        <div id="portal-header-neon" class="portal-header-variant hidden mb-6 text-center space-y-3">
+          <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-gradient-to-r from-indigo-500/20 via-purple-500/20 to-pink-500/20 border border-indigo-400/40 text-indigo-200 text-xs font-bold tracking-widest uppercase shadow-lg shadow-indigo-500/20">
+            <span class="pulse-dot-green"></span>
+            BEZPIECZNA PRZESTRZEŃ WYMIANY PLIKÓW
+          </div>
+          
+          <h1 class="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight bg-gradient-to-r from-white via-indigo-200 to-purple-300 bg-clip-text text-transparent drop-shadow-md">
+            PORTAL PROJEKTU
+          </h1>
+
+          <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-xs text-slate-300">
+            <span class="text-slate-400">Projekt:</span>
+            <span class="font-bold text-white font-mono">nortku - Jacek</span>
+            <span class="text-slate-500 font-mono">• 2026-11-14 08:55</span>
+          </div>
+
+          <p class="text-slate-400 text-xs max-w-lg mx-auto leading-relaxed">
+            Pobierz materiały od studia albo dograj własne pliki. Po kliknięciu „Pobierz” zobaczysz pasek postępu — pakowanie ZIP może potrwać.
+          </p>
+        </div>
+
+        <!-- STYLE 3: STUDIO PILL (ELEGANT PRO) -->
+        <div id="portal-header-compact" class="portal-header-variant hidden mb-6">
+          <div class="flex items-center justify-between pb-3 border-b border-white/10 mb-3">
+            <div class="flex items-center gap-2">
+              <span class="px-3.5 py-1.5 rounded-xl bg-indigo-600 text-white font-black text-xs tracking-wider uppercase shadow-md shadow-indigo-600/30">
+                PORTAL PROJEKTU
+              </span>
+              <span class="px-2 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 text-[11px] font-bold">
+                ● Aktywna sesja
+              </span>
+            </div>
+            <span class="text-xs text-slate-500 font-mono">ID: share_nortku_jacek</span>
+          </div>
+          <h2 class="text-xl sm:text-2xl font-extrabold text-white">nortku - Jacek - 2026-11-14 08:55</h2>
+          <p class="text-slate-400 text-xs mt-1">Pobierz materiały od studia albo dograj własne pliki.</p>
         </div>
 
         <!-- Interactive KPI Stats Grid (Filters on Click!) -->
@@ -550,11 +630,15 @@
           <!-- Left: Meta & Download Hero -->
           <div class="lg:col-span-5 space-y-6 border-b lg:border-b-0 lg:border-r border-white/10 lg:pr-8 pb-6 lg:pb-0">
             <div>
-              <span class="px-3 py-1 rounded-full bg-indigo-500/10 text-indigo-300 text-xs font-semibold uppercase tracking-wider border border-indigo-500/20">
-                Portal Projektu
-              </span>
-              <h2 class="text-2xl font-extrabold text-white mt-3 mb-2">nortku - Jacek</h2>
-              <div class="text-xs text-slate-400 font-mono mb-4">Utworzono: 2026-11-14 08:55</div>
+              <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/15 border border-indigo-400/30 text-indigo-200 text-xs font-black uppercase tracking-wider mb-2 shadow-md shadow-indigo-500/20">
+                <span class="pulse-dot-green"></span>
+                PORTAL PROJEKTU
+              </div>
+              <h2 class="text-3xl font-black text-white tracking-tight mt-1 mb-2">PORTAL PROJEKTU</h2>
+              <div class="p-2.5 rounded-xl bg-white/5 border border-white/10 text-xs font-mono text-indigo-300 mb-3 flex items-center justify-between">
+                <span>📁 nortku - Jacek</span>
+                <span class="text-slate-400 text-[10px]">2026-11-14 08:55</span>
+              </div>
               <p class="text-xs text-slate-400 leading-relaxed">
                 Wszystkie pliki audio, wideo i graficzne powiązane z tym projektem w jednym zabezpieczonym miejscu.
               </p>
@@ -751,6 +835,21 @@
     let currentLayout = 'centered';
     let currentBg = 'aurora';
     let activeFilter = 'all';
+    let currentHdrStyle = 'hero';
+
+    function setPortalHeaderStyle(style) {
+      currentHdrStyle = style;
+      ['hero', 'neon', 'compact'].forEach(s => {
+        const el = document.getElementById('portal-header-' + s);
+        if (el) el.classList.toggle('hidden', s !== style);
+        const btn = document.getElementById('hdr-style-' + s);
+        if (btn) {
+          btn.className = s === style
+            ? 'px-2.5 py-1 rounded-lg text-white font-medium bg-indigo-600 shadow-sm transition'
+            : 'px-2.5 py-1 rounded-lg text-slate-400 hover:text-white font-medium transition';
+        }
+      });
+    }
 
     function switchLayout(l) {
       currentLayout = l;

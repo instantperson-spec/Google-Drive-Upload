@@ -156,7 +156,12 @@ export default function Uploader() {
   }
 
   if (status === 'success') {
-    return <UploadSuccessScreen onReset={handleSuccessReset} />;
+    return (
+      <UploadSuccessScreen
+        onReset={handleSuccessReset}
+        driveFolderId={sessionData?.folderId || uploadFolderIdRef.current || ''}
+      />
+    );
   }
 
   return (

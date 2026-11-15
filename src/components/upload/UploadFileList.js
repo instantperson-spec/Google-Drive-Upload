@@ -6,6 +6,13 @@ function formatMb(size) {
   return `${(size / (1024 * 1024)).toFixed(2)} MB`;
 }
 
+function fileExt(name) {
+  const base = String(name || '').split('/').pop() || '';
+  const parts = base.split('.');
+  if (parts.length < 2) return 'FILE';
+  return parts.pop().slice(0, 4).toUpperCase();
+}
+
 export default function UploadFileList({
   files,
   uploadStatus,
@@ -37,9 +44,17 @@ export default function UploadFileList({
               className={`upload-file-item${index < files.length - 1 ? ' upload-file-item--bordered' : ''}${dimmed ? ' upload-file-item--dimmed' : ''}`}
             >
               <div className="upload-file-item-row">
-                <span className={`upload-file-name${isCompleted ? ' upload-file-name--done' : ''}`}>
-                  {fObj.name}
+                <span className="upload-file-ext" aria-hidden="true">
+                  {fileExt(fObj.name)}
                 </span>
+                <div className="upload-file-main">
+                  <span className={`upload-file-name${isCompleted ? ' upload-file-name--done' : ''}`}>
+                    {fObj.name}
+                  </span>
+                  {isCompleted ? (
+                    <div className="upload-file-done-label">{t('files.completed')}</div>
+                  ) : null}
+                </div>
                 <div className="upload-file-item-meta">
                   <span className="upload-file-size">{formatMb(fObj.size)}</span>
                   {!isUploading && !isCompleted && (
@@ -65,7 +80,6 @@ export default function UploadFileList({
                   />
                 </div>
               )}
-              {isCompleted && <div className="upload-file-done-label">{t('files.completed')}</div>}
             </li>
           );
         })}

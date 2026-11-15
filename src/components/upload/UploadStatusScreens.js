@@ -42,8 +42,12 @@ export function UploadStructuringScreen() {
   );
 }
 
-export function UploadSuccessScreen({ onReset }) {
+export function UploadSuccessScreen({ onReset, driveFolderId }) {
   const t = useT();
+  const driveHref = driveFolderId
+    ? `https://drive.google.com/drive/folders/${encodeURIComponent(driveFolderId)}`
+    : null;
+
   return (
     <div className="uploader-container">
       <div className="upload-success-screen">
@@ -53,9 +57,25 @@ export function UploadSuccessScreen({ onReset }) {
         </svg>
         <h2 className="upload-status-title">{t('status.successTitle')}</h2>
         <p className="upload-status-muted upload-success-subtitle">{t('status.successBody')}</p>
-        <button type="button" className="btn" onClick={onReset}>
-          {t('status.successButton')}
-        </button>
+        <div className="upload-success-actions">
+          {driveHref ? (
+            <a
+              className="btn"
+              href={driveHref}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {t('status.openDrive')}
+            </a>
+          ) : null}
+          <button
+            type="button"
+            className={`btn${driveHref ? ' btn-secondary' : ''}`}
+            onClick={onReset}
+          >
+            {t('status.successButton')}
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -4,25 +4,25 @@ overview: "Spójny redesign /?token= i /share/[id]: Nowoczesny Centered + Nebula
 todos:
   - id: shared-shell
     content: "Wspólne CSS: Nebula + noise + glass + akcent slate/indigo (upload + share)"
-    status: pending
+    status: completed
   - id: upload-form-identity
     content: "Upload: etykieta projektu + identity badge; dropzone/kolejka; sticky Start"
-    status: pending
+    status: completed
   - id: upload-success
     content: "Upload success: Open Drive + kolejna partia (bez MB/s / ETA)"
-    status: pending
+    status: completed
   - id: share-centered
     content: "Share: glass centered — nagłówek, KPI/sekcje, karty plików, dogrywki dropzone"
-    status: pending
+    status: completed
   - id: share-download-ux
     content: "Share download progress: % / faza / N z M — bez fake MB/s; copy bez obietnicy tylko-ZIP"
-    status: pending
+    status: completed
   - id: i18n-polish
     content: "i18n PL/EN pod nowe UI (upload + share)"
-    status: pending
+    status: completed
   - id: deploy-vercel
     content: "Deploy na Vercel po akceptacji obu ekranów"
-    status: pending
+    status: completed
 isProject: false
 ---
 

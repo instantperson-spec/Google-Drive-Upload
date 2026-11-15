@@ -2,6 +2,16 @@
 
 import { useT } from '@/context/LocaleContext';
 
+function initialsFromName(name) {
+  const parts = String(name || '')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  if (!parts.length) return '?';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0] || ''}${parts[1][0] || ''}`.toUpperCase();
+}
+
 export default function UserDetailsForm({
   projectName,
   uploaderName,
@@ -44,9 +54,19 @@ export default function UserDetailsForm({
       ) : null}
 
       {identityLocked ? (
-        <p className="upload-identity-locked">
-          {t('form.identityLocked', { name: uploaderName, email: uploaderEmail })}
-        </p>
+        <div className="upload-identity-card">
+          <div className="upload-identity-main">
+            <span className="upload-identity-avatar" aria-hidden="true">
+              {initialsFromName(uploaderName)}
+            </span>
+            <div>
+              <span className="upload-identity-label">{t('form.uploadingAs')}</span>
+              <span className="upload-identity-name">{uploaderName}</span>
+              <span className="upload-identity-email">{uploaderEmail}</span>
+            </div>
+          </div>
+          <span className="upload-identity-ok">{t('form.authorized')}</span>
+        </div>
       ) : (
         <>
           {identityIncomplete ? (

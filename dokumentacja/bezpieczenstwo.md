@@ -1,6 +1,6 @@
 # Bezpieczeństwo — stan aktualny
 
-> Skrót na 2026-11-14. Pełne raporty VULN z IX 2026: [`archiwum/analiza_bezpieczenstwa.md`](./archiwum/analiza_bezpieczenstwa.md), [`archiwum/analiza_kodu.md`](./archiwum/analiza_kodu.md).
+> Skrót na 2026-11-15. Pełne raporty VULN z IX 2026: [`archiwum/analiza_bezpieczenstwa.md`](./archiwum/analiza_bezpieczenstwa.md), [`archiwum/analiza_kodu.md`](./archiwum/analiza_kodu.md).
 
 ---
 
@@ -18,40 +18,39 @@ Lokalnie: Studio Console (Tauri / localhost) — nie jest publicznym API Vercel.
 
 ---
 
-## Naprawione (security-hardening + security-fixes) — nie otwierać ponownie bez powodu
+## Naprawione — nie otwierać ponownie bez powodu
 
 | ID | Temat | Stan |
 |---|---|---|
 | VULN-01 | Auth na API uploadu | ✅ token server-side |
-| VULN-02 | Open SMTP relay | ✅ whitelist vs `prefillEmail` w registry |
+| VULN-02 | Open SMTP relay | ✅ whitelist vs `prefillEmail` |
 | VULN-03 | SMTP `secure` vs port | ✅ |
-| VULN-04 | Rate limiting | ✅ (in-memory; limit per IP) |
-| VULN-05 | Scope OAuth | ✅ tylko `drive.file` — diagnostyka: [`oauth_drive_file.md`](./oauth_drive_file.md) |
+| VULN-04 | Rate limiting | ✅ in-memory per IP |
+| VULN-05 | Scope OAuth | ✅ `drive.file` — [`oauth_drive_file.md`](./oauth_drive_file.md) |
 | VULN-06 | Logowanie PII | ✅ |
 | VULN-07 | noindex | ✅ |
-| VULN-08 | Weryfikacja emaila klienta (OTP itd.) | ⚠️ **celowo pominięte** — akceptowane dla B2B bez kont |
+| VULN-08 | Weryfikacja emaila klienta (OTP) | ⚠️ celowo pominięte (B2B bez kont) |
 
-Dodatkowo: czarna lista rozszerzeń server-side, weryfikacja `folderId` sesji, Live Monitor (mniej invocacji Vercel).
-
----
-
-## Świadome ograniczenia produkcyjne
-
-- **Progress / rate-limit in-memory** — przy wielu workerach Vercel „Active now” i limity mogą być niespójne; przy obecnym ruchu zwykle OK. KV = backlog.
-- **Share link = sekret URL** — kto ma link, ma portal (jak WeTransfer). Revoke w Console.
-- **Upload token = sekret URL** — to samo; Revoke w `/admin`.
+Dodatkowo: czarna lista rozszerzeń server-side, weryfikacja `folderId` sesji, rzadki heartbeat progress (admin History).
 
 ---
 
-## Otwarty backlog jakości / hardening (niski priorytet)
+## Świadome ograniczenia
 
-Z dawnej analizy kodu — nadal sensowne, nie blokuje produkcji:
+- **Progress / rate-limit in-memory** — przy wielu workerach Vercel „In progress” w History może być puste mimo trwającego uploadu; wtedy widać sesję w Completed z rosnącym `fileCount` po Refresh. KV = backlog.
+- **Live Monitor usunięty** — nie dawał wiarygodnego podglądu multi-instance; zastąpiony prostym merge active → History.
+- **Share / upload token = sekret URL** — kto ma link, ma dostęp. Revoke w Console / `/admin`.
 
-- `formatDate` / lokalny `formatBytes` w adminie → wspólne `lib/`
-- Email regex → jedna `isValidEmail()` w `lib/validation.js`
-- `key={index}` w listach plików → stabilne id
-- Inline styles w `AdminDashboard` / `AdminTokenManager` → CSS
-- Admin: ręczne odtworzenie struktury z `_manifest.json` (recovery UI)
-- Vercel KV dla progress store (gdy multi-instance stanie się problemem)
+UI klienta **nie** reklamuje TLS/Bridge jako badge’e bezpieczeństwa (świadomie odchudzone).
 
-Produkt / portal (binding, pobieranie plik-po-pliku, rundy): [`produkt_i_backlog.md`](./produkt_i_backlog.md) i [`plany/post-mvp_roadmap_05ad683d.plan.md`](./plany/post-mvp_roadmap_05ad683d.plan.md).
+---
+
+## Otwarty backlog hardening (niski priorytet)
+
+- `formatDate` / `formatBytes` w adminie → wspólne `lib/`
+- Email regex → `isValidEmail()` w `lib/validation.js`
+- Inline styles w `AdminTokenManager` → CSS
+- Admin: recovery UI z `_manifest.json`
+- Vercel KV dla progress store
+
+Produkt (binding, plik-po-pliku, rundy): [`produkt_i_backlog.md`](./produkt_i_backlog.md), [`plany/post-mvp_roadmap_05ad683d.plan.md`](./plany/post-mvp_roadmap_05ad683d.plan.md).

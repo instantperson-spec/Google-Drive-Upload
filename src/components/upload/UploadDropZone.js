@@ -23,9 +23,25 @@ export default function UploadDropZone({
       onDragLeave={onDragLeave}
       onDrop={onDrop}
     >
-      <svg className="dropzone-icon upload-dropzone-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-      </svg>
+      <div className="upload-dropzone-icon-wrap" aria-hidden="true">
+        <span className="upload-dropzone-icon-glow" />
+        <span className="upload-dropzone-icon-tile">
+          <svg
+            className="dropzone-icon upload-dropzone-icon"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={1.8}
+              d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+            />
+          </svg>
+        </span>
+      </div>
       <div className="dropzone-text">
         <p>{t('dropzone.main')}</p>
         <p className="upload-dropzone-hint">{t('dropzone.hint')}</p>
@@ -52,7 +68,14 @@ export default function UploadDropZone({
         </div>
       </div>
       <input type="file" multiple ref={fileInputRef} onChange={onFileSelect} className="file-input" />
-      <input type="file" webkitdirectory="true" multiple ref={folderInputRef} onChange={onFileSelect} className="file-input" />
+      <input
+        type="file"
+        webkitdirectory="true"
+        multiple
+        ref={folderInputRef}
+        onChange={onFileSelect}
+        className="file-input"
+      />
     </div>
   );
 }
