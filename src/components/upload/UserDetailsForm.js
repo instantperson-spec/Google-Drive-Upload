@@ -12,20 +12,36 @@ export default function UserDetailsForm({
   identityLocked,
   identityIncomplete,
   disabled,
+  showProjectHint = false,
+  projectRequired = true,
 }) {
   const t = useT();
   return (
     <div className="upload-user-form">
+      <label className="upload-field-label" htmlFor="upload-project-name">
+        <span>{t('form.projectLabel')}</span>
+        {projectRequired ? (
+          <span className="upload-field-required">{t('form.projectRequired')}</span>
+        ) : null}
+      </label>
       <input
+        id="upload-project-name"
         type="text"
         placeholder={t('form.projectPlaceholder')}
         value={projectName}
         onChange={(e) => onProjectChange(e.target.value)}
         disabled={disabled}
-        className="glass-input"
+        className={`glass-input${showProjectHint ? ' glass-input--attention' : ''}`}
         autoComplete="off"
-        required
+        required={projectRequired}
+        aria-required={projectRequired}
+        aria-invalid={showProjectHint}
       />
+      {showProjectHint ? (
+        <p className="upload-project-hint" role="status">
+          {t('form.projectHint')}
+        </p>
+      ) : null}
 
       {identityLocked ? (
         <p className="upload-identity-locked">

@@ -70,7 +70,7 @@ export function assertSafeDest(destInput, opts = {}) {
 
 function assertSafeMacDest(dest) {
   if (dest === '/') {
-    throw new Error('Refusing destination on system root "/".');
+    throw new Error('Odrzucono katalog główny „/”. Wybierz folder na dysku zewnętrznym.');
   }
 
   // External volumes live under /Volumes/<Name>/...
@@ -78,12 +78,14 @@ function assertSafeMacDest(dest) {
     const parts = dest.split('/').filter(Boolean);
     // /Volumes alone or /Volumes/Macintosh HD → treat as system-ish
     if (parts.length < 2) {
-      throw new Error('Point --dest at a folder on an external volume, e.g. /Volumes/T7/MyFolder');
+      throw new Error(
+        'Wskaż folder na dysku zewnętrznym, np. /Volumes/ENV/Projekty albo /Volumes/T7/Incoming'
+      );
     }
     const volumeName = parts[1];
     if (volumeName === 'Macintosh HD' || volumeName === 'Macintosh HD - Data') {
       throw new Error(
-        `Refusing destination on system volume "/Volumes/${volumeName}".\nUse an external disk under /Volumes/<DiskName>/...`
+        `Nie można użyć dysku systemowego „/Volumes/${volumeName}”.\nWybierz zewnętrzny dysk: /Volumes/<NazwaDysku>/TwójFolder`
       );
     }
     return;
@@ -92,13 +94,13 @@ function assertSafeMacDest(dest) {
   for (const prefix of MAC_SYSTEM_PREFIXES) {
     if (dest === prefix || dest.startsWith(prefix + '/')) {
       throw new Error(
-        `Refusing destination on system path "${dest}".\nUse an external disk: /Volumes/<DiskName>/YourFolder`
+        `Folder na dysku systemowym jest zablokowany:\n${dest}\n\nWybierz lokalizację na dysku zewnętrznym, np.:\n/Volumes/ENV/Projekty\n(Documents, Desktop i /Users nie są dozwolone.)`
       );
     }
   }
 
   throw new Error(
-    `Destination must be on an external volume under /Volumes/...\nGot: ${dest}`
+    `Folder musi być na dysku zewnętrznym pod /Volumes/…\nOtrzymano: ${dest}`
   );
 }
 

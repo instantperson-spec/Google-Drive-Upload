@@ -154,6 +154,37 @@ export async function patchTokenLocal(id, action) {
   return { ...record, status: statusOf(record), uploadUrl: buildUploadUrl(record.token, env) };
 }
 
+export async function setTokenIdentityLocal(id, { clientName, clientEmail } = {}) {
+  const { drive, mainFolderId, env } = createDriveClient();
+  const { fileId, registry } = await readRegistry(drive, mainFolderId);
+  const record = registry.tokens.find((t) => t.id === id);
+  if (!record) throw new Error('Token not found.');
+
+  const name = String(clientName || record.clientName || record.prefillName || '')
+    .trim()
+    .slice(0, 200);
+  const email = String(clientEmail || record.prefillEmail || '')
+    .trim()
+    .toLowerCase()
+    .slice(0, 200);
+
+  if (!name) throw new Error('Client name is required.');
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    throw new Error('A valid client email is required.');
+  }
+
+  record.clientName = name;
+  record.prefillName = name;
+  record.prefillEmail = email;
+  await writeRegistry(drive, mainFolderId, fileId, registry);
+  return {
+    ...record,
+    status: statusOf(record),
+    locale: normalizeLocale(record.locale),
+    uploadUrl: buildUploadUrl(record.token, env),
+  };
+}
+
 export async function setTokenLocaleLocal(id, locale) {
   const { drive, mainFolderId, env } = createDriveClient();
   const { fileId, registry } = await readRegistry(drive, mainFolderId);

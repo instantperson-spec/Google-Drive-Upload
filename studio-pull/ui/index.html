@@ -8,11 +8,12 @@
 </head>
 <body>
   <main class="wrap">
+    <div id="flash" class="flash hidden" role="status"></div>
     <header>
       <h1>Studio Console</h1>
-      <p class="sub">Lokalny panel studia — Pull na dysk zewnętrzny + tokeny. Bez agenta, bez Live Progress.</p>
+      <p class="sub">Pobierz → Sync → Wyślij link klientowi.</p>
       <nav class="tabs" role="tablist">
-        <button type="button" class="tab active" data-tab="pull">Pull</button>
+        <button type="button" class="tab active" data-tab="pull">Projekty</button>
         <button type="button" class="tab" data-tab="tokens">Tokeny</button>
       </nav>
     </header>
@@ -25,7 +26,7 @@
             <button type="button" id="btn-refresh" class="btn secondary">Odśwież</button>
           </div>
         </div>
-        <p class="hint">Stare foldery klientów są dzielone na dni uploadu (np. · 2026-11-12). Nowe uploady = osobny folder z godziną.</p>
+        <p class="hint">Pobierz → Sync → Wyślij link. Dogrywki klienta: alert <em>Out of sync</em> + <strong>Pobierz od klienta</strong> (FromClient/).</p>
         <div id="sessions" class="sessions">Ładowanie…</div>
       </section>
 
@@ -39,26 +40,31 @@
       </section>
 
       <section class="card">
-        <h2>Folder bazowy (dysk zewnętrzny)</h2>
-        <p class="hint">Każda sesja trafi do podfolderu: <code>bazowy/Nazwa sesji/</code></p>
+        <h2>Folder projektu (download = sync)</h2>
+        <p class="hint">Tylko <code>/Volumes/…</code>. Każda sesja trafia do <code>ten folder / Nazwa sesji/</code> — to jest też folder Sync.</p>
         <div class="row">
-          <input id="dest" type="text" placeholder="/Volumes/VIDEO_16TB/Incoming" spellcheck="false" />
+          <input id="dest" type="text" placeholder="/Volumes/ENV/Projekty" spellcheck="false" />
           <button type="button" id="btn-pick" class="btn secondary">Wybierz folder…</button>
         </div>
         <p id="dest-error" class="error hidden"></p>
-        <div class="pull-filter">
-          <label class="session-check">
-            <input type="checkbox" id="fresh-only" checked />
-            <span>Tylko świeże pliki (nie cała historia folderu)</span>
-          </label>
-          <label class="fresh-since-label">Od
-            <input type="datetime-local" id="fresh-since" />
-          </label>
-        </div>
+
+        <details class="advanced-block">
+          <summary>Zaawansowane — filtr downloadu</summary>
+          <p class="hint">Nie mylić z New/Modified na share. Tu tylko: co ściągać z Drive przy Pobierz.</p>
+          <div class="pull-filter">
+            <label class="session-check">
+              <input type="checkbox" id="fresh-only" checked />
+              <span>Tylko świeże pliki (od daty poniżej)</span>
+            </label>
+            <label class="fresh-since-label">Od
+              <input type="datetime-local" id="fresh-since" />
+            </label>
+          </div>
+        </details>
       </section>
 
       <section class="card actions">
-        <button type="button" id="btn-start" class="btn primary" disabled>Start kolejki</button>
+        <button type="button" id="btn-start" class="btn primary" disabled>Pobierz zaznaczone</button>
         <button type="button" id="btn-cancel" class="btn secondary" disabled>Anuluj</button>
       </section>
 
@@ -75,7 +81,7 @@
           </span>
           <div class="status-copy">
             <div id="status-title" class="status-title">Gotowy</div>
-            <div id="status-sub" class="status-sub">Zaznacz sesje i folder bazowy.</div>
+            <div id="status-sub" class="status-sub">Zaznacz sesje i folder projektu.</div>
           </div>
         </div>
         <div class="bar-track"><div id="bar" class="bar-fill" style="width:0%"></div></div>
@@ -92,7 +98,7 @@
           </div>
           <button type="button" id="btn-tokens-refresh" class="btn secondary">Odśwież</button>
         </div>
-        <p class="hint">Tokens are stored in <code>_uploader_tokens.json</code> on Google Drive. Revoke takes effect immediately — no redeploy needed.</p>
+        <p class="hint">Tokens are stored in <code>_uploader_tokens.json</code> on Google Drive. Client name + email are locked on the upload form — client only enters project name.</p>
 
         <form id="token-form" class="token-form">
           <label>Token (URL slug) <input name="token" required pattern="[a-zA-Z0-9_-]{2,64}" placeholder="StudioAlfa" /></label>

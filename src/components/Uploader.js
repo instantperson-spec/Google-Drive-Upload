@@ -98,16 +98,35 @@ export default function Uploader() {
     pushLog,
   });
 
+  const hasProjectName =
+    !!sessionData?.folderId || projectName.trim().length >= 2;
+  const projectNameMissing =
+    !sessionData?.folderId && projectName.trim().length < 2;
   const canUpload =
     tokenStatus === 'valid' &&
     files.length > 0 &&
     status !== 'uploading' &&
     !isScanning &&
-    (!!sessionData?.folderId || projectName.trim().length >= 2) &&
+    hasProjectName &&
     !!uploaderName.trim() &&
     !!uploaderEmail.trim();
 
   const uploadDisabled = status === 'uploading' || isScanning;
+  const showProjectHint =
+    files.length > 0 && projectNameMissing && status !== 'uploading';
+
+  let startButtonLabel;
+  if (status === 'uploading') {
+    startButtonLabel = t('upload.inProgress');
+  } else if (files.length === 0) {
+    startButtonLabel = t('upload.needFiles');
+  } else if (projectNameMissing) {
+    startButtonLabel = t('upload.needProject');
+  } else {
+    startButtonLabel = t('upload.start', {
+      count: files.filter((f) => f.status !== 'completed').length,
+    });
+  }
 
   const handleSuccessReset = useCallback(() => {
     clearFiles();
@@ -140,65 +159,69 @@ export default function Uploader() {
     return <UploadSuccessScreen onReset={handleSuccessReset} />;
   }
 
-  const pendingCount = files.filter((f) => f.status !== 'completed').length;
-
   return (
-    <div className="uploader-container">
-      <UserDetailsForm
-        projectName={projectName}
-        uploaderName={uploaderName}
-        uploaderEmail={uploaderEmail}
-        onProjectChange={setProjectName}
-        onNameChange={setUploaderName}
-        onEmailChange={setUploaderEmail}
-        identityLocked={identityLocked}
-        identityIncomplete={identityIncomplete}
-        disabled={status === 'uploading'}
-      />
+    <div
+      className={`uploader-container${files.length > 0 ? ' uploader-container--has-files' : ''}`}
+    >
+      <div className="uploader-body">
+        <UserDetailsForm
+          projectName={projectName}
+          uploaderName={uploaderName}
+          uploaderEmail={uploaderEmail}
+          onProjectChange={setProjectName}
+          onNameChange={setUploaderName}
+          onEmailChange={setUploaderEmail}
+          identityLocked={identityLocked}
+          identityIncomplete={identityIncomplete}
+          disabled={status === 'uploading'}
+          showProjectHint={showProjectHint}
+          projectRequired={!sessionData?.folderId}
+        />
 
-      {sessionData && status !== 'uploading' && files.length === 0 && (
-        <SessionResumeBanner onCancel={handleCancelSession} />
-      )}
+        {sessionData && status !== 'uploading' && files.length === 0 && (
+          <SessionResumeBanner onCancel={handleCancelSession} />
+        )}
 
-      <UploadDropZone
-        isDragging={isDragging}
-        isScanning={isScanning}
-        uploadDisabled={uploadDisabled}
-        fileInputRef={fileInputRef}
-        folderInputRef={folderInputRef}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-        onFileSelect={handleFileSelect}
-        onOpenFilePicker={openFilePicker}
-        onOpenFolderPicker={handleFolderSelect}
-      />
+        <UploadDropZone
+          isDragging={isDragging}
+          isScanning={isScanning}
+          uploadDisabled={uploadDisabled}
+          fileInputRef={fileInputRef}
+          folderInputRef={folderInputRef}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          onFileSelect={handleFileSelect}
+          onOpenFilePicker={openFilePicker}
+          onOpenFolderPicker={handleFolderSelect}
+        />
 
-      <UploadFileList
-        files={files}
-        uploadStatus={status}
-        hasSession={!!sessionData}
-        onRemoveFile={removeFile}
-      />
+        <UploadFileList
+          files={files}
+          uploadStatus={status}
+          hasSession={!!sessionData}
+          onRemoveFile={removeFile}
+        />
 
-      <DeltaScanBanner delta={deltaScan} />
+        <DeltaScanBanner delta={deltaScan} />
 
-      {errorMessage && (
-        <div className="upload-error-banner" role="alert">
-          {errorMessage}
-        </div>
-      )}
+        {errorMessage && (
+          <div className="upload-error-banner" role="alert">
+            {errorMessage}
+          </div>
+        )}
+      </div>
 
-      <button
-        type="button"
-        className={`upload-start-btn ${canUpload ? 'upload-start-btn--ready' : 'upload-start-btn--disabled'}`}
-        onClick={startUpload}
-        disabled={!canUpload}
-      >
-        {status === 'uploading'
-          ? t('upload.inProgress')
-          : t('upload.start', { count: pendingCount })}
-      </button>
+      <div className="uploader-footer">
+        <button
+          type="button"
+          className={`upload-start-btn ${canUpload ? 'upload-start-btn--ready' : 'upload-start-btn--disabled'}`}
+          onClick={startUpload}
+          disabled={!canUpload}
+        >
+          {startButtonLabel}
+        </button>
+      </div>
     </div>
   );
 }

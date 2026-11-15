@@ -1,0 +1,153 @@
+# Regeneracja OAuth — scope `drive.file` (VULN-05)
+
+> Runbook operacyjny (żywa kopia). Archiwum: [`archiwum/regeneracja_oauth_scope.md`](./archiwum/regeneracja_oauth_scope.md).  
+> Diagnostyka: `npm run check-oauth-scopes` **lub** `/admin` → **OAuth scope test** → **Run test**
+
+---
+
+## Problem
+
+Refresh token wygenerowany w OAuth Playground **zapamiętuje scope’y na stałe**.  
+Jeśli token zawiera `https://www.googleapis.com/auth/drive`, aplikacja ma dostęp do **całego** Google Drive — nawet gdy kod w repozytorium wymaga tylko `drive.file`.
+
+---
+
+## Krok 1: Sprawdź obecny stan
+
+```bash
+npm run check-oauth-scopes
+```
+
+Skrypt:
+1. Odświeża access token z `GOOGLE_REFRESH_TOKEN` (`.env.local`)
+2. Wywołuje Google `tokeninfo` — wypisuje faktyczne scope’y
+3. Oznacza ❌ pełny `drive`, ✅ zalecany `drive.file`
+4. Uruchamia testy Drive API (folder główny, lista podfolderów, registry tokenów)
+
+Exit code `1` = wykryto pełny scope `drive` → wymagana regeneracja.
+
+---
+
+## Krok 2: Wygeneruj nowy refresh token (tylko `drive.file`)
+
+1. Otwórz [Google OAuth 2.0 Playground](https://developers.google.com/oauthplayground)
+2. ⚙️ (OAuth 2.0 configuration):
+   - ✅ **Use your own OAuth credentials**
+   - OAuth Client ID: `GOOGLE_CLIENT_ID`
+   - OAuth Client secret: `GOOGLE_CLIENT_SECRET`
+3. **Step 1** — w polu „Input your own scopes” wpisz **wyłącznie**:
+   ```
+   https://www.googleapis.com/auth/drive.file
+   ```
+   - **Nie** zaznaczaj `Drive API v3` → `../auth/drive`
+   - **Nie** dodawaj `drive.readonly`
+4. **Authorize APIs** → zaloguj się na konto, które **posiada** folder uploadów
+5. **Step 2** → **Exchange authorization code for tokens**
+6. Skopiuj **Refresh token**
+
+---
+
+## Krok 3: Podmień token i przetestuj
+
+```bash
+# .env.local
+GOOGLE_REFRESH_TOKEN="nowy_refresh_token"
+```
+
+```bash
+npm run check-oauth-scopes   # powinno pokazać ✅ drive.file, ❌ brak drive
+npm run dev                  # test uploadu + /admin
+```
+
+Checklist ręczny:
+- [ ] Upload pojedynczego pliku
+- [ ] Upload folderu (wiele plików)
+- [ ] Wznowienie przerwanej sesji
+- [ ] `/admin` → historia sesji
+- [ ] `/admin` → token manager (odczyt/zapis `_uploader_tokens.json`)
+
+---
+
+## Krok 4: Publish app (uniknij wygaśnięcia tokena co 7 dni)
+
+W trybie **Testing** refresh token wygasa po ~7 dniach. Przed produkcją:
+
+1. [Google Cloud Console](https://console.cloud.google.com/) → **OAuth consent screen**
+2. Uzupełnij wymagane pola (App name, support email)
+3. Scope: **tylko** `https://www.googleapis.com/auth/drive.file`
+4. Kliknij **Publish app** → status **In production**
+5. **Wygeneruj NOWY refresh token** (Krok 2) — stary z Testing nadal może wygasać
+
+Przy użyciu osobistym (<100 użytkowników) pełna weryfikacja Google **nie jest wymagana** dla scope `drive.file`.
+
+---
+
+## Krok 5: Produkcja (maintenance window)
+
+1. W Vercel → Settings → Environment Variables → `GOOGLE_REFRESH_TOKEN` (+ pozostałe env)
+2. Redeploy
+3. `/admin` → OAuth scope test → **Pass**
+4. Test uploadu na produkcji
+
+Opcjonalnie: [Google Account → Third-party access](https://myaccount.google.com/permissions) → usuń stary dostęp aplikacji.
+
+---
+
+## Co jeśli testy Drive failują po zawężeniu?
+
+`drive.file` daje dostęp do plików **utworzonych lub otwartych przez aplikację** — nie do metadanych dowolnego folderu przez `files.get`.
+
+### Normalne (nie blokuje uploadu)
+
+Test **„Main folder metadata via files.get”** może pokazać `File not found`, podczas gdy pozostałe testy przechodzą:
+- ✓ Verify main upload folder access
+- ✓ List session folders / files
+- ✓ Read `_uploader_tokens.json`
+
+To **oczekiwane** przy `drive.file`, gdy folder główny istniał przed aplikacją. Upload tworzy podfoldery przez `files.create` — i to działa.
+
+### Prawdziwy problem (blokuje upload)
+
+Jeśli **krytyczne** testy failują (brak listy plików, brak tworzenia folderów):
+- Folder `GOOGLE_DRIVE_FOLDER_ID` należy do **innego** konta niż OAuth
+- Folder nie jest udostępniony kontu OAuth z rolą **Edytor**
+
+Rozwiązania:
+1. Utwórz folder uploadów na **tym samym** koncie co OAuth
+2. Albo udostępnij folder kontu OAuth z rolą **Edytor** i przetestuj upload ręcznie
+
+W ostateczności (mniej bezpieczne): `drive.readonly` + `drive.file` — nadal bez pełnego `drive`.
+
+---
+
+## Service Account (fallback)
+
+Jeśli używasz Service Account zamiast OAuth — scope w kodzie jest już poprawiony (`drive.file` only w `src/lib/googleAuth.js`). Ten dokument dotyczy głównie ścieżki **OAuth refresh token**.
+
+---
+
+## OAuth „agentic” (`is_agentic`) i Workspace MCP (2026)
+
+Google wprowadza flagę **agentic** na kliencie OAuth 2.0 (projekt m.in. `drive-uploader-508019`). Dotyczy **Workspace MCP servers** (Gmail, Drive, Calendar przez Model Context Protocol dla agentów AI), **nie** zwykłych REST API.
+
+| Termin | Znaczenie |
+|--------|-----------|
+| **12 paź 2026** | W Google Cloud Console można oznaczyć klienta OAuth jako agentic |
+| **11 lis 2026** | Tylko klienci agentic mogą wołać Workspace MCP |
+| **12 lis 2026** | Flagi agentic **nie da się zmienić** na istniejącym Client ID — trzeba nowy klient |
+
+### drive-uploader (ta aplikacja)
+
+- Używa wyłącznie **Drive REST API** (`googleapis`: upload, foldery, `_uploader_tokens.json`, progress).
+- **Nie** integruje Workspace MCP.
+- Upload robi **użytkownik w przeglądarce**, nie autonomiczny agent AI.
+
+**Działanie:** **nie włączaj** `is_agentic` na OAuth kliencie używanym przez produkcję (Vercel). Google: aplikacje tylko-REST **nie wymagają** zmiany w związku z MCP.
+
+### Kiedy coś robić
+
+1. **Osobny OAuth Client ID** dla agenta AI (Cursor, bot), jeśli ma korzystać z **Workspace MCP** — oznacz go jako agentic **między 12 paź a 11 lis 2026**.
+2. **Nie mieszaj** tego samego Client ID dla strony uploadu (ludzie) i agenta — osobne klienty, osobne refresh tokeny w env.
+3. Po **12 lis 2026** zmiana agentic na starym kliencie = **nowy** Client ID + regeneracja refresh tokena (jak Krok 2 powyżej).
+
+Źródło: powiadomienie Google Cloud o Workspace MCP / `is_agentic` (2026).

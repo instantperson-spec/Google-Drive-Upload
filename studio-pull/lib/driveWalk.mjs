@@ -2,6 +2,8 @@ const FOLDER_MIME = 'application/vnd.google-apps.folder';
 const SKIP_NAMES = new Set([
   '_uploader_tokens.json',
   '_uploader_progress.json',
+  '_uploader_shares.json',
+  '_team_manifest.json',
   '_manifest.json',
   '_crash_log.txt',
 ]);

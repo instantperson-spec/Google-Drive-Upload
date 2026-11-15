@@ -16,7 +16,10 @@
     "successButton": "Wyślij kolejne pliki"
   },
   "form": {
-    "projectPlaceholder": "Nazwa projektu (np. Sligo Extra B-roll)",
+    "projectLabel": "Nazwa projektu",
+    "projectRequired": "wymagane",
+    "projectPlaceholder": "nowy projekt",
+    "projectHint": "Wpisz nazwę projektu, żeby zacząć upload.",
     "namePlaceholder": "Imię i nazwisko / nazwa firmy",
     "emailPlaceholder": "Adres e-mail",
     "identityLocked": "Upload jako {name} ({email})",
@@ -50,6 +53,8 @@
   },
   "upload": {
     "inProgress": "Trwa upload…",
-    "start": "Rozpocznij upload ({count} plików)"
+    "start": "Rozpocznij upload ({count} plików)",
+    "needProject": "Podaj nazwę projektu",
+    "needFiles": "Dodaj pliki, żeby zacząć"
   }
 }

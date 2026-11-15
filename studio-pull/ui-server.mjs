@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Studio Console — local HTTP server (127.0.0.1 only).
- * Pull (multi-session) + Tokens. No Live Progress. No background agent.
+ * Pull + Sync (local→Drive origin) + Shares + Tokens. No Live Progress.
  */
 import http from 'http';
 import fs from 'fs';
@@ -21,8 +21,34 @@ import {
   createTokenLocal,
   patchTokenLocal,
   setTokenLocaleLocal,
+  setTokenIdentityLocal,
   deleteTokenLocal,
 } from './lib/tokenOps.mjs';
+import {
+  listBindings,
+  getBinding,
+  upsertBinding,
+  setLastSynced,
+  setLastClientPull,
+} from './lib/projectBindings.mjs';
+import { computeSyncStatus } from './lib/syncStatus.mjs';
+import { walkLocalFolder } from './lib/localWalk.mjs';
+import { planSync } from './lib/syncDelta.mjs';
+import { uploadFiles } from './lib/upload.mjs';
+import {
+  readManifest,
+  writeManifest,
+  buildBaselineFromLocal,
+  setBaselineFromFiles,
+  recomputeStatuses,
+  hasBaseline,
+  stripSessionPrefix,
+} from './lib/manifestOps.mjs';
+import {
+  listSharesLocal,
+  createShareLocal,
+  revokeShareLocal,
+} from './lib/shareOps.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const UI_DIR = path.join(__dirname, 'ui');
@@ -91,7 +117,11 @@ function serveStatic(req, res) {
     res.end('Not found');
     return;
   }
-  res.writeHead(200, { 'Content-Type': contentType(filePath) });
+  const headers = {
+    'Content-Type': contentType(filePath),
+    'Cache-Control': filePath.endsWith('.jpg') ? 'public, max-age=86400' : 'no-store',
+  };
+  res.writeHead(200, headers);
   fs.createReadStream(filePath).pipe(res);
 }
 
@@ -112,6 +142,65 @@ async function handleSessions(res) {
 
   // Legacy fat folders → one row per upload day; stamped folders stay 1:1.
   const sessions = await expandFoldersToSessions(drive, folders, progressByFolder);
+  const bindingsByFolder = new Map(listBindings().map((b) => [b.folderId, b]));
+  for (const s of sessions) {
+    const b = bindingsByFolder.get(s.folderId);
+    if (b) {
+      s.localPath = b.localPath;
+      s.lastSyncedAt = b.lastSyncedAt || null;
+      s.lastClientPullAt = b.lastClientPullAt || null;
+      s.bindingLabel = b.label || null;
+      if (!s.token && b.token) s.token = b.token;
+    }
+  }
+
+  // Sync status only for bound projects (avoid N Drive walks for unbound rows)
+  const boundIds = [
+    ...new Set(sessions.filter((s) => s.localPath).map((s) => s.folderId)),
+  ];
+  const statusByFolder = new Map();
+  const CONCURRENCY = 4;
+  for (let i = 0; i < boundIds.length; i += CONCURRENCY) {
+    const slice = boundIds.slice(i, i + CONCURRENCY);
+    const results = await Promise.all(
+      slice.map(async (folderId) => {
+        try {
+          const st = await computeSyncStatus(
+            drive,
+            folderId,
+            bindingsByFolder.get(folderId) || null
+          );
+          return [folderId, st];
+        } catch {
+          return [
+            folderId,
+            {
+              syncStatus: 'unknown',
+              fromClientCount: 0,
+              missingLocalFromClient: 0,
+              remoteChangedAt: null,
+            },
+          ];
+        }
+      })
+    );
+    for (const [folderId, st] of results) statusByFolder.set(folderId, st);
+  }
+
+  for (const s of sessions) {
+    const st = statusByFolder.get(s.folderId);
+    if (st) {
+      s.syncStatus = st.syncStatus;
+      s.fromClientCount = st.fromClientCount;
+      s.missingLocalFromClient = st.missingLocalFromClient;
+      s.remoteChangedAt = st.remoteChangedAt;
+      if (st.lastClientPullAt) s.lastClientPullAt = st.lastClientPullAt;
+    } else {
+      s.syncStatus = s.localPath ? 'ok' : 'unknown';
+      s.fromClientCount = 0;
+      s.missingLocalFromClient = 0;
+    }
+  }
 
   sendJson(res, 200, {
     sessions,
@@ -147,8 +236,25 @@ async function handleSessionFiles(folderId, reqUrl, res) {
   });
 }
 
-async function handlePickDest(res) {
-  const picked = await pickFolderMac();
+async function handlePickDest(req, res) {
+  let body = {};
+  if (req.method === 'POST') {
+    try {
+      body = await readBody(req);
+    } catch {
+      body = {};
+    }
+  }
+  let picked;
+  try {
+    picked = await pickFolderMac({
+      defaultPath: body.defaultPath || '/Volumes',
+      prompt: body.prompt || undefined,
+    });
+  } catch (err) {
+    sendJson(res, 500, { error: err.message || String(err), path: null });
+    return;
+  }
   if (!picked) {
     sendJson(res, 200, { cancelled: true, path: null });
     return;
@@ -279,10 +385,21 @@ async function handlePull(req, res) {
         });
 
         if (!files.length) {
+          try {
+            upsertBinding({
+              folderId: session.folderId,
+              token: session.token || null,
+              localPath: sessionDest,
+              label: session.name,
+            });
+          } catch {
+            /* ignore */
+          }
           broadcast({
             type: 'session_done',
             folderId: session.folderId,
             name: session.name,
+            localPath: sessionDest,
             empty: true,
           });
           continue;
@@ -305,10 +422,44 @@ async function handlePull(req, res) {
         totals.failed += stats.failed;
         totals.bytesDownloaded += stats.bytesDownloaded;
 
+        // Bind project folder + snapshot baseline for team statuses
+        try {
+          let token = session.token || null;
+          if (!token) {
+            const progressMap = await loadProgressByFolderId().catch(() => null);
+            token = progressMap?.get?.(session.folderId)?.token || null;
+          }
+          upsertBinding({
+            folderId: session.folderId,
+            token,
+            localPath: sessionDest,
+            label: session.name,
+          });
+          const localFiles = walkLocalFolder(sessionDest);
+          const { fileId: manId, manifest: prevMan } = await readManifest(
+            drive,
+            session.folderId
+          );
+          const baseline = buildBaselineFromLocal(localFiles, {
+            token,
+            force: false,
+            prev: prevMan,
+          });
+          baseline.folderId = session.folderId;
+          await writeManifest(drive, session.folderId, manId, baseline);
+        } catch (bindErr) {
+          broadcast({
+            type: 'error',
+            relativePath: '(binding)',
+            message: bindErr.message || String(bindErr),
+          });
+        }
+
         broadcast({
           type: 'session_done',
           folderId: session.folderId,
           name: session.name,
+          localPath: sessionDest,
           ...stats,
           bytesLabel: formatBytes(stats.bytesDownloaded),
         });
@@ -353,6 +504,375 @@ function handleCancel(res) {
   sendJson(res, 200, { ok: true, running: true, cancelRequested: true });
 }
 
+async function handleSync(req, res) {
+  if (jobRunning) {
+    sendJson(res, 409, { error: 'A job is already running (pull or sync).' });
+    return;
+  }
+
+  let body;
+  try {
+    body = await readBody(req);
+  } catch {
+    sendJson(res, 400, { error: 'Invalid JSON body.' });
+    return;
+  }
+
+  const folderId = String(body.folderId || '').trim();
+  if (!folderId) {
+    sendJson(res, 400, { error: 'folderId is required.' });
+    return;
+  }
+
+  let binding = getBinding(folderId);
+  // Sync only the folder recorded at pull (download = sync). Ignore guessed parents.
+  let localPath = binding?.localPath || null;
+  if (body.localPath && binding?.localPath) {
+    const requested = path.resolve(String(body.localPath).trim());
+    const bound = path.resolve(binding.localPath);
+    if (requested !== bound) {
+      sendJson(res, 400, {
+        error: `Sync tylko z folderu po Pobierz:\n${bound}\n(nie ${requested})`,
+      });
+      return;
+    }
+    localPath = bound;
+  } else if (body.localPath && !binding) {
+    localPath = String(body.localPath).trim();
+  }
+  if (!localPath) {
+    sendJson(res, 400, {
+      error: 'Brak folderu projektu — najpierw Pobierz sesję (download = sync).',
+    });
+    return;
+  }
+
+  let dest;
+  try {
+    ({ dest } = assertSafeDest(localPath, { create: false }));
+  } catch (err) {
+    sendJson(res, 400, { error: err.message || String(err) });
+    return;
+  }
+
+  if (!binding || binding.localPath !== dest) {
+    binding = upsertBinding({
+      folderId,
+      token: body.token || binding?.token || null,
+      localPath: dest,
+      label: body.label || binding?.label || null,
+    });
+  }
+
+  jobRunning = true;
+  cancelRequested = false;
+  sendJson(res, 202, { ok: true, folderId, localPath: dest });
+
+  setImmediate(async () => {
+    try {
+      const { drive } = createDriveClient();
+      broadcast({
+        type: 'sync_start',
+        folderId,
+        dest,
+        label: binding.label || folderId,
+      });
+
+      broadcast({ type: 'listing', folderId, dest });
+      let localFiles = walkLocalFolder(dest);
+      localFiles = stripSessionPrefix(localFiles, binding.label);
+      // Don't push FromClient/ back during studio sync — those are client top-ups.
+      localFiles = localFiles.filter(
+        (f) => !String(f.relativePath || '').startsWith('FromClient/')
+      );
+      const driveFiles = await walkDriveFolder(drive, folderId);
+
+      // Baseline = what the client uploaded. Capture from Drive BEFORE this sync if missing.
+      let { fileId: manId, manifest: prevMan } = await readManifest(drive, folderId);
+      let manifest = {
+        ...prevMan,
+        token: binding.token || prevMan.token || null,
+        folderId,
+      };
+      if (!hasBaseline(manifest)) {
+        const baselineSource = driveFiles.filter(
+          (f) => !String(f.relativePath || '').startsWith('FromClient/')
+        );
+        manifest = setBaselineFromFiles(baselineSource, {
+          token: binding.token,
+          force: true,
+          prev: manifest,
+        });
+        manifest.folderId = folderId;
+        broadcast({
+          type: 'log',
+          message: `Baseline z Drive (pliki klienta): ${Object.keys(manifest.baseline).length} plików`,
+        });
+      }
+
+      const { upload, skip } = planSync(localFiles, driveFiles);
+
+      broadcast({
+        type: 'listing_done',
+        folderId,
+        fileCount: upload.length,
+        listedTotal: localFiles.length,
+        skipCount: skip.length,
+        totalBytes: upload.reduce((s, f) => s + f.size, 0),
+        totalLabel: formatBytes(upload.reduce((s, f) => s + f.size, 0)),
+        mode: 'sync',
+      });
+
+      for (const s of skip) {
+        broadcast({
+          type: 'skip',
+          relativePath: s.relativePath,
+          size: s.size,
+          index: 0,
+          total: upload.length,
+        });
+      }
+
+      const stats = await uploadFiles(drive, upload, folderId, {
+        shouldCancel: () => cancelRequested,
+        onEvent: (event) => broadcast({ ...event, mode: 'sync' }),
+      });
+
+      // Statuses vs immutable client baseline (local after edits = current delivery set)
+      const nextMan = recomputeStatuses(manifest, localFiles);
+      await writeManifest(drive, folderId, manId, nextMan);
+      setLastSynced(folderId);
+
+      broadcast({
+        type: 'summary',
+        mode: 'sync',
+        uploaded: stats.uploaded,
+        skipped: skip.length + stats.skipped,
+        failed: stats.failed,
+        bytesUploaded: stats.bytesUploaded,
+        bytesLabel: formatBytes(stats.bytesUploaded),
+        dest,
+        folderId,
+        cancelled: cancelRequested,
+      });
+    } catch (err) {
+      broadcast({ type: 'fatal', message: err.message || String(err) });
+    } finally {
+      jobRunning = false;
+      cancelRequested = false;
+    }
+  });
+}
+
+async function handleBindingsGet(res) {
+  sendJson(res, 200, { bindings: listBindings() });
+}
+
+async function handleBindingPut(req, res) {
+  const body = await readBody(req);
+  const folderId = String(body.folderId || '').trim();
+  const localPath = String(body.localPath || '').trim();
+  if (!folderId || !localPath) {
+    sendJson(res, 400, { error: 'folderId and localPath are required.' });
+    return;
+  }
+  const { dest } = assertSafeDest(localPath, { create: false });
+  const binding = upsertBinding({
+    folderId,
+    token: body.token || null,
+    localPath: dest,
+    label: body.label || null,
+  });
+  sendJson(res, 200, { binding });
+}
+
+/**
+ * Pull only FromClient/ into local project folder.
+ * Body: { folderId }
+ */
+async function handlePullFromClient(req, res) {
+  if (jobRunning) {
+    sendJson(res, 409, { error: 'A job is already running (pull or sync).' });
+    return;
+  }
+
+  let body;
+  try {
+    body = await readBody(req);
+  } catch {
+    sendJson(res, 400, { error: 'Invalid JSON body.' });
+    return;
+  }
+
+  const folderId = String(body.folderId || '').trim();
+  if (!folderId) {
+    sendJson(res, 400, { error: 'folderId is required.' });
+    return;
+  }
+
+  const binding = getBinding(folderId);
+  if (!binding?.localPath) {
+    sendJson(res, 400, {
+      error: 'Brak folderu projektu — najpierw Pobierz sesję.',
+    });
+    return;
+  }
+
+  let dest;
+  try {
+    ({ dest } = assertSafeDest(binding.localPath, { create: false }));
+  } catch (err) {
+    sendJson(res, 400, { error: err.message || String(err) });
+    return;
+  }
+
+  jobRunning = true;
+  cancelRequested = false;
+  sendJson(res, 202, { ok: true, folderId, localPath: dest, mode: 'fromClient' });
+
+  setImmediate(async () => {
+    try {
+      const { drive } = createDriveClient();
+      broadcast({
+        type: 'sync_start',
+        folderId,
+        dest,
+        label: binding.label || 'FromClient',
+        mode: 'fromClient',
+      });
+
+      broadcast({ type: 'listing', folderId, dest });
+      const all = await walkDriveFolder(drive, folderId);
+      const files = all.filter((f) =>
+        String(f.relativePath || '').startsWith('FromClient/')
+      );
+      const totalBytes = files.reduce((s, f) => s + f.size, 0);
+      broadcast({
+        type: 'listing_done',
+        folderId,
+        fileCount: files.length,
+        listedTotal: files.length,
+        totalBytes,
+        totalLabel: formatBytes(totalBytes),
+        mode: 'fromClient',
+      });
+
+      if (!files.length) {
+        setLastClientPull(folderId);
+        broadcast({
+          type: 'summary',
+          mode: 'fromClient',
+          downloaded: 0,
+          skipped: 0,
+          failed: 0,
+          bytesDownloaded: 0,
+          bytesLabel: formatBytes(0),
+          dest,
+          folderId,
+          cancelled: false,
+        });
+        return;
+      }
+
+      const stats = await downloadFiles(drive, files, dest, {
+        failFast: false,
+        shouldCancel: () => cancelRequested,
+        onEvent: (event) => broadcast({ ...event, mode: 'fromClient' }),
+      });
+
+      setLastClientPull(folderId);
+      broadcast({
+        type: 'summary',
+        mode: 'fromClient',
+        downloaded: stats.downloaded,
+        skipped: stats.skipped,
+        failed: stats.failed,
+        bytesDownloaded: stats.bytesDownloaded,
+        bytesLabel: formatBytes(stats.bytesDownloaded),
+        dest,
+        folderId,
+        cancelled: cancelRequested,
+      });
+    } catch (err) {
+      broadcast({ type: 'fatal', message: err.message || String(err) });
+    } finally {
+      jobRunning = false;
+      cancelRequested = false;
+    }
+  });
+}
+
+/**
+ * Snapshot current Drive tree as client baseline (repair / after pull before edits).
+ * Body: { folderId, force?: true }
+ */
+async function handleCaptureBaseline(req, res) {
+  const body = await readBody(req);
+  const folderId = String(body.folderId || '').trim();
+  if (!folderId) {
+    sendJson(res, 400, { error: 'folderId is required.' });
+    return;
+  }
+  const force = body.force !== false;
+  const { drive } = createDriveClient();
+  const driveFiles = await walkDriveFolder(drive, folderId);
+  const binding = getBinding(folderId);
+  // Prefer non-nested client paths: drop copies under "Session Name/..."
+  const label = binding?.label || body.label || '';
+  const labelTop = String(label)
+    .replace(/[\/\\?%*:|"<>]/g, '-')
+    .replace(/:/g, '-')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const clientFiles = labelTop
+    ? driveFiles.filter((f) => {
+        const top = f.relativePath.split('/')[0];
+        return top !== labelTop && top !== label.replace(/:/g, '-');
+      })
+    : driveFiles;
+  const source = clientFiles.length ? clientFiles : driveFiles;
+
+  const { fileId, manifest: prev } = await readManifest(drive, folderId);
+  const next = setBaselineFromFiles(source, {
+    token: binding?.token || body.token || prev.token,
+    force,
+    prev,
+  });
+  next.folderId = folderId;
+  await writeManifest(drive, folderId, fileId, next);
+  sendJson(res, 200, {
+    ok: true,
+    baselineCount: Object.keys(next.baseline).length,
+    baselineAt: next.baselineAt,
+  });
+}
+
+async function handleSharesGet(res) {
+  const shares = await listSharesLocal();
+  sendJson(res, 200, { shares });
+}
+
+async function handleSharesPost(req, res) {
+  const body = await readBody(req);
+  const folderId = String(body.folderId || '').trim();
+  if (!folderId) {
+    sendJson(res, 400, { error: 'folderId is required.' });
+    return;
+  }
+  const binding = getBinding(folderId);
+  const share = await createShareLocal({
+    folderId,
+    token: body.token || binding?.token || null,
+    label: body.label || binding?.label || null,
+  });
+  sendJson(res, 201, { share });
+}
+
+async function handleShareRevoke(id, res) {
+  const share = await revokeShareLocal(id);
+  sendJson(res, 200, { share });
+}
+
 async function handleTokensGet(res) {
   const tokens = await listTokensLocal();
   sendJson(res, 200, { tokens });
@@ -368,6 +888,14 @@ async function handleTokenPatch(id, req, res) {
   const body = await readBody(req);
   if (body.locale && body.action === 'locale') {
     const token = await setTokenLocaleLocal(id, body.locale);
+    sendJson(res, 200, { token });
+    return;
+  }
+  if (body.action === 'identity') {
+    const token = await setTokenIdentityLocal(id, {
+      clientName: body.clientName,
+      clientEmail: body.clientEmail || body.prefillEmail,
+    });
     sendJson(res, 200, { token });
     return;
   }
@@ -392,7 +920,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (req.method === 'POST' && pathname === '/api/pick-dest') {
-      await handlePickDest(res);
+      await handlePickDest(req, res);
       return;
     }
     if (req.method === 'POST' && pathname === '/api/pull') {
@@ -405,6 +933,50 @@ const server = http.createServer(async (req, res) => {
     }
     if (req.method === 'POST' && pathname === '/api/pull/cancel') {
       handleCancel(res);
+      return;
+    }
+
+    if (req.method === 'POST' && pathname === '/api/sync') {
+      await handleSync(req, res);
+      return;
+    }
+    if (req.method === 'POST' && pathname === '/api/pull-from-client') {
+      await handlePullFromClient(req, res);
+      return;
+    }
+    if (req.method === 'POST' && pathname === '/api/baseline') {
+      await handleCaptureBaseline(req, res);
+      return;
+    }
+    if (req.method === 'GET' && pathname === '/api/sync/events') {
+      handleEvents(req, res);
+      return;
+    }
+    if (req.method === 'POST' && pathname === '/api/sync/cancel') {
+      handleCancel(res);
+      return;
+    }
+
+    if (req.method === 'GET' && pathname === '/api/bindings') {
+      await handleBindingsGet(res);
+      return;
+    }
+    if (req.method === 'PUT' && pathname === '/api/bindings') {
+      await handleBindingPut(req, res);
+      return;
+    }
+
+    if (req.method === 'GET' && pathname === '/api/shares') {
+      await handleSharesGet(res);
+      return;
+    }
+    if (req.method === 'POST' && pathname === '/api/shares') {
+      await handleSharesPost(req, res);
+      return;
+    }
+    const shareMatch = pathname.match(/^\/api\/shares\/([^/]+)$/);
+    if (req.method === 'DELETE' && shareMatch) {
+      await handleShareRevoke(decodeURIComponent(shareMatch[1]), res);
       return;
     }
 

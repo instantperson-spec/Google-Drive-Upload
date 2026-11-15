@@ -2,8 +2,8 @@
 
 import { useRef, useEffect, useCallback } from 'react';
 
-// Production: light 90s pulse during upload so admin Live Monitor stays in sync on
-// long files (MOVs). Per-file events still fire on start/complete. Debug: 30s.
+// Production: light 90s pulse during upload so admin History “In progress” stays
+// in sync on long files (MOVs). Per-file events still fire on start/complete. Debug: 30s.
 const DEBUG_HEARTBEAT = process.env.NEXT_PUBLIC_ENABLE_HEARTBEAT === 'true';
 const HEARTBEAT_INTERVAL_MS = DEBUG_HEARTBEAT ? 30_000 : 90_000;
 
@@ -65,7 +65,7 @@ export function useUploadHeartbeat({
     [accessToken, projectName, uploaderName, uploaderEmail, apiHeaders]
   );
 
-  // Periodic heartbeat while uploading (90s prod / 30s debug) for admin Live Monitor.
+  // Periodic heartbeat while uploading (90s prod / 30s debug) for admin progress.
   useEffect(() => {
     if (status !== 'uploading' || !accessToken) return;
     const tick = () => sendProgressHeartbeat('uploading', filesRef.current);

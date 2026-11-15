@@ -1,0 +1,1060 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Drive Uploader — Nowoczesny Mockup UI (2026 Design System)</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    :root {
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "SF Pro Display", Inter, Helvetica, Arial, sans-serif;
+      --color-primary: #6366f1;
+      --color-primary-hover: #4f46e5;
+      --color-accent: #8b5cf6;
+      --color-cyan: #06b6d4;
+      --color-emerald: #10b981;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background-color: #07090e;
+      color: #f1f5f9;
+      min-height: 100vh;
+      overflow-x: hidden;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      transition: background 0.6s ease;
+    }
+
+    /* ============================================================
+       BACKGROUND PRESETS
+       ============================================================ */
+
+    /* Theme 1: Aurora Glow */
+    .bg-theme-aurora {
+      background: radial-gradient(circle at 50% 0%, #0d1224 0%, #06080e 100%);
+    }
+
+    .aurora-container {
+      position: fixed;
+      inset: 0;
+      overflow: hidden;
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.85;
+      transition: opacity 0.5s ease;
+    }
+
+    .aurora-blob {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(90px);
+      mix-blend-mode: screen;
+      animation: floatAurora 18s ease-in-out infinite alternate;
+    }
+
+    .aurora-blob-1 {
+      width: 550px;
+      height: 550px;
+      background: radial-gradient(circle, rgba(99, 102, 241, 0.45) 0%, rgba(99, 102, 241, 0) 70%);
+      top: -100px;
+      left: 15%;
+      animation-duration: 16s;
+    }
+
+    .aurora-blob-2 {
+      width: 650px;
+      height: 650px;
+      background: radial-gradient(circle, rgba(168, 85, 247, 0.35) 0%, rgba(168, 85, 247, 0) 70%);
+      top: 15%;
+      right: 10%;
+      animation-duration: 22s;
+      animation-delay: -5s;
+    }
+
+    .aurora-blob-3 {
+      width: 480px;
+      height: 480px;
+      background: radial-gradient(circle, rgba(6, 182, 212, 0.25) 0%, rgba(6, 182, 212, 0) 70%);
+      bottom: -100px;
+      left: 30%;
+      animation-duration: 20s;
+      animation-delay: -10s;
+    }
+
+    @keyframes floatAurora {
+      0% { transform: translate(0, 0) scale(1) rotate(0deg); }
+      50% { transform: translate(60px, 40px) scale(1.15) rotate(45deg); }
+      100% { transform: translate(-40px, 70px) scale(0.95) rotate(-30deg); }
+    }
+
+    /* Theme 2: Linear Grid & Spotlight */
+    .bg-theme-grid {
+      background-color: #08090d;
+      background-image: 
+        radial-gradient(circle at var(--mouse-x, 50%) var(--mouse-y, 40%), rgba(99, 102, 241, 0.18) 0%, transparent 600px),
+        linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+      background-size: 100% 100%, 36px 36px, 36px 36px;
+    }
+
+    /* Theme 3: Deep Nebula */
+    .bg-theme-nebula {
+      background: 
+        radial-gradient(circle at 20% 30%, rgba(139, 92, 246, 0.22) 0%, transparent 45%),
+        radial-gradient(circle at 80% 70%, rgba(236, 72, 153, 0.18) 0%, transparent 50%),
+        radial-gradient(circle at 50% 50%, rgba(14, 165, 233, 0.15) 0%, transparent 55%),
+        #05060a;
+    }
+
+    /* Theme 4: Minimalist Obsidian */
+    .bg-theme-obsidian {
+      background: #090a0f;
+      background-image: radial-gradient(circle at 50% -20%, rgba(255, 255, 255, 0.06) 0%, transparent 65%);
+    }
+
+    /* Ambient noise overlay for ultra-crisp physical texture */
+    .noise-overlay {
+      position: fixed;
+      inset: 0;
+      opacity: 0.025;
+      pointer-events: none;
+      z-index: 1;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+    }
+
+    /* ============================================================
+       MODERN GLASS & SURFACES
+       ============================================================ */
+    .modern-glass-card {
+      background: rgba(15, 20, 32, 0.72);
+      backdrop-filter: blur(24px) saturate(190%);
+      -webkit-backdrop-filter: blur(24px) saturate(190%);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 
+        0 24px 64px -12px rgba(0, 0, 0, 0.65),
+        0 0 0 1px rgba(255, 255, 255, 0.04),
+        inset 0 1px 0 0 rgba(255, 255, 255, 0.15);
+      border-radius: 28px;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* Glowing top specular highlight edge */
+    .modern-glass-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 10%;
+      right: 10%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), rgba(99, 102, 241, 0.6), rgba(255, 255, 255, 0.4), transparent);
+      pointer-events: none;
+    }
+
+    /* Subtle interactive dropzone */
+    .modern-dropzone {
+      position: relative;
+      border: 1.5px dashed rgba(255, 255, 255, 0.16);
+      background: rgba(255, 255, 255, 0.02);
+      border-radius: 20px;
+      transition: all 0.28s ease;
+      cursor: pointer;
+    }
+
+    .modern-dropzone:hover, .modern-dropzone.dragover {
+      border-color: rgba(129, 140, 248, 0.8);
+      background: rgba(99, 102, 241, 0.06);
+      box-shadow: 0 0 35px -5px rgba(99, 102, 241, 0.25), inset 0 0 20px rgba(99, 102, 241, 0.05);
+      transform: translateY(-2px);
+    }
+
+    /* Inputs */
+    .modern-input {
+      background: rgba(10, 14, 24, 0.75);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 14px;
+      color: #f8fafc;
+      transition: all 0.2s ease;
+      font-size: 0.95rem;
+      width: 100%;
+      padding: 0.85rem 1.1rem;
+    }
+
+    .modern-input:focus {
+      outline: none;
+      border-color: #818cf8;
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2), 0 4px 12px rgba(0, 0, 0, 0.3);
+      background: rgba(14, 18, 32, 0.9);
+    }
+
+    /* Pulsing indicators */
+    .pulse-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #10b981;
+      box-shadow: 0 0 10px #10b981;
+      animation: pulseAnim 2s infinite;
+    }
+
+    @keyframes pulseAnim {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.1);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+  </style>
+</head>
+<body class="bg-theme-aurora">
+
+  <!-- Ambient background elements -->
+  <div class="aurora-container" id="auroraBg">
+    <div class="aurora-blob aurora-blob-1"></div>
+    <div class="aurora-blob aurora-blob-2"></div>
+    <div class="aurora-blob aurora-blob-3"></div>
+  </div>
+  <div class="noise-overlay"></div>
+
+  <!-- ============================================================
+       TOP FLOATING CONTROL PANEL (MOCKUP CONTROLLER)
+       ============================================================ -->
+  <header class="sticky top-0 z-50 px-4 py-3 border-b border-white/10 bg-black/40 backdrop-blur-xl">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3 text-xs">
+      
+      <!-- Brand & Mockup Tag -->
+      <div class="flex items-center gap-3">
+        <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center font-bold text-white shadow-lg shadow-indigo-500/30">
+          ▲
+        </div>
+        <div class="flex items-center bg-white/5 p-1 rounded-xl border border-white/10">
+          <button class="px-3 py-1 rounded-lg text-white font-medium bg-indigo-600 shadow-sm flex items-center gap-1.5">
+            <span>📤 1. Send Files</span>
+          </button>
+          <a href="share.html" class="px-3 py-1 rounded-lg text-slate-400 hover:text-white transition flex items-center gap-1.5">
+            <span>📦 2. Portal Projektu (Share)</span>
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+          </a>
+        </div>
+      </div>
+
+      <!-- Controls Group -->
+      <div class="flex flex-wrap items-center gap-2">
+        <!-- Layout Switcher -->
+        <div class="flex items-center bg-white/5 p-1 rounded-xl border border-white/10">
+          <button onclick="switchLayout('classic-centered')" id="btn-layout-classic" class="layout-btn px-3 py-1.5 rounded-lg text-white font-medium bg-indigo-600 shadow-sm transition">
+            1. Nowoczesny Centered
+          </button>
+          <button onclick="switchLayout('split-studio')" id="btn-layout-split" class="layout-btn px-3 py-1.5 rounded-lg text-slate-300 hover:text-white font-medium transition">
+            2. Split Studio Pro
+          </button>
+          <button onclick="switchLayout('bento-grid')" id="btn-layout-bento" class="layout-btn px-3 py-1.5 rounded-lg text-slate-300 hover:text-white font-medium transition">
+            3. Bento Dashboard
+          </button>
+        </div>
+
+        <!-- Background Theme Switcher -->
+        <div class="flex items-center bg-white/5 p-1 rounded-xl border border-white/10">
+          <button onclick="switchBg('aurora')" id="bg-aurora" title="Zorza polarna / fluid gradient" class="bg-opt px-2.5 py-1.5 rounded-lg text-white bg-white/15 transition flex items-center gap-1.5">
+            <span class="w-2.5 h-2.5 rounded-full bg-gradient-to-tr from-indigo-500 to-pink-500"></span>
+            Aurora
+          </button>
+          <button onclick="switchBg('grid')" id="bg-grid" title="Interaktywna siatka + spotlight" class="bg-opt px-2.5 py-1.5 rounded-lg text-slate-400 hover:text-white transition flex items-center gap-1.5">
+            <span class="w-2.5 h-2.5 rounded-full bg-cyan-400"></span>
+            Linear Grid
+          </button>
+          <button onclick="switchBg('nebula')" id="bg-nebula" title="Kosmiczna mgławica" class="bg-opt px-2.5 py-1.5 rounded-lg text-slate-400 hover:text-white transition flex items-center gap-1.5">
+            <span class="w-2.5 h-2.5 rounded-full bg-purple-500"></span>
+            Nebula
+          </button>
+          <button onclick="switchBg('obsidian')" id="bg-obsidian" title="Głęboka czerń minimalistyczna" class="bg-opt px-2.5 py-1.5 rounded-lg text-slate-400 hover:text-white transition flex items-center gap-1.5">
+            <span class="w-2.5 h-2.5 rounded-full bg-zinc-600"></span>
+            Obsidian
+          </button>
+        </div>
+
+        <!-- Simulation State Switcher -->
+        <div class="flex items-center bg-white/5 p-1 rounded-xl border border-white/10">
+          <button onclick="setSimState('empty')" id="state-empty" class="sim-btn px-2.5 py-1.5 rounded-lg text-white bg-indigo-600 font-medium transition">
+            Pusty (Screenshot)
+          </button>
+          <button onclick="setSimState('files')" id="state-files" class="sim-btn px-2.5 py-1.5 rounded-lg text-slate-400 hover:text-white font-medium transition">
+            Pliki w kolejce
+          </button>
+          <button onclick="setSimState('uploading')" id="state-uploading" class="sim-btn px-2.5 py-1.5 rounded-lg text-slate-400 hover:text-white font-medium transition">
+            Wgrywanie (Progres)
+          </button>
+          <button onclick="setSimState('success')" id="state-success" class="sim-btn px-2.5 py-1.5 rounded-lg text-slate-400 hover:text-white font-medium transition">
+            Sukces
+          </button>
+        </div>
+
+        <!-- Compare Button -->
+        <button onclick="toggleCompareModal()" class="px-3 py-1.5 rounded-xl bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 border border-amber-500/30 font-medium transition flex items-center gap-1.5">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" strokeWidth="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+          Porównaj ze starym
+        </button>
+
+        <!-- Language toggle -->
+        <button onclick="toggleLang()" id="btn-lang" class="px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 font-semibold">
+          PL / EN
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- ============================================================
+       MAIN CONTENT CONTAINER
+       ============================================================ -->
+  <main class="relative z-10 flex-1 flex items-center justify-center p-4 md:p-8">
+
+    <!-- ==========================================================
+         LAYOUT 1: NOWOCZESNY CENTERED GLASS (Direct Modern Upgrade)
+         ========================================================== -->
+    <section id="layout-classic-centered" class="w-full max-w-xl transition-all duration-500">
+      <div class="modern-glass-card p-6 md:p-9 shadow-2xl">
+        
+        <!-- Header Pill Badge -->
+        <div class="flex items-center justify-between mb-5">
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-medium">
+            <span class="pulse-dot"></span>
+            <span class="t-badge">Google Drive Direct Cloud Bridge</span>
+          </div>
+          <span class="text-xs text-slate-500 font-mono flex items-center gap-1">
+            <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+            End-to-End TLS 1.3
+          </span>
+        </div>
+
+        <!-- Title & Subtitle -->
+        <div class="text-center mb-7">
+          <h1 class="text-3xl md:text-4xl font-extrabold tracking-tight bg-gradient-to-b from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">
+            <span class="t-title">Send Files</span>
+          </h1>
+          <p class="text-slate-400 text-sm mt-1.5 max-w-md mx-auto leading-relaxed">
+            <span class="t-subtitle">Prześlij pliki i kompletne foldery bezpiecznie do wskazanego katalogu Google Drive.</span>
+          </p>
+        </div>
+
+        <!-- Form Elements -->
+        <div class="space-y-4 mb-6">
+          
+          <!-- Project Name Field -->
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <label for="project-input" class="text-xs font-semibold tracking-wider uppercase text-slate-300 flex items-center gap-1.5">
+                <span class="t-proj-label">Nazwa projektu</span>
+                <span class="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/25 t-required">wymagane</span>
+              </label>
+              <span class="text-[11px] text-slate-500">Google Drive folder</span>
+            </div>
+            <div class="relative">
+              <input 
+                id="project-input" 
+                type="text" 
+                value="Nowa Kampania Marketingowa 2026" 
+                placeholder="Wpisz nazwę projektu..." 
+                class="modern-input pl-11 focus:border-indigo-500"
+              />
+              <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                <svg class="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" strokeWidth="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+              </div>
+            </div>
+          </div>
+
+          <!-- Modern Identity Badge (Zamiast nudnego szarego disabled inputa!) -->
+          <div class="p-3 rounded-2xl bg-white/[0.03] border border-white/10 flex items-center justify-between gap-3 hover:bg-white/[0.05] transition">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-500 to-cyan-400 flex items-center justify-center font-bold text-white shadow-md text-xs">
+                CC
+              </div>
+              <div>
+                <div class="flex items-center gap-1.5">
+                  <span class="text-xs font-medium text-slate-400 t-uploading-as">Przesyłasz jako:</span>
+                  <span class="text-xs font-bold text-white">Ciaran Carty</span>
+                  <svg class="w-3.5 h-3.5 text-emerald-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                </div>
+                <div class="text-[11px] text-slate-500 font-mono">ciarancarty@gmail.com</div>
+              </div>
+            </div>
+            <div class="px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-[10px] text-emerald-300 font-medium flex items-center gap-1">
+              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+              Autoryzowano
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Modern Dropzone -->
+        <div id="dropzone-area" class="modern-dropzone p-7 text-center group mb-6">
+          
+          <!-- Cloud Upload Glow Icon -->
+          <div class="relative w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+            <div class="absolute inset-0 bg-indigo-500/25 rounded-2xl blur-xl group-hover:bg-indigo-500/40 transition"></div>
+            <div class="relative w-14 h-14 rounded-2xl bg-gradient-to-b from-indigo-500/20 to-purple-600/30 border border-indigo-400/30 flex items-center justify-center text-indigo-300 shadow-inner group-hover:scale-105 transition-transform duration-300">
+              <svg class="w-7 h-7 text-indigo-300 group-hover:text-white transition" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" strokeWidth="1.8" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+              </svg>
+            </div>
+          </div>
+
+          <!-- Dropzone Headlines -->
+          <h3 class="text-base font-semibold text-white tracking-wide mb-1">
+            <span class="t-drop-main">Przeciągnij i upuść pliki lub cały folder projektu tutaj</span>
+          </h3>
+          <p class="text-xs text-slate-400 max-w-sm mx-auto mb-5 leading-relaxed">
+            <span class="t-drop-hint">Wszystkie podfoldery zostaną automatycznie odtworzone na Google Drive w niezmienionej strukturze.</span>
+          </p>
+
+          <!-- Action Buttons -->
+          <div class="flex items-center justify-center gap-3">
+            <button type="button" onclick="simulateAddFiles()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs shadow-lg shadow-indigo-600/30 transition flex items-center gap-1.5 active:scale-95">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" strokeWidth="2" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+              <span class="t-btn-files">Wybierz pliki</span>
+            </button>
+            <button type="button" onclick="simulateAddFolder()" class="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-slate-200 hover:text-white font-medium text-xs border border-white/10 transition flex items-center gap-1.5 active:scale-95">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" strokeWidth="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+              <span class="t-btn-folder">Wybierz folder</span>
+            </button>
+          </div>
+
+          <input type="file" id="real-file-input" multiple class="hidden" onchange="handleRealFileSelect(this)">
+        </div>
+
+        <!-- Dynamic Files List / Queue (Conditional Visibility) -->
+        <div id="file-queue-section" class="hidden mb-6 space-y-2.5">
+          <div class="flex items-center justify-between text-xs px-1">
+            <span class="font-semibold text-slate-300 flex items-center gap-1.5">
+              <span class="t-files-ready">Pliki gotowe do wysłania</span>
+              <span id="files-count-badge" class="px-1.5 py-0.2 rounded-full bg-indigo-500/20 text-indigo-300 font-mono text-[10px]">3 pliki</span>
+            </span>
+            <span class="text-slate-500 font-mono text-[11px]" id="files-total-size">148.6 MB łącznie</span>
+          </div>
+
+          <div class="space-y-2 max-h-48 overflow-y-auto pr-1" id="file-queue-items">
+            <!-- File Item 1 -->
+            <div class="p-3 rounded-xl bg-white/[0.025] border border-white/5 flex items-center justify-between gap-3 text-xs">
+              <div class="flex items-center gap-2.5 min-w-0">
+                <span class="w-7 h-7 rounded-lg bg-pink-500/20 text-pink-400 font-mono text-[10px] font-bold flex items-center justify-center">ZIP</span>
+                <div class="truncate">
+                  <div class="text-slate-200 font-medium truncate">Brand_Assets_Pack_v2.zip</div>
+                  <div class="text-[10px] text-slate-500">114.2 MB • Gotowy do wysyłki</div>
+                </div>
+              </div>
+              <button onclick="this.parentElement.remove()" class="text-slate-500 hover:text-red-400 transition text-sm px-1.5 py-0.5">✕</button>
+            </div>
+
+            <!-- File Item 2 -->
+            <div class="p-3 rounded-xl bg-white/[0.025] border border-white/5 flex items-center justify-between gap-3 text-xs">
+              <div class="flex items-center gap-2.5 min-w-0">
+                <span class="w-7 h-7 rounded-lg bg-blue-500/20 text-blue-400 font-mono text-[10px] font-bold flex items-center justify-center">PDF</span>
+                <div class="truncate">
+                  <div class="text-slate-200 font-medium truncate">Specyfikacja_Techniczna_FINAL.pdf</div>
+                  <div class="text-[10px] text-slate-500">28.4 MB • Gotowy do wysyłki</div>
+                </div>
+              </div>
+              <button onclick="this.parentElement.remove()" class="text-slate-500 hover:text-red-400 transition text-sm px-1.5 py-0.5">✕</button>
+            </div>
+
+            <!-- File Item 3 -->
+            <div class="p-3 rounded-xl bg-white/[0.025] border border-white/5 flex items-center justify-between gap-3 text-xs">
+              <div class="flex items-center gap-2.5 min-w-0">
+                <span class="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-400 font-mono text-[10px] font-bold flex items-center justify-center">RAW</span>
+                <div class="truncate">
+                  <div class="text-slate-200 font-medium truncate">Hero_Photo_Session_01.cr3</div>
+                  <div class="text-[10px] text-slate-500">6.0 MB • Gotowy do wysyłki</div>
+                </div>
+              </div>
+              <button onclick="this.parentElement.remove()" class="text-slate-500 hover:text-red-400 transition text-sm px-1.5 py-0.5">✕</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dynamic Live Upload Progress (Visible in uploading state) -->
+        <div id="upload-progress-section" class="hidden mb-6 p-4 rounded-2xl bg-indigo-950/30 border border-indigo-500/20 space-y-3">
+          <div class="flex items-center justify-between text-xs">
+            <span class="font-medium text-indigo-200 flex items-center gap-2">
+              <svg class="w-4 h-4 animate-spin text-indigo-400" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
+              Przesyłanie strumieniowe do Google Drive...
+            </span>
+            <span class="font-mono text-indigo-300 font-bold" id="progress-percent">68%</span>
+          </div>
+
+          <div class="w-full h-2 rounded-full bg-white/10 overflow-hidden relative">
+            <div id="progress-bar-fill" class="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-cyan-400 rounded-full transition-all duration-300" style="width: 68%;"></div>
+          </div>
+
+          <div class="flex items-center justify-between text-[11px] text-slate-400 font-mono">
+            <span>Prędkość: ~14.8 MB/s</span>
+            <span>Pozostało: ~3 sekundy</span>
+          </div>
+        </div>
+
+        <!-- Dynamic Success State Screen -->
+        <div id="upload-success-section" class="hidden mb-6 p-6 rounded-2xl bg-emerald-950/30 border border-emerald-500/30 text-center space-y-3">
+          <div class="w-12 h-12 rounded-full bg-emerald-500/20 text-emerald-400 mx-auto flex items-center justify-center">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7"/></svg>
+          </div>
+          <h4 class="text-base font-bold text-white">Pliki zostały pomyślnie wysłane!</h4>
+          <p class="text-xs text-slate-400 max-w-sm mx-auto">
+            Wszystkie 3 elementy zostały zorganizowane w folderze projektu na Twoim dysku Google Drive.
+          </p>
+          <div class="pt-2 flex items-center justify-center gap-3">
+            <a href="#" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs transition flex items-center gap-1.5 shadow-lg shadow-emerald-600/30">
+              Otwórz w Google Drive ↗
+            </a>
+            <button onclick="setSimState('empty')" class="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-slate-300 text-xs transition">
+              Wyślij kolejną partię
+            </button>
+          </div>
+        </div>
+
+        <!-- Main Action CTA Button -->
+        <div id="main-cta-container">
+          <button 
+            id="main-cta-btn" 
+            type="button" 
+            onclick="handleMainCtaClick()" 
+            class="w-full py-3.5 px-6 rounded-xl font-semibold text-sm tracking-wide transition-all duration-300 flex items-center justify-center gap-2 bg-slate-800 text-slate-500 cursor-not-allowed border border-white/5"
+            disabled
+          >
+            <span class="t-btn-cta">Dodaj pliki, aby rozpocząć</span>
+          </button>
+        </div>
+
+        <!-- Footer Security Note -->
+        <div class="mt-5 pt-4 border-t border-white/5 flex items-center justify-between text-[11px] text-slate-500">
+          <span class="flex items-center gap-1.5">
+            <svg class="w-3.5 h-3.5 text-indigo-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+            Resumable Chunk Transfer
+          </span>
+          <span>Google Workspace API v3</span>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ==========================================================
+         LAYOUT 2: SPLIT STUDIO PRO (2-Column Pro Interface)
+         ========================================================== -->
+    <section id="layout-split-studio" class="w-full max-w-5xl hidden transition-all duration-500">
+      <div class="modern-glass-card p-6 md:p-8 shadow-2xl">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          
+          <!-- Left Column: Context & Metadata -->
+          <div class="lg:col-span-5 flex flex-col justify-between space-y-6 border-b lg:border-b-0 lg:border-r border-white/10 lg:pr-8 pb-6 lg:pb-0">
+            <div>
+              <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-medium mb-4">
+                <span class="pulse-dot"></span>
+                Google Drive Workstation
+              </div>
+
+              <h2 class="text-3xl font-extrabold text-white tracking-tight mb-2">
+                Przesyłanie Plików
+              </h2>
+              <p class="text-sm text-slate-400 leading-relaxed mb-6">
+                Nowoczesna stacja uploadu. Twoje pliki trafią bezpośrednio do dedykowanego katalogu na chmurze firmowej.
+              </p>
+
+              <!-- Project Setup Form -->
+              <div class="space-y-4">
+                <div>
+                  <label class="text-xs font-semibold text-slate-300 block mb-1 uppercase tracking-wider">
+                    Projekt docelowy
+                  </label>
+                  <input type="text" value="Prototyp 2026 UI/UX" class="modern-input" />
+                </div>
+
+                <div>
+                  <label class="text-xs font-semibold text-slate-300 block mb-1 uppercase tracking-wider">
+                    Konto autoryzowane
+                  </label>
+                  <div class="p-3 rounded-xl bg-white/[0.03] border border-white/10 flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center font-bold text-white text-xs">
+                      CC
+                    </div>
+                    <div class="text-xs truncate">
+                      <div class="font-semibold text-white">Ciaran Carty</div>
+                      <div class="text-slate-400 font-mono text-[10px]">ciarancarty@gmail.com</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Features Mini Grid -->
+            <div class="pt-6 border-t border-white/5 grid grid-cols-2 gap-3 text-xs text-slate-400">
+              <div class="p-3 rounded-xl bg-white/[0.02] border border-white/5">
+                <div class="text-indigo-400 font-bold mb-1">Bez limitu folderów</div>
+                <div class="text-[11px] text-slate-500">Obsługa zagnieżdżeń do 50 poziomów</div>
+              </div>
+              <div class="p-3 rounded-xl bg-white/[0.02] border border-white/5">
+                <div class="text-emerald-400 font-bold mb-1">Wznawianie sesji</div>
+                <div class="text-[11px] text-slate-500">Auto-resume po zerwaniu sieci</div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Right Column: Massive Modern Dropzone & Queue -->
+          <div class="lg:col-span-7 flex flex-col justify-between space-y-6">
+            
+            <div class="modern-dropzone p-8 text-center">
+              <div class="w-16 h-16 mx-auto mb-3 rounded-2xl bg-indigo-500/10 border border-indigo-400/20 flex items-center justify-center text-indigo-400">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+              </div>
+              <h3 class="text-lg font-bold text-white mb-1">Upuść pliki lub foldery tutaj</h3>
+              <p class="text-xs text-slate-400 mb-5">Obsługuje ZIP, wideo 4K, dokumenty, kody źródłowe oraz kompletne drzewa katalogów.</p>
+              
+              <div class="flex items-center justify-center gap-3">
+                <button onclick="simulateAddFiles()" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs transition shadow-lg shadow-indigo-600/30">
+                  Przeglądaj pliki
+                </button>
+                <button onclick="simulateAddFolder()" class="px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-slate-200 text-xs transition border border-white/10">
+                  Przeglądaj folder
+                </button>
+              </div>
+            </div>
+
+            <!-- Bottom Action -->
+            <div class="p-4 rounded-2xl bg-white/[0.02] border border-white/5 flex items-center justify-between">
+              <div>
+                <div class="text-xs font-semibold text-white">Gotowy do transferu</div>
+                <div class="text-[11px] text-slate-400">Szyfrowanie certyfikatem SHA-256</div>
+              </div>
+              <button onclick="simulateUploadAction()" class="px-6 py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-600 hover:opacity-95 text-white font-bold text-xs shadow-lg shadow-indigo-500/25 transition">
+                Rozpocznij transfer →
+              </button>
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================================
+         LAYOUT 3: BENTO DASHBOARD (Modern Grid Tiles)
+         ========================================================== -->
+    <section id="layout-bento-grid" class="w-full max-w-5xl hidden transition-all duration-500">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+        
+        <!-- Bento Card 1: Main Header & Identity -->
+        <div class="modern-glass-card p-6 md:col-span-2">
+          <div class="flex items-center justify-between mb-4">
+            <span class="px-3 py-1 rounded-full bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 text-xs font-medium">Bento Portal</span>
+            <span class="text-xs text-slate-400 font-mono">v2.4.0 High-Speed</span>
+          </div>
+          <h2 class="text-2xl md:text-3xl font-extrabold text-white mb-2">Google Drive Fast Ingestion</h2>
+          <p class="text-xs text-slate-400 mb-6">Wysyłaj bezpośrednio bez limitu rozmiaru pojedynczego pliku.</p>
+          
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="text-[11px] uppercase font-bold text-slate-400 block mb-1">Nazwa projektu</label>
+              <input type="text" value="Projekt Alpha 2026" class="modern-input text-xs" />
+            </div>
+            <div>
+              <label class="text-[11px] uppercase font-bold text-slate-400 block mb-1">Użytkownik</label>
+              <div class="p-2.5 rounded-xl bg-white/5 border border-white/10 flex items-center gap-2 text-xs">
+                <span class="w-6 h-6 rounded-md bg-indigo-500 flex items-center justify-center font-bold text-white text-[10px]">CC</span>
+                <span class="text-white font-medium truncate">ciarancarty@gmail.com</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bento Card 2: Drive Status Badge -->
+        <div class="modern-glass-card p-6 flex flex-col justify-between">
+          <div>
+            <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center mb-3">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"/></svg>
+            </div>
+            <h4 class="text-sm font-bold text-white mb-1">Połączenie z Google Drive</h4>
+            <p class="text-xs text-slate-400">Token autoryzacyjny aktywny. Posiadasz uprawnienia zapisu do wskazanego folderu.</p>
+          </div>
+          <div class="mt-4 pt-3 border-t border-white/10 flex items-center justify-between text-xs text-slate-400 font-mono">
+            <span>Quota: 2 TB</span>
+            <span class="text-emerald-400 font-semibold">Dostępne</span>
+          </div>
+        </div>
+
+        <!-- Bento Card 3: Dropzone (Spans 3 cols) -->
+        <div class="modern-glass-card p-8 md:col-span-3">
+          <div class="modern-dropzone p-8 text-center">
+            <svg class="w-12 h-12 text-indigo-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" strokeWidth="1.8" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+            <h3 class="text-lg font-bold text-white mb-1">Przeciągnij pliki do siatki Bento</h3>
+            <p class="text-xs text-slate-400 mb-4">Możesz też upuścić cały folder z setkami plików naraz.</p>
+            <div class="flex items-center justify-center gap-3">
+              <button onclick="simulateAddFiles()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-lg shadow-indigo-600/30 transition">
+                Wybierz pliki
+              </button>
+              <button onclick="simulateAddFolder()" class="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-semibold border border-white/10 transition">
+                Wybierz folder
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ============================================================
+       MODAL: PORÓWNANIE ZE STARYM WIDOKIEM
+       ============================================================ -->
+  <div id="compare-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden flex items-center justify-center p-4">
+    <div class="modern-glass-card max-w-5xl w-full p-6 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between pb-4 border-b border-white/10 mb-6">
+        <div>
+          <h3 class="text-lg font-bold text-white">Porównanie: Oryginalny wygląd vs Proponowany Mockup</h3>
+          <p class="text-xs text-slate-400">Oryginalny kod aplikacji nie został zmieniony ani nadpisany.</p>
+        </div>
+        <button onclick="toggleCompareModal()" class="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 text-slate-300 flex items-center justify-center text-lg">✕</button>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+        
+        <!-- Stary wygląd -->
+        <div class="space-y-3">
+          <div class="flex items-center justify-between text-xs font-semibold text-rose-300 px-1">
+            <span>Dotychczasowy design (Ze zrzutu ekranu)</span>
+            <span class="px-2 py-0.5 rounded bg-rose-500/20 border border-rose-500/30 text-[10px]">Stary styl</span>
+          </div>
+          <div class="rounded-2xl overflow-hidden border border-white/10 bg-slate-950 p-2 shadow-inner">
+            <img src="original_screenshot.jpg" alt="Stary wygląd" class="w-full rounded-xl object-contain max-h-[480px]">
+          </div>
+          <ul class="text-xs text-slate-400 space-y-1.5 list-disc list-inside">
+            <li>Ciemne, przytłaczające tło ze statycznymi ikonami z clipartów</li>
+            <li>Zwykły szary disabled input zamiast czytelnej karty użytkownika</li>
+            <li>Płaska, kanciasta hierarchia z niskim kontrastem</li>
+            <li>Brak wizualnego feedbacku i nowoczesnych mikro-animacji</li>
+          </ul>
+        </div>
+
+        <!-- Nowy mockup -->
+        <div class="space-y-3">
+          <div class="flex items-center justify-between text-xs font-semibold text-emerald-300 px-1">
+            <span>Nowy Proponowany Mockup (2026 UI)</span>
+            <span class="px-2 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/30 text-[10px]">Nowoczesny</span>
+          </div>
+          <div class="rounded-2xl overflow-hidden border border-emerald-500/20 bg-slate-900/60 p-4 space-y-4">
+            <div class="p-4 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-xs text-indigo-300">
+              <span class="font-bold">✨ Kluczowe ulepszenia wizualne:</span>
+              <p class="mt-1 text-slate-300">
+                1. <strong>Żywe, animowane tło:</strong> płynna zorza (aurora mesh) lub interaktywny spotlight z siatką technologiczną zamiast mdłych statycznych ikon.<br>
+                2. <strong>Czysty Glassmorphism:</strong> zaawansowany rozmyty frosted glass z wewnętrzną krawędzią światła i głębokimi cieniami.<br>
+                3. <strong>Karta profilu:</strong> informacja o zalogowanym użytkowniku ma postać estetycznej wizytówki z awatarem i statusem autoryzacji.<br>
+                4. <strong>Lepsza czytelność i call to action:</strong> dynamiczny dropzone reagujący na upuszczenie plików i stan wgrywania.
+              </p>
+            </div>
+            <div class="p-3 rounded-xl bg-white/5 border border-white/10 text-xs text-slate-300">
+              💡 <strong>Możesz swobodnie testować:</strong> zmieniaj motywy tła na górnym pasku, przełączaj układy (Centered / Split / Bento) i sprawdzaj stany (pusty, pliki, progres).
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="mt-6 pt-4 border-t border-white/10 flex justify-end">
+        <button onclick="toggleCompareModal()" class="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition">
+          Zamknij podgląd i wróć do mockupu
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       INTERACTIVE LOGIC & CONTROLLER SCRIPTS
+       ============================================================ -->
+  <script>
+    // State
+    let currentLayout = 'classic-centered';
+    let currentBg = 'aurora';
+    let currentSimState = 'empty';
+    let currentLang = 'pl';
+
+    // Translations Dictionary
+    const i18n = {
+      pl: {
+        badge: "Google Drive Direct Cloud Bridge",
+        title: "Send Files",
+        subtitle: "Prześlij pliki i kompletne foldery bezpiecznie do wskazanego katalogu Google Drive.",
+        projLabel: "Nazwa projektu",
+        required: "wymagane",
+        uploadingAs: "Przesyłasz jako:",
+        dropMain: "Przeciągnij i upuść pliki lub cały folder projektu tutaj",
+        dropHint: "Wszystkie podfoldery zostaną automatycznie odtworzone na Google Drive w niezmienionej strukturze.",
+        btnFiles: "Wybierz pliki",
+        btnFolder: "Wybierz folder",
+        filesReady: "Pliki gotowe do wysłania",
+        ctaEmpty: "Dodaj pliki, aby rozpocząć",
+        ctaReady: "Rozpocznij bezpieczne wysyłanie (3 pliki • 148.6 MB) →",
+        ctaUploading: "Wgrywanie plików...",
+      },
+      en: {
+        badge: "Google Drive Direct Cloud Bridge",
+        title: "Send Files",
+        subtitle: "Please select and upload your files or entire project folder securely to Google Drive.",
+        projLabel: "Project name",
+        required: "required",
+        uploadingAs: "Uploading as:",
+        dropMain: "Drag and drop files or an entire project folder here",
+        dropHint: "Nested subfolders are included automatically — select or drop the top-level folder.",
+        btnFiles: "Select Files",
+        btnFolder: "Select Folder",
+        filesReady: "Files ready for upload",
+        ctaEmpty: "Add files to start",
+        ctaReady: "Start Secure Upload (3 files • 148.6 MB) →",
+        ctaUploading: "Uploading files...",
+      }
+    };
+
+    // Layout Switcher
+    function switchLayout(layoutName) {
+      currentLayout = layoutName;
+      ['classic-centered', 'split-studio', 'bento-grid'].forEach(l => {
+        const el = document.getElementById('layout-' + l);
+        if (el) el.classList.toggle('hidden', l !== layoutName);
+      });
+
+      document.getElementById('btn-layout-classic').className = layoutName === 'classic-centered' 
+        ? 'layout-btn px-3 py-1.5 rounded-lg text-white font-medium bg-indigo-600 shadow-sm transition' 
+        : 'layout-btn px-3 py-1.5 rounded-lg text-slate-300 hover:text-white font-medium transition';
+      document.getElementById('btn-layout-split').className = layoutName === 'split-studio' 
+        ? 'layout-btn px-3 py-1.5 rounded-lg text-white font-medium bg-indigo-600 shadow-sm transition' 
+        : 'layout-btn px-3 py-1.5 rounded-lg text-slate-300 hover:text-white font-medium transition';
+      document.getElementById('btn-layout-bento').className = layoutName === 'bento-grid' 
+        ? 'layout-btn px-3 py-1.5 rounded-lg text-white font-medium bg-indigo-600 shadow-sm transition' 
+        : 'layout-btn px-3 py-1.5 rounded-lg text-slate-300 hover:text-white font-medium transition';
+    }
+
+    // Background Switcher
+    function switchBg(theme) {
+      currentBg = theme;
+      document.body.className = 'bg-theme-' + theme;
+      
+      const auroraEl = document.getElementById('auroraBg');
+      if (auroraEl) {
+        auroraEl.style.display = theme === 'aurora' ? 'block' : 'none';
+      }
+
+      ['aurora', 'grid', 'nebula', 'obsidian'].forEach(t => {
+        const btn = document.getElementById('bg-' + t);
+        if (btn) {
+          btn.className = t === theme 
+            ? 'bg-opt px-2.5 py-1.5 rounded-lg text-white bg-white/15 transition flex items-center gap-1.5' 
+            : 'bg-opt px-2.5 py-1.5 rounded-lg text-slate-400 hover:text-white transition flex items-center gap-1.5';
+        }
+      });
+    }
+
+    // Mouse movement spotlight for linear grid theme
+    window.addEventListener('mousemove', (e) => {
+      if (currentBg === 'grid') {
+        const x = `${(e.clientX / window.innerWidth) * 100}%`;
+        const y = `${(e.clientY / window.innerHeight) * 100}%`;
+        document.body.style.setProperty('--mouse-x', x);
+        document.body.style.setProperty('--mouse-y', y);
+      }
+    });
+
+    // Simulation States
+    function setSimState(state) {
+      currentSimState = state;
+      ['empty', 'files', 'uploading', 'success'].forEach(s => {
+        const btn = document.getElementById('state-' + s);
+        if (btn) {
+          btn.className = s === state 
+            ? 'sim-btn px-2.5 py-1.5 rounded-lg text-white bg-indigo-600 font-medium transition' 
+            : 'sim-btn px-2.5 py-1.5 rounded-lg text-slate-400 hover:text-white font-medium transition';
+        }
+      });
+
+      const queueSec = document.getElementById('file-queue-section');
+      const progressSec = document.getElementById('upload-progress-section');
+      const successSec = document.getElementById('upload-success-section');
+      const dropzone = document.getElementById('dropzone-area');
+      const ctaBtn = document.getElementById('main-cta-btn');
+
+      if (!queueSec || !progressSec || !successSec || !ctaBtn) return;
+
+      if (state === 'empty') {
+        queueSec.classList.add('hidden');
+        progressSec.classList.add('hidden');
+        successSec.classList.add('hidden');
+        dropzone.classList.remove('hidden');
+        ctaBtn.disabled = true;
+        ctaBtn.className = 'w-full py-3.5 px-6 rounded-xl font-semibold text-sm tracking-wide transition-all duration-300 flex items-center justify-center gap-2 bg-slate-800 text-slate-500 cursor-not-allowed border border-white/5';
+        ctaBtn.innerHTML = `<span>${i18n[currentLang].ctaEmpty}</span>`;
+      } else if (state === 'files') {
+        queueSec.classList.remove('hidden');
+        progressSec.classList.add('hidden');
+        successSec.classList.add('hidden');
+        dropzone.classList.remove('hidden');
+        ctaBtn.disabled = false;
+        ctaBtn.className = 'w-full py-3.5 px-6 rounded-xl font-semibold text-sm tracking-wide transition-all duration-300 flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-600 hover:opacity-95 text-white shadow-xl shadow-indigo-600/30 cursor-pointer active:scale-[0.99]';
+        ctaBtn.innerHTML = `<span>${i18n[currentLang].ctaReady}</span>`;
+      } else if (state === 'uploading') {
+        queueSec.classList.remove('hidden');
+        progressSec.classList.remove('hidden');
+        successSec.classList.add('hidden');
+        dropzone.classList.add('hidden');
+        ctaBtn.disabled = true;
+        ctaBtn.className = 'w-full py-3.5 px-6 rounded-xl font-semibold text-sm tracking-wide transition-all duration-300 flex items-center justify-center gap-2 bg-indigo-900/60 text-indigo-300 cursor-wait border border-indigo-500/20';
+        ctaBtn.innerHTML = `<svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg> <span>${i18n[currentLang].ctaUploading}</span>`;
+        animateProgress();
+      } else if (state === 'success') {
+        queueSec.classList.add('hidden');
+        progressSec.classList.add('hidden');
+        successSec.classList.remove('hidden');
+        dropzone.classList.add('hidden');
+        ctaBtn.disabled = true;
+        ctaBtn.className = 'hidden';
+      }
+    }
+
+    function animateProgress() {
+      const bar = document.getElementById('progress-bar-fill');
+      const text = document.getElementById('progress-percent');
+      if (!bar || !text) return;
+      let p = 15;
+      const interval = setInterval(() => {
+        p += 5;
+        if (p > 95) {
+          clearInterval(interval);
+          p = 95;
+        }
+        bar.style.width = p + '%';
+        text.innerText = p + '%';
+      }, 200);
+    }
+
+    function simulateAddFiles() {
+      const realInput = document.getElementById('real-file-input');
+      if (realInput) realInput.click();
+      else setSimState('files');
+    }
+
+    function simulateAddFolder() {
+      setSimState('files');
+    }
+
+    function handleRealFileSelect(input) {
+      if (input.files && input.files.length > 0) {
+        setSimState('files');
+        const countBadge = document.getElementById('files-count-badge');
+        const sizeBadge = document.getElementById('files-total-size');
+        if (countBadge) countBadge.innerText = `${input.files.length} plików`;
+        let total = 0;
+        for (let i = 0; i < input.files.length; i++) total += input.files[i].size;
+        if (sizeBadge) sizeBadge.innerText = `${(total / (1024*1024)).toFixed(1)} MB łącznie`;
+      }
+    }
+
+    function handleMainCtaClick() {
+      if (currentSimState === 'files') {
+        setSimState('uploading');
+        setTimeout(() => {
+          setSimState('success');
+        }, 3200);
+      }
+    }
+
+    function simulateUploadAction() {
+      switchLayout('classic-centered');
+      setSimState('uploading');
+      setTimeout(() => {
+        setSimState('success');
+      }, 3000);
+    }
+
+    // Modal
+    function toggleCompareModal() {
+      const modal = document.getElementById('compare-modal');
+      if (modal) modal.classList.toggle('hidden');
+    }
+
+    // Drag and Drop visual feedback
+    const dropzone = document.getElementById('dropzone-area');
+    if (dropzone) {
+      ['dragenter', 'dragover'].forEach(eventName => {
+        dropzone.addEventListener(eventName, (e) => {
+          e.preventDefault();
+          dropzone.classList.add('dragover');
+        }, false);
+      });
+      ['dragleave', 'drop'].forEach(eventName => {
+        dropzone.addEventListener(eventName, (e) => {
+          e.preventDefault();
+          dropzone.classList.remove('dragover');
+        }, false);
+      });
+      dropzone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        setSimState('files');
+      });
+    }
+
+    // Toggle Language
+    function toggleLang() {
+      currentLang = currentLang === 'pl' ? 'en' : 'pl';
+      document.getElementById('btn-lang').innerText = currentLang.toUpperCase();
+      applyLang();
+    }
+
+    function applyLang() {
+      const t = i18n[currentLang];
+      document.querySelectorAll('.t-badge').forEach(el => el.innerText = t.badge);
+      document.querySelectorAll('.t-title').forEach(el => el.innerText = t.title);
+      document.querySelectorAll('.t-subtitle').forEach(el => el.innerText = t.subtitle);
+      document.querySelectorAll('.t-proj-label').forEach(el => el.innerText = t.projLabel);
+      document.querySelectorAll('.t-required').forEach(el => el.innerText = t.required);
+      document.querySelectorAll('.t-uploading-as').forEach(el => el.innerText = t.uploadingAs);
+      document.querySelectorAll('.t-drop-main').forEach(el => el.innerText = t.dropMain);
+      document.querySelectorAll('.t-drop-hint').forEach(el => el.innerText = t.dropHint);
+      document.querySelectorAll('.t-btn-files').forEach(el => el.innerText = t.btnFiles);
+      document.querySelectorAll('.t-btn-folder').forEach(el => el.innerText = t.btnFolder);
+      document.querySelectorAll('.t-files-ready').forEach(el => el.innerText = t.filesReady);
+
+      const ctaBtn = document.getElementById('main-cta-btn');
+      if (ctaBtn) {
+        if (currentSimState === 'empty') ctaBtn.innerHTML = `<span>${t.ctaEmpty}</span>`;
+        else if (currentSimState === 'files') ctaBtn.innerHTML = `<span>${t.ctaReady}</span>`;
+      }
+    }
+
+    // Keyboard ESC to close modal
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        const modal = document.getElementById('compare-modal');
+        if (modal && !modal.classList.contains('hidden')) modal.classList.add('hidden');
+      }
+    });
+  </script>
+</body>
+</html>

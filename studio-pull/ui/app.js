@@ -30,6 +30,77 @@
   let currentFileIndex = 0;
   let currentFileTotal = 1;
 
+  try {
+    const saved = localStorage.getItem('studioConsole.destPath');
+    if (saved) destPath = saved;
+  } catch {
+    /* ignore */
+  }
+
+  function sessionSubfolderName(sessionName, folderId) {
+    const base = String(sessionName || folderId || 'session')
+      .replace(/[\/\\?%*:|"<>]/g, '-')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 120);
+    return base || folderId || 'session';
+  }
+
+  /** Path after pull (binding) — only this is allowed for Sync. */
+  function projectFolderPath(session) {
+    return session?.localPath || null;
+  }
+
+  /** Hint before pull: where files will land. */
+  function expectedPullPath(session) {
+    if (session?.localPath) return session.localPath;
+    if (!destPath || !session) return null;
+    const sub = sessionSubfolderName(session.name, session.folderId);
+    return `${destPath.replace(/\/$/, '')}/${sub}`;
+  }
+
+  function offerShareAfterSync(folderId, label, token) {
+    if (!flashEl || !folderId) return;
+    let actions = flashEl.querySelector('.flash-actions');
+    if (!actions) {
+      actions = document.createElement('div');
+      actions.className = 'flash-actions';
+      flashEl.appendChild(actions);
+    }
+    actions.innerHTML = '';
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn ok tiny';
+    btn.textContent = 'Wyślij link klientowi (kopiuj)';
+    btn.addEventListener('click', async () => {
+      try {
+        await shareSession(folderId, label, token);
+      } catch (err) {
+        notify(err.message || String(err), 'error');
+      }
+    });
+    actions.appendChild(btn);
+  }
+
+  const flashEl = $('flash');
+  let flashTimer = null;
+
+  /** In-app banner — Tauri often hides window.alert/confirm behind the window. */
+  function notify(message, kind = 'ok') {
+    const text = String(message || '');
+    if (flashEl) {
+      flashEl.textContent = text;
+      flashEl.className = `flash ${kind === 'error' ? 'error' : kind === 'warn' ? 'warn' : 'ok'}`;
+      flashEl.classList.remove('hidden');
+      clearTimeout(flashTimer);
+      flashTimer = setTimeout(() => flashEl.classList.add('hidden'), 8000);
+    }
+    appendLog(text);
+    if (kind === 'error') setStatus(text, 'error');
+    else if (kind === 'warn') setStatus(text, 'warn');
+    else setStatus(text, 'ok');
+  }
+
   function setStatus(text, cls) {
     const state = running
       ? 'running'
@@ -49,9 +120,9 @@
       return;
     }
     if (cls === 'ok' || cls === 'warn' || cls === 'error') {
-      statusTitleEl.textContent = text || (cls === 'ok' ? 'Gotowe' : 'Uwaga');
-      statusSubEl.textContent =
-        cls === 'ok' ? 'Pull zakończony.' : cls === 'error' ? 'Coś poszło nie tak.' : 'Sprawdź log.';
+      statusTitleEl.textContent =
+        cls === 'ok' ? 'Gotowe' : cls === 'error' ? 'Błąd' : 'Uwaga';
+      statusSubEl.textContent = text || '';
       return;
     }
     statusTitleEl.textContent = 'Gotowy';
@@ -79,9 +150,9 @@
     btnPreview.disabled = running || !previewSessionId;
 
     if (!running && !canStart) {
-      if (!selected.size && !destPath) setStatus('Zaznacz sesje i wybierz folder bazowy.');
+      if (!selected.size && !destPath) setStatus('Zaznacz sesje i folder projektu.');
       else if (!selected.size) setStatus('Zaznacz co najmniej jedną sesję.');
-      else if (!destPath) setStatus('Wybierz folder bazowy na dysku zewnętrznym.');
+      else if (!destPath) setStatus('Wybierz folder projektu na /Volumes/…');
     }
   }
 
@@ -98,10 +169,167 @@
     tab.addEventListener('click', () => switchTab(tab.dataset.tab));
   });
 
+  async function loadSharesByFolder() {
+    try {
+      const res = await fetch('/api/shares');
+      const data = await res.json();
+      if (!res.ok) return new Map();
+      const map = new Map();
+      for (const sh of data.shares || []) {
+        if (sh.revoked) continue;
+        map.set(sh.folderId, sh);
+      }
+      return map;
+    } catch {
+      return new Map();
+    }
+  }
+
+  async function pullFromClient(session) {
+    if (running || !session?.folderId) return;
+    if (!projectFolderPath(session)) {
+      notify('Najpierw Pobierz sesję (folder projektu).', 'warn');
+      return;
+    }
+    running = true;
+    updateStartEnabled();
+    logEl.textContent = '';
+    setProgress(0, 1);
+    notify('Pobieranie FromClient/…', 'ok');
+    try {
+      const res = await fetch('/api/pull-from-client', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ folderId: session.folderId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Pull FromClient failed');
+      setStatus(`FromClient → ${data.localPath}`);
+    } catch (err) {
+      running = false;
+      updateStartEnabled();
+      notify(err.message || String(err), 'error');
+    }
+  }
+
+  async function syncSession(session) {
+    if (running || !session?.folderId) return;
+    // Strict: only the folder recorded at pull — never invent parent/base path.
+    const pathHint = projectFolderPath(session);
+    if (!pathHint) {
+      notify(
+        'Najpierw Pobierz sesję (albo „Folder projektu”), żeby Sync wiedział który katalog.',
+        'warn'
+      );
+      return;
+    }
+    running = true;
+    updateStartEnabled();
+    logEl.textContent = '';
+    setProgress(0, 1);
+    notify(`Sync start ← ${pathHint}`, 'ok');
+    try {
+      const res = await fetch('/api/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          folderId: session.folderId,
+          localPath: pathHint,
+          label: session.name,
+          token: session.token || null,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Sync failed');
+      setStatus(`Sync → ${data.localPath}`);
+      session._pendingShareOffer = true;
+    } catch (err) {
+      running = false;
+      updateStartEnabled();
+      notify(err.message || String(err), 'error');
+    }
+  }
+
+  async function linkSessionFolder(session) {
+    const suggested =
+      projectFolderPath(session) || expectedPullPath(session) || destPath || '/Volumes';
+    try {
+      const pick = await fetch('/api/pick-dest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          defaultPath: suggested,
+          prompt: 'Folder projektu (ten sam co po Pobierz — download = sync)',
+        }),
+      });
+      const picked = await pick.json();
+      if (picked.cancelled) return;
+      if (!pick.ok) {
+        notify(picked.error || 'Folder odrzucony', 'error');
+        return;
+      }
+      const res = await fetch('/api/bindings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          folderId: session.folderId,
+          localPath: picked.path,
+          label: session.name,
+          token: session.token || null,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Link failed');
+      notify(`Wskazano sync ← ${data.binding.localPath}`, 'ok');
+      loadSessions();
+    } catch (err) {
+      notify(err.message || String(err), 'error');
+    }
+  }
+
+  async function shareSession(folderId, label, token) {
+    const res = await fetch('/api/shares', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ folderId, label, token }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Share failed');
+    const url = data.share?.url;
+    try {
+      await navigator.clipboard.writeText(url);
+      notify(`Share gotowy (skopiowany):\n${url}`, 'ok');
+    } catch {
+      notify(`Share gotowy — skopiuj: ${url}`, 'warn');
+    }
+    await loadSessions();
+  }
+
+  async function revokeShare(shareId) {
+    try {
+      notify('Unieważnianie share linku…', 'warn');
+      const res = await fetch(`/api/shares/${encodeURIComponent(shareId)}`, {
+        method: 'DELETE',
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        notify(data.error || 'Revoke failed', 'error');
+        return;
+      }
+      notify('Share unieważniony — stary link /share/… już nie działa.', 'ok');
+      await loadSessions();
+    } catch (err) {
+      notify(err.message || String(err), 'error');
+    }
+  }
+
   async function loadSessions() {
     sessionsEl.textContent = 'Ładowanie…';
     try {
-      const res = await fetch('/api/sessions');
+      const [res, sharesByFolder] = await Promise.all([
+        fetch('/api/sessions'),
+        loadSharesByFolder(),
+      ]);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Błąd listy sesji');
       const list = data.sessions || [];
@@ -126,8 +354,10 @@
             <span class="session-body">
               <span class="session-name"></span>
               <span class="session-meta"></span>
+              <span class="session-local"></span>
             </span>
           </label>
+          <div class="session-actions"></div>
           <label class="session-preview-pick" title="Podgląd tej sesji">
             <input type="radio" name="preview-session" value="" />
             Podgląd
@@ -146,7 +376,115 @@
           bits.push(whenRaw ? `aktywność ${new Date(whenRaw).toLocaleString()}` : '—');
         }
         if (s.token) bits.push(`token:${s.token}`);
+        if (s.lastSyncedAt) {
+          bits.push(`sync ${new Date(s.lastSyncedAt).toLocaleString()}`);
+        }
+        if (s.fromClientCount > 0) {
+          bits.push(`dogrywki:${s.fromClientCount}`);
+        }
+        if (s.syncStatus === 'out_of_sync') {
+          bits.push('OUT OF SYNC');
+        }
         row.querySelector('.session-meta').textContent = bits.join(' · ');
+        if (s.syncStatus === 'out_of_sync') {
+          row.classList.add('session-out-of-sync');
+        }
+
+        const syncPath = projectFolderPath(s);
+        const localEl = row.querySelector('.session-local');
+        if (syncPath) {
+          const syncLabel =
+            s.syncStatus === 'out_of_sync'
+              ? 'Out of sync'
+              : s.lastSyncedAt
+                ? `Zsynchronizowano ${new Date(s.lastSyncedAt).toLocaleString()}`
+                : 'Jeszcze nie sync';
+          localEl.textContent = `Folder projektu: ${syncPath} · ${syncLabel}`;
+          if (s.syncStatus === 'out_of_sync') localEl.style.color = 'var(--warn)';
+        } else {
+          const expected = expectedPullPath(s);
+          localEl.textContent = expected
+            ? `Po Pobierz: ${expected}`
+            : 'Ustaw folder projektu powyżej, potem Pobierz';
+          if (expected) localEl.style.color = 'var(--warn)';
+        }
+
+        const actions = row.querySelector('.session-actions');
+        const mkBtn = (text, cls, fn) => {
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.className = `btn ${cls} tiny`;
+          b.textContent = text;
+          b.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            fn();
+          });
+          actions.appendChild(b);
+          return b;
+        };
+
+        if (syncPath) {
+          const btnFolder = mkBtn('Zmień folder', 'ghost', () => linkSessionFolder(s));
+          btnFolder.title = 'Zmień folder projektu (download = sync)';
+        }
+
+        const syncBtn = mkBtn('Sync → Drive', 'ok', () => syncSession(s));
+        syncBtn.title = 'Tylko folder z Pobierz → Drive origin (bez zgadywania ścieżki)';
+        if (!syncPath) syncBtn.disabled = true;
+
+        if (
+          syncPath &&
+          (s.fromClientCount > 0 || s.missingLocalFromClient > 0)
+        ) {
+          const btnClient = mkBtn('Pobierz od klienta', 'ghost', () =>
+            pullFromClient(s)
+          );
+          btnClient.title = 'Ściągnij FromClient/ do folderu projektu';
+          if (s.syncStatus === 'out_of_sync' || s.missingLocalFromClient > 0) {
+            btnClient.classList.add('warn-accent');
+          }
+        }
+
+        const activeShare = sharesByFolder.get(s.folderId);
+        if (activeShare) {
+          const btnCopy = mkBtn('Kopiuj link', 'ghost', async () => {
+            try {
+              await navigator.clipboard.writeText(activeShare.url);
+              notify(`Skopiowano link klienta:\n${activeShare.url}`, 'ok');
+            } catch {
+              notify(`Skopiuj ręcznie: ${activeShare.url}`, 'warn');
+            }
+          });
+          btnCopy.title = 'Skopiuj /share/… dla klienta';
+
+          const btnRev = mkBtn('Cofnij link', 'danger', () => {
+            if (btnRev.dataset.armed === '1') {
+              btnRev.dataset.armed = '';
+              revokeShare(activeShare.id);
+              return;
+            }
+            btnRev.dataset.armed = '1';
+            btnRev.textContent = 'Na pewno? Jeszcze raz';
+            notify('Kliknij jeszcze raz, żeby unieważnić link klienta.', 'warn');
+            setTimeout(() => {
+              if (btnRev.dataset.armed === '1') {
+                btnRev.dataset.armed = '';
+                btnRev.textContent = 'Cofnij link';
+              }
+            }, 5000);
+          });
+          btnRev.title = 'Unieważnia tylko link share (folder i token zostają)';
+        } else {
+          const btnShare = mkBtn('Wyślij link', 'ghost', async () => {
+            try {
+              await shareSession(s.folderId, s.name, s.token);
+            } catch (err) {
+              notify(err.message || String(err), 'error');
+            }
+          });
+          btnShare.title = 'Utwórz i skopiuj link dla klienta';
+        }
 
         const cb = row.querySelector('input[type=checkbox]');
         cb.addEventListener('change', () => {
@@ -230,7 +568,14 @@
     destErrorEl.classList.add('hidden');
     setStatus('Otwieranie dialogu folderu…');
     try {
-      const res = await fetch('/api/pick-dest', { method: 'POST' });
+      const res = await fetch('/api/pick-dest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          defaultPath: destPath || '/Volumes',
+          prompt: 'Wskaż folder bazowy na dysku zewnętrznym (download / sync)',
+        }),
+      });
       const data = await res.json();
       if (data.cancelled) {
         setStatus('Anulowano wybór folderu.');
@@ -239,14 +584,23 @@
       if (!res.ok) {
         destErrorEl.textContent = data.error || 'Nieprawidłowy folder';
         destErrorEl.classList.remove('hidden');
-        setStatus('Folder odrzucony (safety).', 'error');
+        setStatus('Wybierz folder na /Volumes/… (nie Documents).', 'error');
         return;
       }
       destPath = String(data.path || '').trim();
       destEl.value = destPath;
+      try {
+        localStorage.setItem('studioConsole.destPath', destPath);
+      } catch {
+        /* ignore */
+      }
+      destErrorEl.classList.add('hidden');
       setStatus(`Baza: ${destPath}`);
       updateStartEnabled();
+      loadSessions();
     } catch (err) {
+      destErrorEl.textContent = err.message || String(err);
+      destErrorEl.classList.remove('hidden');
       setStatus(err.message || String(err), 'error');
     }
   }
@@ -254,8 +608,18 @@
   function onDestTyped() {
     destPath = destEl.value.trim();
     destErrorEl.classList.add('hidden');
+    try {
+      if (destPath) localStorage.setItem('studioConsole.destPath', destPath);
+    } catch {
+      /* ignore */
+    }
     updateStartEnabled();
     if (destPath) setStatus(`Baza: ${destPath}`);
+  }
+
+  function onDestCommitted() {
+    onDestTyped();
+    loadSessions();
   }
 
   function defaultFreshSinceLocal() {
@@ -326,6 +690,14 @@
         appendLog(`Kolejka: ${event.sessionCount} sesji → ${event.dest}`);
         if (event.since) appendLog(`Filtr świeżych: createdTime ≥ ${event.since}`);
         break;
+      case 'sync_start':
+        appendLog(`── Sync → Drive: ${event.label || event.folderId}`);
+        appendLog(`   ← ${event.dest}`);
+        setStatus(`Sync: ${event.label || event.folderId}`);
+        break;
+      case 'log':
+        if (event.message) appendLog(event.message);
+        break;
       case 'session_start':
         appendLog(`── Sesja ${event.index}/${event.total}: ${event.name}`);
         appendLog(`   → ${event.dest}`);
@@ -335,20 +707,27 @@
         appendLog(`Listing ${event.folderId}`);
         break;
       case 'listing_done':
-        appendLog(
-          event.filtered
-            ? `Plików po filtrze: ${event.fileCount}/${event.listedTotal || '?'} (od ${event.since || '?'}), ${event.totalLabel}`
-            : `Plików: ${event.fileCount}, ${event.totalLabel}`
-        );
+        if (event.mode === 'sync') {
+          appendLog(
+            `Do wysłania: ${event.fileCount}/${event.listedTotal || '?'} (skip ${event.skipCount || 0}), ${event.totalLabel}`
+          );
+        } else {
+          appendLog(
+            event.filtered
+              ? `Plików po filtrze: ${event.fileCount}/${event.listedTotal || '?'} (od ${event.since || '?'}), ${event.totalLabel}`
+              : `Plików: ${event.fileCount}, ${event.totalLabel}`
+          );
+        }
         setProgress(0, event.fileCount || 1);
         break;
       case 'skip':
         appendLog(`[${event.index}/${event.total}] skip ${event.relativePath}`);
-        setProgress(event.index, event.total);
+        if (event.index) setProgress(event.index, event.total);
         break;
       case 'progress':
         if (event.phase === 'start') {
-          appendLog(`[${event.index}/${event.total}] get ${event.relativePath}`);
+          const verb = event.mode === 'sync' ? (event.action === 'replace' ? 'put' : 'new') : 'get';
+          appendLog(`[${event.index}/${event.total}] ${verb} ${event.relativePath}`);
           setStatus(
             `${event.sessionName || ''} [${event.index}/${event.total}] ${event.relativePath}`
           );
@@ -370,6 +749,7 @@
             ? `Sesja pusta: ${event.name}`
             : `Sesja OK: ${event.name} (dl ${event.downloaded}, skip ${event.skipped}, fail ${event.failed})`
         );
+        if (event.localPath) appendLog(`   powiązano → ${event.localPath}`);
         break;
       case 'cancelled':
         appendLog('Anulowano.');
@@ -379,10 +759,35 @@
         running = false;
         updateStartEnabled();
         {
-          const line = `Gotowe — dl ${event.downloaded}, skip ${event.skipped}, fail ${event.failed}, ${event.bytesLabel}`;
+          let line;
+          if (event.mode === 'sync') {
+            line = `Sync OK — up ${event.uploaded}, skip ${event.skipped}, fail ${event.failed}, ${event.bytesLabel}`;
+          } else if (event.mode === 'fromClient') {
+            line = `FromClient OK — dl ${event.downloaded}, skip ${event.skipped}, fail ${event.failed}, ${event.bytesLabel}`;
+          } else {
+            line = `Pobrano — dl ${event.downloaded}, skip ${event.skipped}, fail ${event.failed}, ${event.bytesLabel}`;
+          }
           appendLog(line);
           setStatus(line, event.failed ? 'warn' : 'ok');
           setProgress(1, 1);
+          if (event.mode === 'fromClient' && !event.failed) {
+            notify('Dogrywki klienta w folderze projektu (FromClient/).', 'ok');
+          }
+          if (event.mode === 'sync' && !event.failed && event.folderId) {
+            notify(
+              'Sync gotowy. Następny krok: wyślij link klientowi.',
+              event.failed ? 'warn' : 'ok'
+            );
+            const sess = [...sessionMap.values()].find(
+              (x) => x.folderId === event.folderId
+            );
+            offerShareAfterSync(
+              event.folderId,
+              sess?.name || event.label || null,
+              sess?.token || null
+            );
+          }
+          loadSessions();
         }
         break;
       case 'fatal':
@@ -445,25 +850,26 @@
       const table = document.createElement('table');
       table.className = 'token-table';
       table.innerHTML =
-        '<thead><tr><th>Client</th><th>Token</th><th>Type</th><th>Locale</th><th>Status</th><th>Expires</th><th>Link</th><th></th></tr></thead>';
+        '<thead><tr><th>Client</th><th>Email</th><th>Token</th><th>Type</th><th>Locale</th><th>Status</th><th>Expires</th><th>Link</th><th></th></tr></thead>';
       const tbody = document.createElement('tbody');
       for (const t of list) {
         const tr = document.createElement('tr');
         if (t.status !== 'active') tr.className = 'inactive';
         tr.innerHTML = `
-          <td></td><td><code class="token-code"></code></td><td></td><td></td>
+          <td></td><td></td><td><code class="token-code"></code></td><td></td><td></td>
           <td><span class="${statusBadgeClass(t.status)}"></span></td>
           <td class="token-cell-date"></td>
           <td class="token-actions"></td>
           <td class="token-actions"></td>`;
         tr.cells[0].textContent = t.clientName;
-        tr.cells[1].querySelector('code').textContent = t.token;
-        tr.cells[2].textContent = t.type === 'one-time' ? 'One-time' : 'Retainer';
-        tr.cells[3].textContent = (t.locale || 'en').toUpperCase();
-        tr.cells[4].querySelector('span').textContent = t.status;
-        tr.cells[5].textContent = formatExpires(t.expiresAt);
-        const linkCell = tr.cells[6];
-        const actions = tr.cells[7];
+        tr.cells[1].textContent = t.prefillEmail || '—';
+        tr.cells[2].querySelector('code').textContent = t.token;
+        tr.cells[3].textContent = t.type === 'one-time' ? 'One-time' : 'Retainer';
+        tr.cells[4].textContent = (t.locale || 'en').toUpperCase();
+        tr.cells[5].querySelector('span').textContent = t.status;
+        tr.cells[6].textContent = formatExpires(t.expiresAt);
+        const linkCell = tr.cells[7];
+        const actions = tr.cells[8];
 
         if (t.status === 'active') {
           const copyBtn = document.createElement('button');
@@ -482,6 +888,36 @@
             }
           });
           linkCell.appendChild(copyBtn);
+        }
+
+        if (t.status === 'active' && !t.prefillEmail) {
+          const setEmail = document.createElement('button');
+          setEmail.type = 'button';
+          setEmail.className = 'btn ghost tiny';
+          setEmail.textContent = 'Set email';
+          setEmail.addEventListener('click', async () => {
+            const email = window.prompt(
+              `Client email for „${t.token}” (locked on upload form):`,
+              ''
+            );
+            if (email == null) return;
+            const res = await fetch(`/api/tokens/${encodeURIComponent(t.id)}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                action: 'identity',
+                clientName: t.clientName,
+                clientEmail: email.trim(),
+              }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+              window.alert(data.error || 'Set email failed');
+              return;
+            }
+            loadTokens();
+          });
+          actions.appendChild(setEmail);
         }
 
         if (t.status === 'active') {
@@ -589,11 +1025,13 @@
 
   btnRefresh.addEventListener('click', loadSessions);
   btnPreview.addEventListener('click', loadPreview);
+  if (destPath) destEl.value = destPath;
+
   btnPick.addEventListener('click', pickDest);
   btnStart.addEventListener('click', startPull);
   btnCancel.addEventListener('click', cancelPull);
   destEl.addEventListener('input', onDestTyped);
-  destEl.addEventListener('change', onDestTyped);
+  destEl.addEventListener('change', onDestCommitted);
   $('btn-tokens-refresh').addEventListener('click', loadTokens);
 
   updateStartEnabled();

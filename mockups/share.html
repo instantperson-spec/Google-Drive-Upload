@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portal Projektu — Nowoczesny Mockup UI (2026)</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    :root {
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "SF Pro Display", Inter, Helvetica, Arial, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background-color: #07090e;
+      color: #f1f5f9;
+      min-height: 100vh;
+      overflow-x: hidden;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      transition: background 0.6s ease;
+    }
+
+    /* THEMES */
+    .bg-theme-aurora {
+      background: radial-gradient(circle at 50% 0%, #0d1224 0%, #06080e 100%);
+    }
+
+    .aurora-container {
+      position: fixed;
+      inset: 0;
+      overflow: hidden;
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.85;
+      transition: opacity 0.5s ease;
+    }
+
+    .aurora-blob {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(90px);
+      mix-blend-mode: screen;
+      animation: floatAurora 18s ease-in-out infinite alternate;
+    }
+
+    .aurora-blob-1 {
+      width: 550px;
+      height: 550px;
+      background: radial-gradient(circle, rgba(99, 102, 241, 0.45) 0%, rgba(99, 102, 241, 0) 70%);
+      top: -100px;
+      left: 15%;
+      animation-duration: 16s;
+    }
+
+    .aurora-blob-2 {
+      width: 650px;
+      height: 650px;
+      background: radial-gradient(circle, rgba(168, 85, 247, 0.35) 0%, rgba(168, 85, 247, 0) 70%);
+      top: 15%;
+      right: 10%;
+      animation-duration: 22s;
+      animation-delay: -5s;
+    }
+
+    .aurora-blob-3 {
+      width: 480px;
+      height: 480px;
+      background: radial-gradient(circle, rgba(6, 182, 212, 0.25) 0%, rgba(6, 182, 212, 0) 70%);
+      bottom: -100px;
+      left: 30%;
+      animation-duration: 20s;
+      animation-delay: -10s;
+    }
+
+    @keyframes floatAurora {
+      0% { transform: translate(0, 0) scale(1) rotate(0deg); }
+      50% { transform: translate(60px, 40px) scale(1.15) rotate(45deg); }
+      100% { transform: translate(-40px, 70px) scale(0.95) rotate(-30deg); }
+    }
+
+    .bg-theme-grid {
+      background-color: #08090d;
+      background-image: 
+        radial-gradient(circle at var(--mouse-x, 50%) var(--mouse-y, 40%), rgba(99, 102, 241, 0.18) 0%, transparent 600px),
+        linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+      background-size: 100% 100%, 36px 36px, 36px 36px;
+    }
+
+    .bg-theme-nebula {
+      background: 
+        radial-gradient(circle at 20% 30%, rgba(139, 92, 246, 0.22) 0%, transparent 45%),
+        radial-gradient(circle at 80% 70%, rgba(236, 72, 153, 0.18) 0%, transparent 50%),
+        radial-gradient(circle at 50% 50%, rgba(14, 165, 233, 0.15) 0%, transparent 55%),
+        #05060a;
+    }
+
+    .bg-theme-obsidian {
+      background: #090a0f;
+      background-image: radial-gradient(circle at 50% -20%, rgba(255, 255, 255, 0.06) 0%, transparent 65%);
+    }
+
+    .noise-overlay {
+      position: fixed;
+      inset: 0;
+      opacity: 0.025;
+      pointer-events: none;
+      z-index: 1;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+    }
+
+    /* SURFACES */
+    .modern-glass-card {
+      background: rgba(15, 20, 32, 0.72);
+      backdrop-filter: blur(26px) saturate(190%);
+      -webkit-backdrop-filter: blur(26px) saturate(190%);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 
+        0 24px 64px -12px rgba(0, 0, 0, 0.65),
+        0 0 0 1px rgba(255, 255, 255, 0.04),
+        inset 0 1px 0 0 rgba(255, 255, 255, 0.15);
+      border-radius: 28px;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .modern-glass-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 10%;
+      right: 10%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), rgba(99, 102, 241, 0.6), rgba(255, 255, 255, 0.4), transparent);
+      pointer-events: none;
+    }
+
+    .stat-kpi-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 18px;
+      padding: 1rem 0.8rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      position: relative;
+    }
+
+    .stat-kpi-card:hover {
+      background: rgba(255, 255, 255, 0.06);
+      border-color: rgba(99, 102, 241, 0.4);
+      transform: translateY(-2px);
+    }
+
+    .stat-kpi-card.active {
+      background: rgba(99, 102, 241, 0.15);
+      border-color: rgba(129, 140, 248, 0.7);
+      box-shadow: 0 0 25px -4px rgba(99, 102, 241, 0.35);
+    }
+
+    .file-item-card {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 16px;
+      padding: 0.85rem 1.1rem;
+      transition: all 0.2s ease;
+    }
+
+    .file-item-card:hover {
+      background: rgba(255, 255, 255, 0.045);
+      border-color: rgba(255, 255, 255, 0.14);
+      transform: translateX(2px);
+    }
+
+    .pulse-dot-green {
+      display: inline-block;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #10b981;
+      box-shadow: 0 0 8px #10b981;
+      animation: pulseAnim 2s infinite;
+    }
+
+    @keyframes pulseAnim {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+  </style>
+</head>
+<body class="bg-theme-aurora">
+
+  <!-- Ambient background elements -->
+  <div class="aurora-container" id="auroraBg">
+    <div class="aurora-blob aurora-blob-1"></div>
+    <div class="aurora-blob aurora-blob-2"></div>
+    <div class="aurora-blob aurora-blob-3"></div>
+  </div>
+  <div class="noise-overlay"></div>
+
+  <!-- ============================================================
+       TOP NAVIGATION & CONTROLLER
+       ============================================================ -->
+  <header class="sticky top-0 z-50 px-4 py-2.5 border-b border-white/10 bg-black/50 backdrop-blur-xl">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3 text-xs">
+      
+      <!-- Brand & Navigation Between Screens -->
+      <div class="flex items-center gap-3">
+        <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center font-bold text-white shadow-lg shadow-indigo-500/30">
+          ▲
+        </div>
+        
+        <!-- Screen Switcher Tabs -->
+        <div class="flex items-center bg-white/5 p-1 rounded-xl border border-white/10">
+          <a href="index.html" class="px-3 py-1 rounded-lg text-slate-400 hover:text-white transition flex items-center gap-1.5">
+            <span>📤 1. Send Files</span>
+          </a>
+          <button class="px-3 py-1 rounded-lg text-white font-medium bg-indigo-600 shadow-sm flex items-center gap-1.5">
+            <span>📦 2. Portal Projektu (Share)</span>
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Controls Group -->
+      <div class="flex flex-wrap items-center gap-2">
+        <!-- Layout Switcher -->
+        <div class="flex items-center bg-white/5 p-1 rounded-xl border border-white/10">
+          <button onclick="switchLayout('centered')" id="btn-layout-centered" class="px-2.5 py-1 rounded-lg text-white font-medium bg-indigo-600 shadow-sm transition">
+            Centered Glass
+          </button>
+          <button onclick="switchLayout('split')" id="btn-layout-split" class="px-2.5 py-1 rounded-lg text-slate-400 hover:text-white font-medium transition">
+            Split Studio Pro
+          </button>
+          <button onclick="switchLayout('media')" id="btn-layout-media" class="px-2.5 py-1 rounded-lg text-slate-400 hover:text-white font-medium transition">
+            Media & Audio Deck
+          </button>
+        </div>
+
+        <!-- Background Themes -->
+        <div class="flex items-center bg-white/5 p-1 rounded-xl border border-white/10">
+          <button onclick="switchBg('aurora')" id="bg-aurora" class="px-2 py-1 rounded-lg text-white bg-white/15 transition flex items-center gap-1">
+            <span class="w-2 h-2 rounded-full bg-indigo-400"></span> Aurora
+          </button>
+          <button onclick="switchBg('grid')" id="bg-grid" class="px-2 py-1 rounded-lg text-slate-400 hover:text-white transition flex items-center gap-1">
+            <span class="w-2 h-2 rounded-full bg-cyan-400"></span> Grid
+          </button>
+          <button onclick="switchBg('nebula')" id="bg-nebula" class="px-2 py-1 rounded-lg text-slate-400 hover:text-white transition flex items-center gap-1">
+            <span class="w-2 h-2 rounded-full bg-purple-400"></span> Nebula
+          </button>
+          <button onclick="switchBg('obsidian')" id="bg-obsidian" class="px-2 py-1 rounded-lg text-slate-400 hover:text-white transition flex items-center gap-1">
+            <span class="w-2 h-2 rounded-full bg-zinc-400"></span> Obsidian
+          </button>
+        </div>
+
+        <!-- Compare Modal Toggle -->
+        <button onclick="toggleCompareModal()" class="px-3 py-1 rounded-xl bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 border border-amber-500/30 font-medium transition flex items-center gap-1.5">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" strokeWidth="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+          Porównaj z oryginałem
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- ============================================================
+       MAIN CONTENT
+       ============================================================ -->
+  <main class="relative z-10 flex-1 flex items-center justify-center p-4 md:p-8">
+
+    <!-- ==========================================================
+         LAYOUT 1: NOWOCZESNY CENTERED GLASS (Direct Upgrade)
+         ========================================================== -->
+    <section id="layout-centered" class="w-full max-w-2xl transition-all duration-500">
+      <div class="modern-glass-card p-6 md:p-9 shadow-2xl">
+        
+        <!-- Eyebrow Badge -->
+        <div class="flex items-center justify-between mb-4">
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-semibold tracking-wider uppercase">
+            <span class="pulse-dot-green"></span>
+            Portal Projektu
+          </div>
+          <span class="text-xs text-slate-500 font-mono flex items-center gap-1">
+            <svg class="w-3.5 h-3.5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            Aktywna sesja
+          </span>
+        </div>
+
+        <!-- Title & Subtitle -->
+        <div class="mb-6">
+          <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight bg-gradient-to-r from-white via-slate-100 to-indigo-200 bg-clip-text text-transparent break-words">
+            nortku - Jacek - 2026-11-14 08:55
+          </h1>
+          <p class="text-slate-400 text-xs mt-2 leading-relaxed">
+            Pobierz materiały od studia albo dograj własne pliki. Po kliknięciu „Pobierz” zobaczysz pasek postępu — pakowanie ZIP może potrwać.
+          </p>
+        </div>
+
+        <!-- Interactive KPI Stats Grid (Filters on Click!) -->
+        <div class="grid grid-cols-4 gap-2.5 mb-6" id="stats-container">
+          <div onclick="filterFiles('all')" id="stat-all" class="stat-kpi-card active">
+            <div class="text-2xl font-extrabold text-white font-mono" id="count-all">6</div>
+            <div class="text-[10px] uppercase font-bold tracking-wider text-slate-400 mt-0.5">Wszystkie</div>
+          </div>
+          <div onclick="filterFiles('original')" id="stat-original" class="stat-kpi-card">
+            <div class="text-2xl font-extrabold text-blue-400 font-mono" id="count-original">4</div>
+            <div class="text-[10px] uppercase font-bold tracking-wider text-slate-400 mt-0.5">Twoje</div>
+          </div>
+          <div onclick="filterFiles('studio')" id="stat-studio" class="stat-kpi-card">
+            <div class="text-2xl font-extrabold text-emerald-400 font-mono" id="count-studio">2</div>
+            <div class="text-[10px] uppercase font-bold tracking-wider text-slate-400 mt-0.5">Od Studia</div>
+          </div>
+          <div onclick="filterFiles('client')" id="stat-client" class="stat-kpi-card">
+            <div class="text-2xl font-extrabold text-cyan-400 font-mono" id="count-client">0</div>
+            <div class="text-[10px] uppercase font-bold tracking-wider text-slate-400 mt-0.5">Dogrywki</div>
+          </div>
+        </div>
+
+        <!-- Live Download / Packing Progress Banner (Hidden by default) -->
+        <div id="zip-progress-panel" class="hidden mb-6 p-4 rounded-2xl bg-indigo-950/40 border border-indigo-500/30 space-y-2.5">
+          <div class="flex items-center justify-between text-xs">
+            <span class="font-semibold text-indigo-200 flex items-center gap-2" id="zip-progress-title">
+              <svg class="w-4 h-4 animate-spin text-indigo-400" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
+              Pakowanie archiwum ZIP...
+            </span>
+            <span class="font-mono text-indigo-300 font-bold" id="zip-progress-pct">45%</span>
+          </div>
+          <div class="w-full h-2 rounded-full bg-white/10 overflow-hidden">
+            <div id="zip-bar-fill" class="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-emerald-400 rounded-full transition-all duration-200" style="width: 45%;"></div>
+          </div>
+          <div class="text-[11px] text-slate-400 font-mono" id="zip-progress-detail">
+            Kompresja plików — nie zamykaj karty...
+          </div>
+        </div>
+
+        <!-- Modern Dropzone ("Dograj nowe pliki") -->
+        <div id="dropzone-area" class="border-1.5 border-dashed border-white/15 hover:border-indigo-400/80 rounded-2xl p-5 mb-6 text-center bg-white/[0.02] hover:bg-indigo-500/[0.04] transition group cursor-pointer" onclick="simulateClientUpload()">
+          <div class="flex items-center justify-center gap-2 mb-1">
+            <svg class="w-5 h-5 text-indigo-400 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+            <h3 class="text-sm font-bold text-white">Dograj nowe pliki</h3>
+          </div>
+          <p class="text-xs text-slate-400 mb-3">
+            Upuść tu pliki albo wybierz z dysku. Trafią bezpośrednio do studia (FromClient).
+          </p>
+          <button type="button" class="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white font-medium text-xs border border-white/10 shadow-sm transition">
+            Wybierz pliki...
+          </button>
+        </div>
+
+        <!-- Hero Section: Wszystkie pliki (6) + Pobierz Wszystko Button -->
+        <div id="section-all" class="p-4 rounded-2xl bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-transparent border border-indigo-500/20 mb-6 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <div class="flex items-center gap-2">
+              <h2 class="text-base font-bold text-white">Wszystkie pliki</h2>
+              <span class="px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 text-xs font-mono font-bold" id="badge-all-count">6</span>
+            </div>
+            <p class="text-xs text-slate-400 mt-0.5">Cały projekt w jednym ZIP — oryginały, studio i dogrywki.</p>
+          </div>
+          <button onclick="startDownloadSim('Wszystkie pliki (cały projekt)', 6)" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-semibold text-xs shadow-lg shadow-indigo-500/30 transition flex items-center gap-2 active:scale-95">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+            Pobierz wszystko (ZIP)
+          </button>
+        </div>
+
+        <!-- Section: Od Studia (2) -->
+        <div id="section-studio" class="mb-6 space-y-3">
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="flex items-center gap-2">
+                <h3 class="text-sm font-bold text-white">Od studia</h3>
+                <span class="px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-300 text-[11px] font-mono">2</span>
+              </div>
+              <p class="text-[11px] text-slate-400">Nowe i zmienione przez studio materiały gotowe do odbioru.</p>
+            </div>
+            <button onclick="startDownloadSim('Pliki od studia', 2)" class="px-3.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-slate-200 hover:text-white font-medium text-xs border border-white/10 transition flex items-center gap-1.5">
+              <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+              Pobierz od studia
+            </button>
+          </div>
+
+          <div class="space-y-2">
+            <!-- Studio File 1 -->
+            <div class="file-item-card flex items-center justify-between gap-3 text-xs">
+              <div class="flex items-center gap-3 min-w-0">
+                <span class="w-8 h-8 rounded-lg bg-pink-500/20 text-pink-400 font-mono text-[10px] font-bold flex items-center justify-center flex-shrink-0">PNG</span>
+                <div class="truncate">
+                  <div class="text-white font-semibold truncate">Screenshot 2026-11-14 at 09.20.24.png</div>
+                  <div class="text-[10px] text-slate-500 truncate font-mono">📁 emotional-sadness-piano-2026-05-07-21-00-22-utc/</div>
+                </div>
+              </div>
+              <div class="flex flex-col items-end flex-shrink-0 gap-1">
+                <span class="px-2 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-[10px] text-emerald-300 font-bold flex items-center gap-1">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Nowe od studia
+                </span>
+                <span class="text-slate-400 font-mono text-[11px]">8.9 KB</span>
+              </div>
+            </div>
+
+            <!-- Studio File 2 -->
+            <div class="file-item-card flex items-center justify-between gap-3 text-xs">
+              <div class="flex items-center gap-3 min-w-0">
+                <span class="w-8 h-8 rounded-lg bg-indigo-500/20 text-indigo-400 font-mono text-[10px] font-bold flex items-center justify-center flex-shrink-0">MOV</span>
+                <div class="truncate">
+                  <div class="text-white font-semibold truncate">IMG_8842.MOV</div>
+                  <div class="text-[10px] text-slate-500 truncate font-mono">📁 emotional-sadness-piano-2026-05-07-21-00-22-utc/</div>
+                </div>
+              </div>
+              <div class="flex flex-col items-end flex-shrink-0 gap-1">
+                <span class="px-2 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-[10px] text-emerald-300 font-bold flex items-center gap-1">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Nowe od studia
+                </span>
+                <span class="text-slate-400 font-mono text-[11px]">171.3 MB</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section: Twoje pliki (oryginał) (4) -->
+        <div id="section-original" class="space-y-3">
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="flex items-center gap-2">
+                <h3 class="text-sm font-bold text-white">Twoje pliki (oryginał)</h3>
+                <span class="px-1.5 py-0.2 rounded-full bg-blue-500/20 text-blue-300 text-[11px] font-mono">4</span>
+              </div>
+              <p class="text-[11px] text-slate-400">To, co wysłałeś na początku sesji projektu.</p>
+            </div>
+            <button onclick="startDownloadSim('Oryginalne pliki', 4)" class="px-3.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-slate-200 hover:text-white font-medium text-xs border border-white/10 transition flex items-center gap-1.5">
+              <svg class="w-3.5 h-3.5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+              Pobierz oryginały
+            </button>
+          </div>
+
+          <div class="space-y-2">
+            <!-- File 1 -->
+            <div class="file-item-card flex items-center justify-between gap-3 text-xs">
+              <div class="flex items-center gap-3 min-w-0">
+                <span class="w-8 h-8 rounded-lg bg-cyan-500/20 text-cyan-400 font-mono text-[10px] font-bold flex items-center justify-center flex-shrink-0">MP3</span>
+                <div class="truncate">
+                  <div class="text-white font-semibold truncate">main version.mp3</div>
+                  <div class="text-[10px] text-slate-500 truncate font-mono">📁 emotional-sadness-piano-2026-05-07-21-00-22-utc/</div>
+                </div>
+              </div>
+              <div class="flex flex-col items-end flex-shrink-0 gap-1">
+                <span class="px-2 py-0.5 rounded-md bg-slate-800 border border-slate-700 text-[10px] text-slate-300 font-semibold">
+                  Twoje (oryginał)
+                </span>
+                <span class="text-slate-400 font-mono text-[11px]">3.2 MB</span>
+              </div>
+            </div>
+
+            <!-- File 2 -->
+            <div class="file-item-card flex items-center justify-between gap-3 text-xs">
+              <div class="flex items-center gap-3 min-w-0">
+                <span class="w-8 h-8 rounded-lg bg-violet-500/20 text-violet-400 font-mono text-[10px] font-bold flex items-center justify-center flex-shrink-0">WAV</span>
+                <div class="truncate">
+                  <div class="text-white font-semibold truncate">solo piano.wav</div>
+                  <div class="text-[10px] text-slate-500 truncate font-mono">📁 emotional-sadness-piano-2026-05-07-21-00-22-utc/</div>
+                </div>
+              </div>
+              <div class="flex flex-col items-end flex-shrink-0 gap-1">
+                <span class="px-2 py-0.5 rounded-md bg-slate-800 border border-slate-700 text-[10px] text-slate-300 font-semibold">
+                  Twoje (oryginał)
+                </span>
+                <span class="text-slate-400 font-mono text-[11px]">14.1 MB</span>
+              </div>
+            </div>
+
+            <!-- File 3 -->
+            <div class="file-item-card flex items-center justify-between gap-3 text-xs">
+              <div class="flex items-center gap-3 min-w-0">
+                <span class="w-8 h-8 rounded-lg bg-violet-500/20 text-violet-400 font-mono text-[10px] font-bold flex items-center justify-center flex-shrink-0">WAV</span>
+                <div class="truncate">
+                  <div class="text-white font-semibold truncate">main version.wav</div>
+                  <div class="text-[10px] text-slate-500 truncate font-mono">📁 emotional-sadness-piano-2026-05-07-21-00-22-utc/</div>
+                </div>
+              </div>
+              <div class="flex flex-col items-end flex-shrink-0 gap-1">
+                <span class="px-2 py-0.5 rounded-md bg-slate-800 border border-slate-700 text-[10px] text-slate-300 font-semibold">
+                  Twoje (oryginał)
+                </span>
+                <span class="text-slate-400 font-mono text-[11px]">14.1 MB</span>
+              </div>
+            </div>
+
+            <!-- File 4 -->
+            <div class="file-item-card flex items-center justify-between gap-3 text-xs">
+              <div class="flex items-center gap-3 min-w-0">
+                <span class="w-8 h-8 rounded-lg bg-cyan-500/20 text-cyan-400 font-mono text-[10px] font-bold flex items-center justify-center flex-shrink-0">MP3</span>
+                <div class="truncate">
+                  <div class="text-white font-semibold truncate">solo piano.mp3</div>
+                  <div class="text-[10px] text-slate-500 truncate font-mono">📁 emotional-sadness-piano-2026-05-07-21-00-22-utc/</div>
+                </div>
+              </div>
+              <div class="flex flex-col items-end flex-shrink-0 gap-1">
+                <span class="px-2 py-0.5 rounded-md bg-slate-800 border border-slate-700 text-[10px] text-slate-300 font-semibold">
+                  Twoje (oryginał)
+                </span>
+                <span class="text-slate-400 font-mono text-[11px]">3.2 MB</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section: Dogrywki (Dynamically updated) -->
+        <div id="section-client" class="hidden mt-6 space-y-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <h3 class="text-sm font-bold text-white">Dograne przez Ciebie</h3>
+              <span class="px-1.5 py-0.2 rounded-full bg-cyan-500/20 text-cyan-300 text-[11px] font-mono">1</span>
+            </div>
+            <span class="text-xs text-slate-400">Widoczne dla studia</span>
+          </div>
+          <div class="file-item-card flex items-center justify-between gap-3 text-xs border-cyan-500/30 bg-cyan-950/20">
+            <div class="flex items-center gap-3 min-w-0">
+              <span class="w-8 h-8 rounded-lg bg-cyan-500/20 text-cyan-400 font-mono text-[10px] font-bold flex items-center justify-center flex-shrink-0">WAV</span>
+              <div class="truncate">
+                <div class="text-white font-semibold truncate">wokal_dogrywka_v2_take3.wav</div>
+                <div class="text-[10px] text-slate-400 font-mono">📁 FromClient/</div>
+              </div>
+            </div>
+            <div class="flex flex-col items-end flex-shrink-0 gap-1">
+              <span class="px-2 py-0.5 rounded-md bg-cyan-500/20 border border-cyan-500/40 text-[10px] text-cyan-300 font-bold">
+                Dograne przez Ciebie
+              </span>
+              <span class="text-slate-400 font-mono text-[11px]">18.4 MB</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ==========================================================
+         LAYOUT 2: SPLIT STUDIO PRO (2-Column Interface)
+         ========================================================== -->
+    <section id="layout-split" class="w-full max-w-5xl hidden transition-all duration-500">
+      <div class="modern-glass-card p-6 md:p-8 shadow-2xl">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          
+          <!-- Left: Meta & Download Hero -->
+          <div class="lg:col-span-5 space-y-6 border-b lg:border-b-0 lg:border-r border-white/10 lg:pr-8 pb-6 lg:pb-0">
+            <div>
+              <span class="px-3 py-1 rounded-full bg-indigo-500/10 text-indigo-300 text-xs font-semibold uppercase tracking-wider border border-indigo-500/20">
+                Portal Projektu
+              </span>
+              <h2 class="text-2xl font-extrabold text-white mt-3 mb-2">nortku - Jacek</h2>
+              <div class="text-xs text-slate-400 font-mono mb-4">Utworzono: 2026-11-14 08:55</div>
+              <p class="text-xs text-slate-400 leading-relaxed">
+                Wszystkie pliki audio, wideo i graficzne powiązane z tym projektem w jednym zabezpieczonym miejscu.
+              </p>
+            </div>
+
+            <!-- Big Download Card -->
+            <div class="p-5 rounded-2xl bg-gradient-to-br from-indigo-900/40 via-purple-900/30 to-black/40 border border-indigo-500/30 space-y-3">
+              <div class="text-xs font-bold text-indigo-300 uppercase tracking-wider">Kompletna paczka ZIP</div>
+              <div class="text-2xl font-black text-white font-mono">205.9 MB</div>
+              <div class="text-[11px] text-slate-400">Zawiera 6 plików: 4 Twoje + 2 ze studia</div>
+              <button onclick="startDownloadSim('Wszystkie pliki (cały projekt)', 6)" class="w-full py-3 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 hover:opacity-95 text-white font-bold text-xs shadow-lg shadow-indigo-600/30 transition flex items-center justify-center gap-2">
+                Pobierz cały projekt (ZIP) ↓
+              </button>
+            </div>
+
+            <!-- Mini Dropzone -->
+            <div class="p-4 rounded-xl border border-dashed border-white/15 text-center bg-white/[0.02] hover:bg-white/[0.04] transition cursor-pointer" onclick="simulateClientUpload()">
+              <div class="text-xs font-bold text-white mb-1">Dograj nowe pliki</div>
+              <div class="text-[11px] text-slate-400 mb-2">Trafią do folderu FromClient</div>
+              <button class="px-3 py-1.5 rounded-lg bg-white/10 text-white text-xs">Wybierz pliki...</button>
+            </div>
+          </div>
+
+          <!-- Right: File Explorer with Search & Filter -->
+          <div class="lg:col-span-7 space-y-4">
+            <div class="flex items-center justify-between">
+              <h3 class="text-base font-bold text-white">Zasoby projektu (6)</h3>
+              <div class="flex items-center gap-2">
+                <button onclick="startDownloadSim('Od studia', 2)" class="px-3 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 text-xs border border-emerald-500/30">
+                  Od studia (2)
+                </button>
+                <button onclick="startDownloadSim('Oryginały', 4)" class="px-3 py-1 rounded-lg bg-blue-500/20 text-blue-300 text-xs border border-blue-500/30">
+                  Twoje (4)
+                </button>
+              </div>
+            </div>
+
+            <!-- List items -->
+            <div class="space-y-2 max-h-[500px] overflow-y-auto pr-1">
+              <div class="file-item-card flex items-center justify-between">
+                <div>
+                  <div class="font-bold text-white text-xs">IMG_8842.MOV</div>
+                  <div class="text-[10px] text-slate-500">171.3 MB • Nowe od studia</div>
+                </div>
+                <span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-bold">Nowe od studia</span>
+              </div>
+              <div class="file-item-card flex items-center justify-between">
+                <div>
+                  <div class="font-bold text-white text-xs">Screenshot 2026-11-14 at 09.20.24.png</div>
+                  <div class="text-[10px] text-slate-500">8.9 KB • Nowe od studia</div>
+                </div>
+                <span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-bold">Nowe od studia</span>
+              </div>
+              <div class="file-item-card flex items-center justify-between">
+                <div>
+                  <div class="font-bold text-white text-xs">solo piano.wav</div>
+                  <div class="text-[10px] text-slate-500">14.1 MB • Twoje (oryginał)</div>
+                </div>
+                <span class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 text-[10px]">Twoje oryginał</span>
+              </div>
+              <div class="file-item-card flex items-center justify-between">
+                <div>
+                  <div class="font-bold text-white text-xs">main version.wav</div>
+                  <div class="text-[10px] text-slate-500">14.1 MB • Twoje (oryginał)</div>
+                </div>
+                <span class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 text-[10px]">Twoje oryginał</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================================
+         LAYOUT 3: MEDIA & AUDIO DECK (Creative Audio Focus)
+         ========================================================== -->
+    <section id="layout-media" class="w-full max-w-4xl hidden transition-all duration-500">
+      <div class="modern-glass-card p-6 shadow-2xl space-y-6">
+        
+        <div class="flex items-center justify-between border-b border-white/10 pb-4">
+          <div>
+            <span class="px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 text-xs font-semibold">
+              Audio & Media Session Deck
+            </span>
+            <h2 class="text-2xl font-bold text-white mt-1">nortku - Jacek</h2>
+          </div>
+          <button onclick="startDownloadSim('Wszystko', 6)" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md">
+            Pobierz wszystko (205.9 MB)
+          </button>
+        </div>
+
+        <!-- Audio Interactive Player Mockup -->
+        <div class="p-4 rounded-2xl bg-black/40 border border-white/10 flex items-center justify-between gap-4">
+          <div class="w-12 h-12 rounded-xl bg-gradient-to-tr from-purple-600 to-indigo-500 flex items-center justify-center text-white cursor-pointer hover:scale-105 transition shadow-lg shadow-purple-600/30">
+            ▶
+          </div>
+          <div class="flex-1">
+            <div class="flex items-center justify-between text-xs mb-1">
+              <span class="font-bold text-white">main version.wav (24-bit PCM Master)</span>
+              <span class="text-slate-400 font-mono">01:42 / 03:28</span>
+            </div>
+            <!-- Fake Waveform -->
+            <div class="flex items-center gap-1 h-6">
+              <span class="w-1 bg-purple-500 h-2 rounded-full"></span>
+              <span class="w-1 bg-purple-400 h-4 rounded-full"></span>
+              <span class="w-1 bg-indigo-400 h-6 rounded-full"></span>
+              <span class="w-1 bg-indigo-300 h-3 rounded-full"></span>
+              <span class="w-1 bg-indigo-400 h-5 rounded-full"></span>
+              <span class="w-1 bg-purple-400 h-4 rounded-full"></span>
+              <span class="w-1 bg-slate-600 h-2 rounded-full"></span>
+              <span class="w-1 bg-slate-600 h-5 rounded-full"></span>
+              <span class="w-1 bg-slate-600 h-3 rounded-full"></span>
+              <span class="w-1 bg-slate-600 h-6 rounded-full"></span>
+              <span class="w-1 bg-slate-600 h-4 rounded-full"></span>
+              <span class="w-1 bg-slate-600 h-2 rounded-full"></span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ============================================================
+       MODAL: PORÓWNANIE ZE STARYM SHARE SCREENSHOTEM
+       ============================================================ -->
+  <div id="compare-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden flex items-center justify-center p-4">
+    <div class="modern-glass-card max-w-5xl w-full p-6 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between pb-4 border-b border-white/10 mb-6">
+        <div>
+          <h3 class="text-lg font-bold text-white">Porównanie: Portal Projektu (Oryginalny vs Mockup 2026)</h3>
+          <p class="text-xs text-slate-400">Oryginalny kod aplikacji nie został zmieniony.</p>
+        </div>
+        <button onclick="toggleCompareModal()" class="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 text-slate-300 flex items-center justify-center text-lg">✕</button>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+        
+        <!-- Stary screenshot -->
+        <div class="space-y-3">
+          <div class="flex items-center justify-between text-xs font-semibold text-rose-300 px-1">
+            <span>Dotychczasowy wygląd (Twój zrzut ekranu)</span>
+            <span class="px-2 py-0.5 rounded bg-rose-500/20 text-[10px]">Stary styl</span>
+          </div>
+          <div class="rounded-2xl overflow-hidden border border-white/10 bg-slate-950 p-2 shadow-inner">
+            <img src="original_share_screenshot.jpg" alt="Dotychczasowy Share Portal" class="w-full rounded-xl object-contain max-h-[480px]">
+          </div>
+          <ul class="text-xs text-slate-400 space-y-1.5 list-disc list-inside">
+            <li>Ciemne, jednolite tło ze starym clipartem</li>
+            <li>Nieczytelne, długie ścieżki plików zlewające się z nazwą pliku</li>
+            <li>Statyczne, zwykłe prostokąty z liczbami</li>
+            <li>Brak podziału na typy mediów (audio, wideo, grafiki)</li>
+          </ul>
+        </div>
+
+        <!-- Nowy mockup -->
+        <div class="space-y-3">
+          <div class="flex items-center justify-between text-xs font-semibold text-emerald-300 px-1">
+            <span>Nowy Proponowany Mockup 2026</span>
+            <span class="px-2 py-0.5 rounded bg-emerald-500/20 text-[10px]">Nowoczesny</span>
+          </div>
+          <div class="rounded-2xl overflow-hidden border border-emerald-500/20 bg-slate-900/60 p-4 space-y-4">
+            <div class="p-4 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-xs text-indigo-300">
+              <span class="font-bold">✨ Kluczowe ulepszenia w Portalu Projektu:</span>
+              <p class="mt-2 text-slate-300 leading-relaxed">
+                1. <strong>Interaktywne kafelki KPI:</strong> Kliknięcie "Od studia", "Twoje" lub "Dogrywki" natychmiast filtruje widoczne pliki.<br>
+                2. <strong>Czytelna typografia plików:</strong> Nazwa pliku jest na pierwszym planie, a długa ścieżka folderu jako czytelny podrzędny breadcrumb.<br>
+                3. <strong>Nowoczesne plakietki i ikony typów MIME:</strong> Kolorowe oznaczenia rozszerzeń (PNG, MOV, WAV, MP3).<br>
+                4. <strong>Interaktywna symulacja pobierania ZIP:</strong> Kliknięcie "Pobierz wszystko" demonstruje działanie paska postępu pakowania archiwum.
+              </p>
+            </div>
+            <div class="p-3 rounded-xl bg-white/5 border border-white/10 text-xs text-slate-300">
+              💡 <strong>Możesz swobodnie przełączać:</strong> kliknij w lewym górnym rogu <em>"📤 1. Send Files"</em> lub <em>"📦 2. Portal Projektu"</em>, aby płynnie badać oba widoki!
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="mt-6 pt-4 border-t border-white/10 flex justify-end">
+        <button onclick="toggleCompareModal()" class="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition">
+          Zamknij i wróć do mockupu
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       SCRIPTS & CONTROLLER
+       ============================================================ -->
+  <script>
+    let currentLayout = 'centered';
+    let currentBg = 'aurora';
+    let activeFilter = 'all';
+
+    function switchLayout(l) {
+      currentLayout = l;
+      ['centered', 'split', 'media'].forEach(name => {
+        const el = document.getElementById('layout-' + name);
+        if (el) el.classList.toggle('hidden', name !== l);
+      });
+      document.getElementById('btn-layout-centered').className = l === 'centered' ? 'px-2.5 py-1 rounded-lg text-white font-medium bg-indigo-600 shadow-sm transition' : 'px-2.5 py-1 rounded-lg text-slate-400 hover:text-white font-medium transition';
+      document.getElementById('btn-layout-split').className = l === 'split' ? 'px-2.5 py-1 rounded-lg text-white font-medium bg-indigo-600 shadow-sm transition' : 'px-2.5 py-1 rounded-lg text-slate-400 hover:text-white font-medium transition';
+      document.getElementById('btn-layout-media').className = l === 'media' ? 'px-2.5 py-1 rounded-lg text-white font-medium bg-indigo-600 shadow-sm transition' : 'px-2.5 py-1 rounded-lg text-slate-400 hover:text-white font-medium transition';
+    }
+
+    function switchBg(theme) {
+      currentBg = theme;
+      document.body.className = 'bg-theme-' + theme;
+      const auroraEl = document.getElementById('auroraBg');
+      if (auroraEl) auroraEl.style.display = theme === 'aurora' ? 'block' : 'none';
+      ['aurora', 'grid', 'nebula', 'obsidian'].forEach(t => {
+        const btn = document.getElementById('bg-' + t);
+        if (btn) btn.className = t === theme ? 'px-2 py-1 rounded-lg text-white bg-white/15 transition flex items-center gap-1' : 'px-2 py-1 rounded-lg text-slate-400 hover:text-white transition flex items-center gap-1';
+      });
+    }
+
+    window.addEventListener('mousemove', (e) => {
+      if (currentBg === 'grid') {
+        const x = `${(e.clientX / window.innerWidth) * 100}%`;
+        const y = `${(e.clientY / window.innerHeight) * 100}%`;
+        document.body.style.setProperty('--mouse-x', x);
+        document.body.style.setProperty('--mouse-y', y);
+      }
+    });
+
+    // KPI Filters
+    function filterFiles(type) {
+      activeFilter = type;
+      ['all', 'original', 'studio', 'client'].forEach(t => {
+        const card = document.getElementById('stat-' + t);
+        if (card) card.classList.toggle('active', t === type);
+      });
+
+      const secStudio = document.getElementById('section-studio');
+      const secOriginal = document.getElementById('section-original');
+      const secClient = document.getElementById('section-client');
+
+      if (type === 'all') {
+        if (secStudio) secStudio.classList.remove('hidden');
+        if (secOriginal) secOriginal.classList.remove('hidden');
+      } else if (type === 'studio') {
+        if (secStudio) secStudio.classList.remove('hidden');
+        if (secOriginal) secOriginal.classList.add('hidden');
+      } else if (type === 'original') {
+        if (secStudio) secStudio.classList.add('hidden');
+        if (secOriginal) secOriginal.classList.remove('hidden');
+      } else if (type === 'client') {
+        if (secStudio) secStudio.classList.add('hidden');
+        if (secOriginal) secOriginal.classList.add('hidden');
+        if (secClient) secClient.classList.remove('hidden');
+      }
+    }
+
+    // Interactive ZIP Download simulation
+    function startDownloadSim(label, count) {
+      const panel = document.getElementById('zip-progress-panel');
+      const title = document.getElementById('zip-progress-title');
+      const bar = document.getElementById('zip-bar-fill');
+      const pct = document.getElementById('zip-progress-pct');
+      const detail = document.getElementById('zip-progress-detail');
+
+      if (!panel) return;
+      panel.classList.remove('hidden');
+
+      let currentPct = 5;
+      bar.style.width = currentPct + '%';
+      pct.innerText = currentPct + '%';
+      detail.innerText = `Pobieranie plików z serwera (1 / ${count})...`;
+
+      const interval = setInterval(() => {
+        currentPct += 12;
+        if (currentPct >= 85 && currentPct < 95) {
+          detail.innerText = `Pakowanie archiwum ZIP w locie...`;
+        }
+        if (currentPct >= 100) {
+          currentPct = 100;
+          clearInterval(interval);
+          bar.style.width = '100%';
+          pct.innerText = '100%';
+          title.innerHTML = '✓ Paczka ZIP gotowa do zapisu!';
+          detail.innerText = `Pobieranie rozpoczęte pomyślnie.`;
+          setTimeout(() => {
+            panel.classList.add('hidden');
+            title.innerHTML = `<svg class="w-4 h-4 animate-spin text-indigo-400" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg> Pakowanie archiwum ZIP...`;
+          }, 3500);
+        } else {
+          bar.style.width = currentPct + '%';
+          pct.innerText = currentPct + '%';
+        }
+      }, 250);
+    }
+
+    // Client file addition simulation ("Dograj nowe pliki")
+    function simulateClientUpload() {
+      const secClient = document.getElementById('section-client');
+      const countClient = document.getElementById('count-client');
+      const countAll = document.getElementById('count-all');
+      const badgeAll = document.getElementById('badge-all-count');
+
+      if (secClient) {
+        secClient.classList.remove('hidden');
+        if (countClient) countClient.innerText = '1';
+        if (countAll) countAll.innerText = '7';
+        if (badgeAll) badgeAll.innerText = '7';
+        alert('✨ Symulacja: Pomyślnie dograno plik "wokal_dogrywka_v2_take3.wav" (18.4 MB) do studia!');
+      }
+    }
+
+    function toggleCompareModal() {
+      const modal = document.getElementById('compare-modal');
+      if (modal) modal.classList.toggle('hidden');
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        const modal = document.getElementById('compare-modal');
+        if (modal && !modal.classList.contains('hidden')) modal.classList.add('hidden');
+      }
+    });
+  </script>
+</body>
+</html>
+
