@@ -119,7 +119,12 @@ export default function AdminClientManager() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || 'Invite failed');
       setLastInviteUrl(data.url || '');
-      setInviteForm({ email: '', locale: inviteForm.locale, note: '', sendEmail: inviteForm.sendEmail });
+      setInviteForm({
+        email: '',
+        locale: inviteForm.locale,
+        note: '',
+        sendEmail: inviteForm.sendEmail,
+      });
       await refresh();
       if (data.url) await copyText(data.url);
     } catch (err) {
@@ -200,367 +205,487 @@ export default function AdminClientManager() {
     memberships.filter((m) => m.clientEmail === email);
 
   const pendingInvites = invites.filter((i) => i.status === 'pending');
+  const activeCount = clients.filter((c) => c.status === 'active').length;
 
   return (
     <section className="admin-section glass-panel">
-      <div className="admin-section-head">
-        <h2>Client hub accounts</h2>
-        <button type="button" className="btn tiny ghost" onClick={() => refresh()}>
-          Refresh
+      <div className="admin-section-header-row">
+        <h3 className="admin-section-title">
+          Client hub
+          {activeCount > 0 ? (
+            <span className="admin-section-count">{activeCount} active</span>
+          ) : null}
+          {pendingInvites.length > 0 ? (
+            <span className="admin-section-count admin-section-count-warn">
+              {pendingInvites.length} pending
+            </span>
+          ) : null}
+        </h3>
+        <button
+          type="button"
+          className="btn admin-btn-secondary"
+          onClick={() => refresh()}
+          disabled={loading}
+        >
+          {loading ? 'Refreshing…' : 'Refresh'}
         </button>
       </div>
-      <p className="admin-hint">
-        Signup tylko po <strong>zaproszeniu</strong>. Tworzysz invite → copy link
-        i/lub mail SMTP. Klienci: suspend / password / assign / delete.
+
+      <p className="admin-empty-inline" style={{ marginTop: 0 }}>
+        Signup tylko po zaproszeniu. Tworzysz invite → kopiujesz link i/lub
+        wysyłasz mail SMTP. Potem: suspend, hasło, assign projektu, delete.
       </p>
 
-      {error ? <p className="admin-error">{error}</p> : null}
+      {error ? <p className="admin-error admin-error-banner">{error}</p> : null}
 
-      <div className="admin-subhead" style={{ marginTop: '0.75rem' }}>
-        Invite client
-      </div>
-      <form className="admin-token-form-grid" onSubmit={handleCreateInvite}>
-        <input
-          required
-          type="email"
-          placeholder="client@email.com"
-          value={inviteForm.email}
-          onChange={(e) =>
-            setInviteForm({ ...inviteForm, email: e.target.value })
-          }
-        />
-        <select
-          value={inviteForm.locale}
-          onChange={(e) =>
-            setInviteForm({ ...inviteForm, locale: e.target.value })
-          }
-        >
-          <option value="en">lang=en</option>
-          <option value="pl">lang=pl</option>
-        </select>
-        <input
-          type="text"
-          placeholder="Note (optional)"
-          value={inviteForm.note}
-          onChange={(e) =>
-            setInviteForm({ ...inviteForm, note: e.target.value })
-          }
-        />
-        <label className="admin-hint" style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
-          <input
-            type="checkbox"
-            checked={inviteForm.sendEmail}
-            disabled={!smtpConfigured}
-            onChange={(e) =>
-              setInviteForm({ ...inviteForm, sendEmail: e.target.checked })
+      <form className="admin-token-form admin-invite-form" onSubmit={handleCreateInvite}>
+        <div className="admin-invite-form-head">
+          <h4 className="admin-block-title">Invite client</h4>
+          <span className="admin-invite-ttl">TTL 7 days · one-time</span>
+        </div>
+
+        <div className="admin-token-form-grid">
+          <label>
+            Email
+            <input
+              required
+              type="email"
+              className="glass-input admin-input"
+              placeholder="client@email.com"
+              value={inviteForm.email}
+              onChange={(e) =>
+                setInviteForm({ ...inviteForm, email: e.target.value })
+              }
+            />
+          </label>
+          <label>
+            Language
+            <select
+              className="glass-input admin-input"
+              value={inviteForm.locale}
+              onChange={(e) =>
+                setInviteForm({ ...inviteForm, locale: e.target.value })
+              }
+            >
+              <option value="en">English</option>
+              <option value="pl">Polski</option>
+            </select>
+          </label>
+          <label>
+            Note (optional)
+            <input
+              type="text"
+              className="glass-input admin-input"
+              placeholder="Internal note…"
+              value={inviteForm.note}
+              onChange={(e) =>
+                setInviteForm({ ...inviteForm, note: e.target.value })
+              }
+            />
+          </label>
+        </div>
+
+        <div className="admin-invite-form-footer">
+          <label
+            className={`admin-check${smtpConfigured ? '' : ' is-disabled'}`}
+            title={
+              smtpConfigured
+                ? 'Send invite email via SMTP'
+                : 'Configure SMTP env vars to enable'
             }
-          />
-          Send email
-          {!smtpConfigured ? ' (SMTP not configured)' : ''}
-        </label>
-        <button type="submit" className="btn" disabled={creatingInvite}>
-          {creatingInvite ? 'Creating…' : 'Create invite + copy URL'}
-        </button>
-      </form>
-      {lastInviteUrl ? (
-        <p className="admin-hint" style={{ wordBreak: 'break-all' }}>
-          {copied ? 'Copied: ' : 'URL: '}
-          <code>{lastInviteUrl}</code>
-          <button
-            type="button"
-            className="btn ghost tiny"
-            style={{ marginLeft: '0.5rem' }}
-            onClick={() => copyText(lastInviteUrl)}
           >
-            Copy
+            <input
+              type="checkbox"
+              checked={inviteForm.sendEmail && smtpConfigured}
+              disabled={!smtpConfigured}
+              onChange={(e) =>
+                setInviteForm({ ...inviteForm, sendEmail: e.target.checked })
+              }
+            />
+            <span>
+              Send email
+              {!smtpConfigured ? (
+                <em className="admin-check-muted"> · SMTP not configured</em>
+              ) : null}
+            </span>
+          </label>
+          <button
+            type="submit"
+            className="btn admin-btn admin-btn-primary"
+            disabled={creatingInvite}
+          >
+            {creatingInvite ? 'Creating…' : 'Create invite + copy URL'}
           </button>
-        </p>
+        </div>
+      </form>
+
+      {lastInviteUrl ? (
+        <div className="admin-invite-url">
+          <div className="admin-invite-url-meta">
+            <span className="admin-invite-url-label">
+              {copied ? 'Copied to clipboard' : 'Invite URL'}
+            </span>
+            <button
+              type="button"
+              className="btn admin-btn-secondary admin-btn-compact"
+              onClick={() => copyText(lastInviteUrl)}
+            >
+              Copy again
+            </button>
+          </div>
+          <code className="admin-invite-url-code">{lastInviteUrl}</code>
+        </div>
       ) : null}
 
       {pendingInvites.length ? (
-        <div className="admin-table-wrap" style={{ marginTop: '0.75rem' }}>
-          <h3 className="admin-subhead">Pending invites</h3>
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>Email</th>
-                <th>Lang</th>
-                <th>Expires</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {pendingInvites.map((inv) => (
-                <tr key={inv.id}>
-                  <td>{inv.email}</td>
-                  <td>{inv.locale}</td>
-                  <td>{formatDate(inv.expiresAt)}</td>
-                  <td className="admin-actions-cell">
-                    <button
-                      type="button"
-                      className="btn ghost tiny"
-                      onClick={() => inviteAction(inv.id, 'copy')}
-                      title="Rotate token + copy new URL"
-                    >
-                      New URL + copy
-                    </button>
-                    <button
-                      type="button"
-                      className="btn ghost tiny"
-                      disabled={!smtpConfigured}
-                      onClick={() => inviteAction(inv.id, 'resend')}
-                    >
-                      Resend mail
-                    </button>
-                    <button
-                      type="button"
-                      className="btn ghost tiny"
-                      onClick={() => inviteAction(inv.id, 'revoke')}
-                    >
-                      Revoke
-                    </button>
-                  </td>
+        <div className="admin-block">
+          <h4 className="admin-block-title">
+            Pending invites
+            <span className="admin-section-count">{pendingInvites.length}</span>
+          </h4>
+          <div className="admin-table-wrap">
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>Email</th>
+                  <th>Lang</th>
+                  <th>Expires</th>
+                  <th />
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {pendingInvites.map((inv) => (
+                  <tr key={inv.id}>
+                    <td className="admin-cell-email">{inv.email}</td>
+                    <td>
+                      <span className="admin-locale-pill">
+                        {inv.locale === 'pl' ? 'PL' : 'EN'}
+                      </span>
+                    </td>
+                    <td>{formatDate(inv.expiresAt)}</td>
+                    <td className="admin-actions-cell">
+                      <button
+                        type="button"
+                        className="btn admin-btn-secondary admin-btn-compact"
+                        onClick={() => inviteAction(inv.id, 'copy')}
+                        title="Rotate token + copy new URL"
+                      >
+                        New URL
+                      </button>
+                      <button
+                        type="button"
+                        className="btn admin-btn-secondary admin-btn-compact"
+                        disabled={!smtpConfigured}
+                        onClick={() => inviteAction(inv.id, 'resend')}
+                      >
+                        Resend
+                      </button>
+                      <button
+                        type="button"
+                        className="btn admin-btn-danger admin-btn-compact"
+                        onClick={() => inviteAction(inv.id, 'revoke')}
+                      >
+                        Revoke
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       ) : null}
 
       {assignFor ? (
-        <form className="admin-token-form-grid" onSubmit={handleAssign}>
-          <p className="admin-hint">
-            Assign project → <strong>{assignFor.email}</strong>
-          </p>
-          <select
-            required
-            value={assignFolderId}
-            onChange={(e) => setAssignFolderId(e.target.value)}
-          >
-            <option value="">Select session folder…</option>
-            {sessions.map((s) => (
-              <option key={s.folderId} value={s.folderId}>
-                {(s.projectName || s.folderName || s.folderId).slice(0, 80)}
-                {shareByFolder.has(s.folderId) ? ' · share' : ''}
-              </option>
-            ))}
-          </select>
-          <input
-            type="text"
-            placeholder="Label (optional)"
-            value={assignLabel}
-            onChange={(e) => setAssignLabel(e.target.value)}
-          />
-          <button type="submit" className="btn">
-            Assign
-          </button>
-          <button
-            type="button"
-            className="btn ghost"
-            onClick={() => setAssignFor(null)}
-          >
-            Cancel
-          </button>
+        <form className="admin-token-form" onSubmit={handleAssign}>
+          <h4 className="admin-block-title">
+            Assign project
+            <span className="admin-section-count">{assignFor.email}</span>
+          </h4>
+          <div className="admin-token-form-grid">
+            <label>
+              Session folder
+              <select
+                required
+                className="glass-input admin-input"
+                value={assignFolderId}
+                onChange={(e) => setAssignFolderId(e.target.value)}
+              >
+                <option value="">Select session folder…</option>
+                {sessions.map((s) => (
+                  <option key={s.folderId} value={s.folderId}>
+                    {(s.projectName || s.folderName || s.folderId).slice(0, 80)}
+                    {shareByFolder.has(s.folderId) ? ' · share' : ''}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Label (optional)
+              <input
+                type="text"
+                className="glass-input admin-input"
+                placeholder="Project label"
+                value={assignLabel}
+                onChange={(e) => setAssignLabel(e.target.value)}
+              />
+            </label>
+          </div>
+          <div className="admin-invite-form-footer">
+            <button type="submit" className="btn admin-btn admin-btn-primary">
+              Assign
+            </button>
+            <button
+              type="button"
+              className="btn admin-btn-secondary"
+              onClick={() => setAssignFor(null)}
+            >
+              Cancel
+            </button>
+          </div>
         </form>
       ) : null}
 
       {passwordFor ? (
-        <form className="admin-token-form-grid" onSubmit={handleSetPassword}>
-          <p className="admin-hint">
-            Reset password → <strong>{passwordFor.email}</strong>
-          </p>
-          <input
-            required
-            type="password"
-            minLength={8}
-            placeholder="New password (min 8)"
-            value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
-          />
-          <button type="submit" className="btn">
-            Set password
-          </button>
-          <button
-            type="button"
-            className="btn ghost"
-            onClick={() => {
-              setPasswordFor(null);
-              setNewPassword('');
-            }}
-          >
-            Cancel
-          </button>
+        <form className="admin-token-form" onSubmit={handleSetPassword}>
+          <h4 className="admin-block-title">
+            Reset password
+            <span className="admin-section-count">{passwordFor.email}</span>
+          </h4>
+          <label>
+            New password (min 8)
+            <input
+              required
+              type="password"
+              minLength={8}
+              className="glass-input admin-input"
+              placeholder="••••••••"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+            />
+          </label>
+          <div className="admin-invite-form-footer">
+            <button type="submit" className="btn admin-btn admin-btn-primary">
+              Set password
+            </button>
+            <button
+              type="button"
+              className="btn admin-btn-secondary"
+              onClick={() => {
+                setPasswordFor(null);
+                setNewPassword('');
+              }}
+            >
+              Cancel
+            </button>
+          </div>
         </form>
       ) : null}
 
-      {loading ? (
-        <p className="admin-hint">Loading…</p>
-      ) : (
-        <div className="admin-table-wrap" style={{ marginTop: '1rem' }}>
-          <h3 className="admin-subhead">Accounts</h3>
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>Email</th>
-                <th>Name</th>
-                <th>Token</th>
-                <th>Assigned</th>
-                <th>Status</th>
-                <th>Created</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {clients.map((c) => (
-                <tr key={c.id}>
-                  <td>{c.email}</td>
-                  <td>{c.displayName || '—'}</td>
-                  <td>
-                    <code>{c.linkedToken || '—'}</code>
-                  </td>
-                  <td>{membershipsFor(c.email).length}</td>
-                  <td>
-                    <span
-                      className={`admin-token-badge ${
-                        c.status === 'active'
-                          ? 'admin-token-badge-active'
-                          : 'admin-token-badge-revoked'
-                      }`}
-                    >
-                      {c.status === 'active' ? 'active' : 'suspended'}
-                    </span>
-                  </td>
-                  <td>{formatDate(c.createdAt)}</td>
-                  <td className="admin-actions-cell">
-                    <button
-                      type="button"
-                      className="btn ghost tiny"
-                      onClick={() => setAssignFor(c)}
-                    >
-                      Assign
-                    </button>
-                    <button
-                      type="button"
-                      className="btn ghost tiny"
-                      onClick={() => {
-                        setPasswordFor(c);
-                        setNewPassword('');
-                      }}
-                    >
-                      Password
-                    </button>
-                    {c.status === 'active' ? (
-                      <button
-                        type="button"
-                        className="btn ghost tiny"
-                        onClick={() =>
-                          patchClient(c.id, { action: 'revoke' }).catch((err) =>
-                            setError(err.message)
-                          )
-                        }
-                      >
-                        Suspend
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        className="btn ghost tiny"
-                        onClick={() =>
-                          patchClient(c.id, { action: 'restore' }).catch((err) =>
-                            setError(err.message)
-                          )
-                        }
-                      >
-                        Restore
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      className="btn ghost tiny danger"
-                      onClick={() => {
-                        if (
-                          !window.confirm(
-                            `Delete hub account ${c.email}? Memberships removed.`
-                          )
-                        ) {
-                          return;
-                        }
-                        fetch(`/api/admin/clients/${encodeURIComponent(c.id)}`, {
-                          method: 'DELETE',
-                          credentials: 'include',
-                        })
-                          .then((r) => r.json().then((d) => ({ ok: r.ok, d })))
-                          .then(({ ok, d }) => {
-                            if (!ok) throw new Error(d.error || 'Delete failed');
-                            return refresh();
-                          })
-                          .catch((err) => setError(err.message));
-                      }}
-                    >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {!clients.length ? (
-                <tr>
-                  <td colSpan={7} className="admin-hint">
-                    Brak kont — wyślij zaproszenie powyżej.
-                  </td>
-                </tr>
-              ) : null}
-            </tbody>
-          </table>
-        </div>
-      )}
+      <div className="admin-block">
+        <h4 className="admin-block-title">
+          Accounts
+          {clients.length ? (
+            <span className="admin-section-count">{clients.length}</span>
+          ) : null}
+        </h4>
 
-      {memberships.length ? (
-        <div className="admin-table-wrap" style={{ marginTop: '1rem' }}>
-          <h3 className="admin-subhead">Assignments</h3>
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>Client</th>
-                <th>Folder</th>
-                <th>Label</th>
-                <th>Share</th>
-                <th>When</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {memberships.map((m) => {
-                const client = clients.find((c) => c.email === m.clientEmail);
-                return (
-                  <tr key={m.id}>
-                    <td>{m.clientEmail}</td>
+        {loading ? (
+          <p className="admin-empty-inline">Loading accounts…</p>
+        ) : (
+          <div className="admin-table-wrap">
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>Email</th>
+                  <th>Name</th>
+                  <th>Token</th>
+                  <th>Assigned</th>
+                  <th>Status</th>
+                  <th>Created</th>
+                  <th />
+                </tr>
+              </thead>
+              <tbody>
+                {clients.map((c) => (
+                  <tr
+                    key={c.id}
+                    className={
+                      c.status !== 'active' ? 'admin-token-row-inactive' : ''
+                    }
+                  >
+                    <td className="admin-cell-email">{c.email}</td>
+                    <td className="admin-cell-name">{c.displayName || '—'}</td>
                     <td>
-                      <code>{String(m.folderId).slice(0, 12)}…</code>
+                      <code className="admin-code">
+                        {c.linkedToken || '—'}
+                      </code>
                     </td>
-                    <td>{m.label || '—'}</td>
-                    <td>{m.shareId ? <code>{m.shareId}</code> : '—'}</td>
-                    <td>{formatDate(m.assignedAt)}</td>
+                    <td>{membershipsFor(c.email).length}</td>
                     <td>
-                      {client ? (
+                      <span
+                        className={`admin-token-badge ${
+                          c.status === 'active'
+                            ? 'admin-token-badge-active'
+                            : 'admin-token-badge-revoked'
+                        }`}
+                      >
+                        {c.status === 'active' ? 'active' : 'suspended'}
+                      </span>
+                    </td>
+                    <td>{formatDate(c.createdAt)}</td>
+                    <td className="admin-actions-cell">
+                      <button
+                        type="button"
+                        className="btn admin-btn-secondary admin-btn-compact"
+                        onClick={() => setAssignFor(c)}
+                      >
+                        Assign
+                      </button>
+                      <button
+                        type="button"
+                        className="btn admin-btn-secondary admin-btn-compact"
+                        onClick={() => {
+                          setPasswordFor(c);
+                          setNewPassword('');
+                        }}
+                      >
+                        Password
+                      </button>
+                      {c.status === 'active' ? (
                         <button
                           type="button"
-                          className="btn ghost tiny"
+                          className="btn admin-btn-secondary admin-btn-compact"
                           onClick={() =>
-                            patchClient(client.id, {
-                              action: 'unassign',
-                              membershipId: m.id,
-                            }).catch((err) => setError(err.message))
+                            patchClient(c.id, { action: 'revoke' }).catch(
+                              (err) => setError(err.message)
+                            )
                           }
                         >
-                          Remove
+                          Suspend
                         </button>
-                      ) : null}
+                      ) : (
+                        <button
+                          type="button"
+                          className="btn admin-btn-secondary admin-btn-compact"
+                          onClick={() =>
+                            patchClient(c.id, { action: 'restore' }).catch(
+                              (err) => setError(err.message)
+                            )
+                          }
+                        >
+                          Restore
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className="btn admin-btn-danger admin-btn-compact"
+                        onClick={() => {
+                          if (
+                            !window.confirm(
+                              `Delete hub account ${c.email}? Memberships removed.`
+                            )
+                          ) {
+                            return;
+                          }
+                          fetch(
+                            `/api/admin/clients/${encodeURIComponent(c.id)}`,
+                            {
+                              method: 'DELETE',
+                              credentials: 'include',
+                            }
+                          )
+                            .then((r) =>
+                              r.json().then((d) => ({ ok: r.ok, d }))
+                            )
+                            .then(({ ok, d }) => {
+                              if (!ok)
+                                throw new Error(d.error || 'Delete failed');
+                              return refresh();
+                            })
+                            .catch((err) => setError(err.message));
+                        }}
+                      >
+                        Delete
+                      </button>
                     </td>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                ))}
+                {!clients.length ? (
+                  <tr>
+                    <td colSpan={7}>
+                      <p className="admin-empty-inline" style={{ margin: 0 }}>
+                        Brak kont — wyślij zaproszenie powyżej.
+                      </p>
+                    </td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {memberships.length ? (
+        <div className="admin-block">
+          <h4 className="admin-block-title">
+            Assignments
+            <span className="admin-section-count">{memberships.length}</span>
+          </h4>
+          <div className="admin-table-wrap">
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>Client</th>
+                  <th>Folder</th>
+                  <th>Label</th>
+                  <th>Share</th>
+                  <th>When</th>
+                  <th />
+                </tr>
+              </thead>
+              <tbody>
+                {memberships.map((m) => {
+                  const client = clients.find((c) => c.email === m.clientEmail);
+                  return (
+                    <tr key={m.id}>
+                      <td className="admin-cell-email">{m.clientEmail}</td>
+                      <td>
+                        <code className="admin-code">
+                          {String(m.folderId).slice(0, 12)}…
+                        </code>
+                      </td>
+                      <td>{m.label || '—'}</td>
+                      <td>
+                        {m.shareId ? (
+                          <code className="admin-code">{m.shareId}</code>
+                        ) : (
+                          '—'
+                        )}
+                      </td>
+                      <td>{formatDate(m.assignedAt)}</td>
+                      <td className="admin-actions-cell">
+                        {client ? (
+                          <button
+                            type="button"
+                            className="btn admin-btn-secondary admin-btn-compact"
+                            onClick={() =>
+                              patchClient(client.id, {
+                                action: 'unassign',
+                                membershipId: m.id,
+                              }).catch((err) => setError(err.message))
+                            }
+                          >
+                            Remove
+                          </button>
+                        ) : null}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       ) : null}
     </section>
