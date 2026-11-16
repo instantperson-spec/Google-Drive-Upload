@@ -137,15 +137,41 @@ function statusForFile(relativePath, size, md5, modifiedTime, baseline, baseline
   return 'original';
 }
 
+function normalizeSnapshot(raw) {
+  const snapshot = {};
+  if (!raw || typeof raw !== 'object') return snapshot;
+  for (const [path, val] of Object.entries(raw)) {
+    if (val && typeof val === 'object') {
+      snapshot[path] = {
+        size: Number(val.size) || 0,
+        md5: typeof val.md5 === 'string' ? val.md5 : null,
+      };
+    } else {
+      snapshot[path] = { size: Number(val) || 0, md5: null };
+    }
+  }
+  return snapshot;
+}
+
+function vsSnapshot(relativePath, size, md5, snapshot) {
+  if (!(relativePath in snapshot)) return 'added';
+  const entry = snapshot[relativePath];
+  const baseSize = Number(entry?.size);
+  if (!Number.isFinite(baseSize) || Number(size) !== baseSize) return 'changed';
+  if (entry.md5 && md5 && entry.md5 !== md5) return 'changed';
+  return 'unchanged';
+}
+
 export async function readTeamManifest(folderId) {
   const drive = await getDrive();
   const file = await findManifest(drive, folderId);
   if (!file) {
-    return { files: {}, baseline: {}, baselineAt: null };
+    return { files: {}, baseline: {}, baselineAt: null, rounds: [] };
   }
   const manifest = await readFileJson(drive, file.id);
   if (!manifest.files || typeof manifest.files !== 'object') manifest.files = {};
   manifest.baseline = extractBaseline(manifest);
+  if (!Array.isArray(manifest.rounds)) manifest.rounds = [];
   return manifest;
 }
 
@@ -178,13 +204,39 @@ async function listChildren(drive, folderId) {
 }
 
 /**
- * Walk session folder; merge statuses from team manifest.
+ * Walk session folder; merge statuses from team manifest + vs previous round.
+ * @param {string} folderId
+ * @param {{ roundId?: string|null }} [opts]
  */
-export async function listShareFiles(folderId) {
+export async function listShareFiles(folderId, opts = {}) {
   const drive = await getDrive();
   const manifest = await readTeamManifest(folderId);
   const baseline = extractBaseline(manifest);
   const baselineAt = manifest?.baselineAt || null;
+  const rounds = Array.isArray(manifest.rounds) ? manifest.rounds : [];
+  const roundId = opts.roundId || null;
+  let currentRound = null;
+  let prevSnapshot = null;
+
+  if (rounds.length) {
+    const idx = roundId
+      ? rounds.findIndex((r) => r.id === roundId)
+      : rounds.length - 1;
+    const i = idx >= 0 ? idx : rounds.length - 1;
+    currentRound = rounds[i]
+      ? {
+          id: rounds[i].id,
+          label: rounds[i].label || `Draft ${i + 1}`,
+          publishedAt: rounds[i].publishedAt || null,
+        }
+      : null;
+    if (i > 0) {
+      prevSnapshot = normalizeSnapshot(rounds[i - 1].snapshot);
+    } else {
+      prevSnapshot = baseline;
+    }
+  }
+
   const out = [];
 
   async function walk(id, prefix) {
@@ -209,6 +261,11 @@ export async function listShareFiles(folderId) {
         status = statusForFile(rel, size, md5, item.modifiedTime || null, baseline, baselineAt);
       }
 
+      let vsPrevRound = null;
+      if (prevSnapshot && status !== 'fromClient') {
+        vsPrevRound = vsSnapshot(rel, size, md5, prevSnapshot);
+      }
+
       out.push({
         id: item.id,
         name: item.name,
@@ -216,12 +273,22 @@ export async function listShareFiles(folderId) {
         size,
         modifiedTime: item.modifiedTime || null,
         status,
+        vsPrevRound,
       });
     }
   }
 
   await walk(folderId, '');
-  return { files: out, manifest };
+  return {
+    files: out,
+    manifest,
+    round: currentRound,
+    rounds: rounds.map((r) => ({
+      id: r.id,
+      label: r.label || null,
+      publishedAt: r.publishedAt || null,
+    })),
+  };
 }
 
 async function findFromClientFolder(drive, sessionFolderId) {

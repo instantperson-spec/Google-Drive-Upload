@@ -172,7 +172,11 @@ function SharePageInner({ shareId }) {
       const res = await fetch(`/api/share/${encodeURIComponent(shareId)}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Nie udało się otworzyć linku');
-      setShare(data.share);
+      setShare({
+        ...(data.share || {}),
+        roundLabel: data.share?.roundLabel || data.round?.label || null,
+        roundId: data.share?.roundId || data.round?.id || null,
+      });
       setFiles(data.files || []);
     } catch (err) {
       setError(err.message || String(err));
@@ -197,6 +201,14 @@ function SharePageInner({ shareId }) {
     () => files.filter((f) => f.status === 'fromClient'),
     [files]
   );
+  const sincePublishFiles = useMemo(
+    () =>
+      files.filter(
+        (f) => f.vsPrevRound === 'added' || f.vsPrevRound === 'changed'
+      ),
+    [files]
+  );
+  const hasRounds = Boolean(share?.roundId || share?.roundLabel);
 
   async function downloadSet(list, zipName, actionLabel) {
     if (!list.length) {
@@ -443,6 +455,7 @@ function SharePageInner({ shareId }) {
       .slice(0, 80) || 'project';
 
   const showAllHero = filter === 'all';
+  const showSince = filter === 'since';
   const showStudio = filter === 'all' || filter === 'studio';
   const showOriginal = filter === 'all' || filter === 'original';
   const showClient = filter === 'all' || filter === 'client';
@@ -469,6 +482,11 @@ function SharePageInner({ shareId }) {
                   <span className="share-active-dot" aria-hidden="true" />
                   {t('share.active')}
                 </span>
+                {hasRounds && (
+                  <span className="share-round-pill">
+                    {share.roundLabel || 'Draft'}
+                  </span>
+                )}
               </div>
               <h1 className="share-portal-title">{t('share.portalTitle')}</h1>
             </div>
@@ -492,6 +510,16 @@ function SharePageInner({ shareId }) {
           <strong>{files.length}</strong>
           <span>wszystkie</span>
         </button>
+        {hasRounds && (
+          <button
+            type="button"
+            className={`share-stat${filter === 'since' ? ' is-active' : ''}`}
+            onClick={() => setFilter('since')}
+          >
+            <strong>{sincePublishFiles.length}</strong>
+            <span>od publikacji</span>
+          </button>
+        )}
         <button
           type="button"
           className={`share-stat${filter === 'original' ? ' is-active' : ''}`}
@@ -575,7 +603,28 @@ function SharePageInner({ shareId }) {
         </section>
       ) : null}
 
-      {showStudio ? (
+      {showSince ? (
+        <FileSection
+          title="Od ostatniej publikacji"
+          hint={
+            share?.roundLabel
+              ? `Zmiany względem poprzedniej rundy (aktywna: ${share.roundLabel}).`
+              : 'Nowe i zmienione względem poprzedniej publikacji.'
+          }
+          items={sincePublishFiles}
+          busy={busy}
+          downloadLabel="Pobierz od publikacji"
+          onDownload={() =>
+            downloadSet(
+              sincePublishFiles,
+              `${zipBase}-od-publikacji.zip`,
+              'Pobierz od publikacji'
+            )
+          }
+        />
+      ) : null}
+
+      {!showSince && showStudio ? (
         <FileSection
           title="Od studia"
           hint="Nowe i zmienione przez studio."
@@ -587,7 +636,7 @@ function SharePageInner({ shareId }) {
           }
         />
       ) : null}
-      {showOriginal ? (
+      {!showSince && showOriginal ? (
         <FileSection
           title="Twoje pliki (oryginał)"
           hint="To, co wysłałeś na początku."
@@ -599,7 +648,7 @@ function SharePageInner({ shareId }) {
           }
         />
       ) : null}
-      {showClient ? (
+      {!showSince && showClient ? (
         <FileSection
           title="Twoje dogrywki"
           hint="Pliki dodane później przez ten portal."

@@ -13,10 +13,10 @@ todos:
     status: completed
   - id: p1-rounds
     content: "P1: Delivery v2 — Opublikuj Draft N + diff na share"
-    status: pending
+    status: completed
   - id: p2-mail
     content: "P2: mail z share na email tokenu przy publikacji"
-    status: pending
+    status: completed
   - id: p3-feedback
     content: "P3: Approve / Changes requested na plikach rundy"
     status: pending

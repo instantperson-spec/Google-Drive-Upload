@@ -14,8 +14,9 @@
 | Flat upload + `/api/build-structure` + `_manifest.json` | ✅ |
 | Czarna lista rozszerzeń (server) | ✅ |
 | `/admin` — Modern Glass + Nebula (hero/KPI), History, tokeny, OAuth test | ✅ |
-| Studio Console — Modern Glass + Nebula (hero/KPI, wiersze sesji + menu ⋯) | ✅ |
-| Portal `/share/<id>` — lista, KPI-filtry, pobieranie plik-po-pliku (ZIP tylko małe), dogrywki | ✅ |
+| Studio Console — Modern Glass + Nebula; **Opublikuj** Draft/Final + chipy rund | ✅ |
+| Portal `/share/<id>` — rundy, filtr „od publikacji”, plik-po-pliku, dogrywki | ✅ |
+| Mail do `prefillEmail` przy Opublikuj (`/api/share/…/notify-client`) | ✅ |
 | UI share: nagłówek „Portal projektu” (PL/EN), Nebula + glass | ✅ |
 | noindex / rate limit / drive.file | ✅ |
 
@@ -57,7 +58,7 @@ Plan upload (archiwum): [`archiwum/plany/upload_ui_nebula_centered.plan.md`](./a
 | [`upload_ui_nebula_centered…`](./archiwum/plany/upload_ui_nebula_centered.plan.md) | ✅ → archiwum |
 | Admin: bez Live Monitor + History split | ✅ |
 | Upload: wymagana nazwa + sticky Start | ✅ |
-| [`post-mvp_roadmap_…`](./plany/post-mvp_roadmap_05ad683d.plan.md) | ⏳ **aktywny** — P0 ✅; **następne: P1 rundy** |
+| [`post-mvp_roadmap_…`](./plany/post-mvp_roadmap_05ad683d.plan.md) | ⏳ **aktywny** — P0–P2 ✅ (rundy + mail); **następne: P3 feedback** |
 | Security remediacja 2026-11-15 (P0–P2) | ✅ → [`archiwum/plany/security_audit_…`](./archiwum/plany/security_audit_remediation.plan.md) |
 | Binding+OOS + progress Drive+ETag | ✅ (bez Redis/KV) |
 

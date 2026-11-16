@@ -4,6 +4,7 @@
  */
 import crypto from 'crypto';
 import { createDriveClient } from './auth.mjs';
+import { publishRound, roundsMeta } from './manifestOps.mjs';
 
 export const SHARES_FILE_NAME = '_uploader_shares.json';
 
@@ -77,7 +78,25 @@ export async function listSharesLocal() {
   }));
 }
 
-export async function createShareLocal({ folderId, token = null, label = null }) {
+function withShareUrl(record, env) {
+  return {
+    ...record,
+    url: buildShareUrl(record.id, env),
+    status: record.revoked ? 'revoked' : 'active',
+  };
+}
+
+/**
+ * Create or reuse active share for folder. Optionally set roundId / rounds meta.
+ */
+export async function createShareLocal({
+  folderId,
+  token = null,
+  label = null,
+  roundId = null,
+  roundLabel = null,
+  rounds = null,
+} = {}) {
   if (!folderId) throw new Error('folderId is required.');
   const { drive, mainFolderId, env } = createDriveClient();
   const { fileId, registry } = await readSharesRegistry(drive, mainFolderId);
@@ -86,12 +105,28 @@ export async function createShareLocal({ folderId, token = null, label = null })
     (s) => s.folderId === folderId && !s.revoked
   );
   if (existing) {
-    return {
-      ...existing,
-      url: buildShareUrl(existing.id, env),
-      status: 'active',
-      reused: true,
-    };
+    let dirty = false;
+    if (token && !existing.token) {
+      existing.token = token;
+      dirty = true;
+    }
+    if (label && existing.label !== label) {
+      existing.label = label;
+      dirty = true;
+    }
+    if (roundId) {
+      existing.roundId = roundId;
+      existing.roundLabel = roundLabel || existing.roundLabel || null;
+      dirty = true;
+    }
+    if (Array.isArray(rounds)) {
+      existing.rounds = rounds;
+      dirty = true;
+    }
+    if (dirty) {
+      await writeSharesRegistry(drive, mainFolderId, fileId, registry);
+    }
+    return { ...withShareUrl(existing, env), reused: true };
   }
 
   const now = new Date().toISOString();
@@ -103,14 +138,44 @@ export async function createShareLocal({ folderId, token = null, label = null })
     createdAt: now,
     revoked: false,
     revokedAt: null,
+    roundId: roundId || null,
+    roundLabel: roundLabel || null,
+    rounds: Array.isArray(rounds) ? rounds : [],
   };
   registry.shares.push(record);
   await writeSharesRegistry(drive, mainFolderId, fileId, registry);
+  return { ...withShareUrl(record, env), reused: false };
+}
+
+/**
+ * Publish Draft N (or Final), upsert share with roundId, return share + round.
+ */
+export async function publishAndShare({
+  folderId,
+  token = null,
+  label = null,
+  markFinal = false,
+  roundLabel = null,
+} = {}) {
+  if (!folderId) throw new Error('folderId is required.');
+  const { drive, env } = createDriveClient();
+  const { round, manifest } = await publishRound(drive, folderId, {
+    label: roundLabel,
+    markFinal: Boolean(markFinal),
+  });
+  const meta = roundsMeta(manifest);
+  const share = await createShareLocal({
+    folderId,
+    token,
+    label,
+    roundId: round.id,
+    roundLabel: round.label,
+    rounds: meta,
+  });
   return {
-    ...record,
-    url: buildShareUrl(record.id, env),
-    status: 'active',
-    reused: false,
+    share: withShareUrl(share, env),
+    round: { id: round.id, label: round.label, publishedAt: round.publishedAt },
+    rounds: meta,
   };
 }
 

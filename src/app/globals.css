@@ -1730,6 +1730,19 @@ h1 {
   border: 1px solid rgba(16, 185, 129, 0.3);
 }
 
+.share-round-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #a5b4fc;
+  background: rgba(99, 102, 241, 0.2);
+  border: 1px solid rgba(99, 102, 241, 0.4);
+}
+
 .share-active-dot {
   width: 0.35rem;
   height: 0.35rem;

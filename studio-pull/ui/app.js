@@ -324,6 +324,51 @@
     await loadSessions();
   }
 
+  async function publishSession(session, { markFinal = false } = {}) {
+    const folderId = session.folderId;
+    if (!folderId) throw new Error('Brak folderId');
+    notify(
+      markFinal ? 'Publikacja Final…' : 'Publikacja Draft…',
+      'ok'
+    );
+    const res = await apiFetch('/api/publish', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        folderId,
+        token: session.token || null,
+        label: session.name || null,
+        final: markFinal,
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'Publish failed');
+    const url = data.share?.url;
+    const roundLabel = data.round?.label || 'Draft';
+    if (url) {
+      try {
+        await navigator.clipboard.writeText(url);
+        notify(`Opublikowano ${roundLabel} — link skopiowany:\n${url}`, 'ok');
+      } catch {
+        notify(`Opublikowano ${roundLabel} — skopiuj: ${url}`, 'warn');
+      }
+    } else {
+      notify(`Opublikowano ${roundLabel}`, 'ok');
+    }
+    if (data.mail?.sent) {
+      notify(`Mail wysłany do klienta${data.mail.to ? `: ${data.mail.to}` : ''}`, 'ok');
+    } else if (data.mail && !data.mail.skipped) {
+      notify(
+        `Share OK, mail nieposłany: ${data.mail.error || data.mail.skipped || 'sprawdź SMTP / ADMIN_SECRET / prefillEmail'}`,
+        'warn'
+      );
+    } else if (data.mail?.skipped === 'missing_ADMIN_SECRET') {
+      notify('Share OK. Mail pominięty — brak ADMIN_SECRET w .env.local', 'warn');
+    }
+    await loadSessions();
+    return data;
+  }
+
   async function revokeShare(shareId) {
     try {
       notify('Unieważnianie share linku…', 'warn');
@@ -502,6 +547,23 @@
         const needsClientPull =
           syncPath &&
           (s.fromClientCount > 0 || s.missingLocalFromClient > 0);
+        const activeShare = sharesByFolder.get(s.folderId);
+
+        if (activeShare?.rounds?.length) {
+          const roundsEl = document.createElement('div');
+          roundsEl.className = 'session-rounds';
+          for (const r of activeShare.rounds) {
+            const chip = document.createElement('span');
+            chip.className =
+              r.id === activeShare.roundId ? 'round-chip is-current' : 'round-chip';
+            chip.textContent = r.label || 'Draft';
+            chip.title = r.publishedAt
+              ? `Opublikowano ${new Date(r.publishedAt).toLocaleString()}`
+              : '';
+            roundsEl.appendChild(chip);
+          }
+          row.querySelector('.session-body').appendChild(roundsEl);
+        }
 
         if (needsClientPull) {
           const btnClient = mkBtn('Pobierz od klienta', 'ghost', () =>
@@ -511,13 +573,24 @@
           if (reasons.fromClientPending || s.missingLocalFromClient > 0) {
             btnClient.classList.add('warn-accent');
           }
-        } else {
+        }
+
+        const pubBtn = mkBtn('Opublikuj', 'primary', async () => {
+          try {
+            await publishSession(s, { markFinal: false });
+          } catch (err) {
+            notify(err.message || String(err), 'error');
+          }
+        });
+        pubBtn.title = 'Snapshot Draft N + share link + mail do klienta';
+        if (!syncPath) pubBtn.disabled = true;
+
+        if (!needsClientPull) {
           const syncBtn = mkBtn('Sync → Drive', 'ok', () => syncSession(s));
           syncBtn.title = 'Tylko folder z Pobierz → Drive origin';
           if (!syncPath) syncBtn.disabled = true;
         }
 
-        const activeShare = sharesByFolder.get(s.folderId);
         if (activeShare) {
           mkBtn('Kopiuj link', 'ghost', async () => {
             try {
@@ -547,6 +620,15 @@
         } else {
           mkBtn('Wskaż folder sync', 'ghost', () => linkSessionFolder(s), menuPop);
         }
+
+        mkBtn('Opublikuj Final', 'ghost', async () => {
+          menuPop.classList.remove('open');
+          try {
+            await publishSession(s, { markFinal: true });
+          } catch (err) {
+            notify(err.message || String(err), 'error');
+          }
+        }, menuPop);
 
         if (needsClientPull) {
           const syncInMenu = mkBtn('Sync → Drive', 'ok', () => syncSession(s), menuPop);

@@ -48,8 +48,11 @@ import {
 import {
   listSharesLocal,
   createShareLocal,
+  publishAndShare,
   revokeShareLocal,
+  buildShareUrl,
 } from './lib/shareOps.mjs';
+import { loadEnvFile } from './lib/auth.mjs';
 import {
   ensureConsoleAuthToken,
   assertConsoleRequest,
@@ -914,6 +917,77 @@ async function handleSharesPost(req, res) {
   sendJson(res, 201, { share });
 }
 
+async function notifyClientShareMail(share, round) {
+  const env = loadEnvFile();
+  const secret = env.ADMIN_SECRET || '';
+  const origin = (
+    env.PUBLIC_UPLOAD_URL ||
+    'https://drive-uploader-three.vercel.app'
+  ).replace(/\/$/, '');
+  if (!secret) {
+    return { sent: false, skipped: 'missing_ADMIN_SECRET' };
+  }
+  if (!share?.id) {
+    return { sent: false, skipped: 'no_share' };
+  }
+  try {
+    const res = await fetch(`${origin}/api/share/${encodeURIComponent(share.id)}/notify-client`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-admin-secret': secret,
+      },
+      body: JSON.stringify({
+        roundId: round?.id || share.roundId || null,
+        roundLabel: round?.label || share.roundLabel || null,
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      return {
+        sent: false,
+        error: data.error || `HTTP ${res.status}`,
+        skipped: data.skipped || null,
+      };
+    }
+    return { sent: true, to: data.to || null };
+  } catch (err) {
+    return { sent: false, error: err.message || String(err) };
+  }
+}
+
+async function handlePublish(req, res) {
+  const body = await readBody(req);
+  const folderId = String(body.folderId || '').trim();
+  if (!folderId) {
+    sendJson(res, 400, { error: 'folderId is required.' });
+    return;
+  }
+  const binding = getBinding(folderId);
+  try {
+    const result = await publishAndShare({
+      folderId,
+      token: body.token || binding?.token || null,
+      label: body.label || binding?.label || null,
+      markFinal: Boolean(body.final || body.markFinal),
+      roundLabel: body.roundLabel || body.labelRound || null,
+    });
+    const mail = body.skipMail
+      ? { sent: false, skipped: 'skipMail' }
+      : await notifyClientShareMail(result.share, result.round);
+    sendJson(res, 200, {
+      ...result,
+      share: {
+        ...result.share,
+        url: result.share.url || buildShareUrl(result.share.id),
+      },
+      mail,
+    });
+  } catch (err) {
+    sendJson(res, 400, { error: err.message || String(err) });
+  }
+}
+
 async function handleShareRevoke(id, res) {
   const share = await revokeShareLocal(id);
   sendJson(res, 200, { share });
@@ -1046,6 +1120,10 @@ const server = http.createServer(async (req, res) => {
     }
     if (req.method === 'POST' && pathname === '/api/shares') {
       await handleSharesPost(req, res);
+      return;
+    }
+    if (req.method === 'POST' && pathname === '/api/publish') {
+      await handlePublish(req, res);
       return;
     }
     const shareMatch = pathname.match(/^\/api\/shares\/([^/]+)$/);

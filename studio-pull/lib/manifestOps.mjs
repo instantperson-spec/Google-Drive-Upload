@@ -2,9 +2,19 @@
  * Per-session _team_manifest.json on Drive.
  * baseline = immutable map of what the client originally uploaded (path → size).
  * Statuses are always derived: original | modified | new.
+ * rounds = published Delivery drafts (snapshot path → { size, md5? }).
  */
 
+import crypto from 'crypto';
+import { walkDriveFolder } from './driveWalk.mjs';
+
 export const MANIFEST_NAME = '_team_manifest.json';
+export const FROM_CLIENT_FOLDER = 'FromClient';
+
+export function isFromClientPath(relativePath) {
+  const rel = String(relativePath || '').replace(/\\/g, '/');
+  return rel === FROM_CLIENT_FOLDER || rel.startsWith(`${FROM_CLIENT_FOLDER}/`);
+}
 
 async function findManifest(drive, folderId) {
   const res = await drive.files.list({
@@ -51,6 +61,7 @@ export function normalizeManifest(raw, folderId) {
   }
 
   if (!manifest.files || typeof manifest.files !== 'object') manifest.files = {};
+  if (!Array.isArray(manifest.rounds)) manifest.rounds = [];
   return manifest;
 }
 
@@ -109,6 +120,73 @@ export async function writeManifest(drive, folderId, fileId, manifest) {
 
 export function hasBaseline(manifest) {
   return Boolean(manifest?.baselineAt && manifest.baseline && Object.keys(manifest.baseline).length);
+}
+
+/** Build path → { size, md5? } from a Drive walk (skips FromClient/). */
+export function snapshotFromDriveFiles(files) {
+  const snapshot = {};
+  for (const f of files || []) {
+    const rel = String(f.relativePath || '').replace(/\\/g, '/');
+    if (!rel || isFromClientPath(rel)) continue;
+    const size = Number(f.size) || 0;
+    const md5 = f.md5Checksum || f.md5 || null;
+    snapshot[rel] = md5 ? { size, md5 } : { size };
+  }
+  return snapshot;
+}
+
+export function roundsMeta(manifest) {
+  const rounds = Array.isArray(manifest?.rounds) ? manifest.rounds : [];
+  return rounds.map((r) => ({
+    id: r.id,
+    label: r.label || 'Draft',
+    publishedAt: r.publishedAt || null,
+  }));
+}
+
+/**
+ * Walk Drive session folder, append a published round, write manifest.
+ * @returns {Promise<{ fileId: string, manifest: object, round: object }>}
+ */
+export async function publishRound(drive, folderId, { label = null, markFinal = false } = {}) {
+  if (!folderId) throw new Error('folderId is required.');
+  const { fileId, manifest } = await readManifest(drive, folderId);
+  const files = await walkDriveFolder(drive, folderId);
+  const snapshot = snapshotFromDriveFiles(files);
+  if (!Object.keys(snapshot).length) {
+    throw new Error('Brak plików do publikacji (pusta sesja lub tylko FromClient/).');
+  }
+
+  const nextNum = (manifest.rounds?.length || 0) + 1;
+  const roundLabel = markFinal
+    ? 'Final'
+    : String(label || '').trim() || `Draft ${nextNum}`;
+  const round = {
+    id: `rnd_${crypto.randomBytes(8).toString('hex')}`,
+    label: roundLabel,
+    publishedAt: new Date().toISOString(),
+    snapshot,
+  };
+  manifest.rounds = [...(manifest.rounds || []), round];
+  const newFileId = await writeManifest(drive, folderId, fileId, manifest);
+  return { fileId: newFileId, manifest, round };
+}
+
+/**
+ * Compare current file (size/md5) to a snapshot entry map.
+ * @returns {'added'|'changed'|'unchanged'}
+ */
+export function vsSnapshot(relativePath, size, md5, snapshot = {}) {
+  const rel = String(relativePath || '').replace(/\\/g, '/');
+  if (!(rel in snapshot)) return 'added';
+  const entry = snapshot[rel];
+  const baseSize =
+    typeof entry === 'object' && entry != null ? Number(entry.size) : Number(entry);
+  const baseMd5 =
+    typeof entry === 'object' && entry != null ? entry.md5 || null : null;
+  if (!Number.isFinite(baseSize) || Number(size) !== baseSize) return 'changed';
+  if (baseMd5 && md5 && baseMd5 !== md5) return 'changed';
+  return 'unchanged';
 }
 
 /**
@@ -171,6 +249,7 @@ export function setBaselineFromFiles(fileList, { token = null, force = false, pr
     baselineAt: new Date().toISOString(),
     baseline,
     files,
+    rounds: prevNorm?.rounds || [],
   };
 }
 
