@@ -79,10 +79,11 @@ Each client receives a dedicated URL: `https://your-domain/?token=ClientToken`. 
 
 ### 6. Admin Console
 Set `ADMIN_SECRET` in your environment, then open `/admin` to monitor uploads:
-- **Active now** — live progress bars (client heartbeat every 10s, admin refresh every 5s)
-- **History** — completed session folders from Google Drive (refresh every 60s)
+- **History** — Drive session folders; **In progress** when a recent heartbeat exists (Drive+ETag progress store)
 - **Client tokens** — create, copy upload links, revoke/restore tokens (stored in `_uploader_tokens.json` on Drive)
 - **OAuth scope test** — verify `drive.file` token before/after deploy
+
+Live Monitor (per-file polling UI) was removed — ineffective across Vercel instances.
 
 ### 7. Studio Console (local)
 Local studio panel: multi-session Pull to external disk + token manager. No agent, no Live Progress. Vercel `/admin` remains as emergency fallback. See [`studio-pull/README.md`](studio-pull/README.md).

@@ -20,7 +20,7 @@
 | UI share: nagłówek „Portal projektu” (PL/EN), Nebula + glass | ✅ |
 | noindex / rate limit / drive.file | ✅ |
 
-**Usunięte (świadomie):** Live Monitor ON/OFF w `/admin` — nieskuteczny na Vercel (in-memory). Progress sesji w History → *In progress* (gdy heartbeat trafi w tę samą instancję).
+**Usunięte (świadomie):** Live Monitor ON/OFF w `/admin` — nieskuteczny multi-instance. Progress sesji w History → *In progress* z `_uploader_progress.json` (Drive + ETag), nie z pamięci lambdy.
 
 ---
 

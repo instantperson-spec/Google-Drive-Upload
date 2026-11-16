@@ -60,7 +60,9 @@ Główne problemy dziś to: **zaległości produktowe (P1–P3 roadmap)**, **śm
 | `pdf-parse` w `devDependencies` | **Martwy** — zero importów | ✅ usunięty w tym przeglądzie |
 | `public/file.svg`, `globe.svg`, `next.svg`, `vercel.svg`, `window.svg` | **Martwe** — default Next | ✅ usunięte |
 | `public/bg.jpg` (~590 KB) | **Prawie martwy** — route w `ui-server`, UI nie używa | ✅ usunięty asset + route |
-| `studio-pull/tauri/` | Tylko README → `tauri-app` | Zostawić jako pointer albo scalić docs |
+| `studio-pull/tauri/` | Tylko README → `tauri-app` | ✅ usunięty stub |
+| Martwy CSS (Live Monitor cards, stary uploader/share) | `.admin-active-*`, `.dropzone-subtext`, `.status-*`, `.share-header`… | ✅ usunięty |
+| Nieużywane eksporty | `isStampedSessionFolderName`, `assertFileInFromClient`, `useLocale`, `SUPPORTED_LOCALES` | ✅ usunięte |
 | `mockups/*.html` + screenshoty | **Świadoma referencja UI** (nie runtime) | Zostawić; nie mylić z produkcją |
 | `dokumentacja/archiwum/**` | Historia — OK | Nie linkować z README jako „żywe” ścieżki |
 | Duplikacja `formatBytes` / `formatDate` / email regex | Techniczny dług (P3 audytu) | Wspólny `lib/` przy okazji |
@@ -76,7 +78,10 @@ Główne problemy dziś to: **zaległości produktowe (P1–P3 roadmap)**, **śm
 | `README.md` | `dokumentacja/regeneracja_oauth_scope.md` | Brak — żywy: `oauth_drive_file.md` (archiwum: `archiwum/regeneracja_oauth_scope.md`) |
 | `README.md` | `dokumentacja/operacje_tokeny_i_linki.md` | Brak — żywy: `operacje.md` |
 | `README.md` | `dokumentacja/wdrozenie_security_hardening.md` | Tylko w archiwum; branch `security-hardening` **nie istnieje** na remote |
-| `.env.example` | Service Account + `WEBHOOK_URL`, bez OAuth/SMTP/`MAX_FILE_SIZE_GB` | Rozjechane z README i kodem produkcyjnym |
+| `.env.example` | Service Account + `WEBHOOK_URL`, bez OAuth/SMTP | ✅ zsynchronizowany |
+| `operacje.md` „ZIP dziś, plik-po-pliku później” | Sprzeczne z P0 | ✅ poprawione |
+| README „Active now” / ścieżki w `AdminOAuthCheck` + `checkOAuthScopes` | Stale | ✅ poprawione |
+| `scripts/*.mjs` (poza `check-oauth-scopes`) | Ops ad-hoc, nie w `package.json` | Zostawić jako CLI |
 
 ---
 

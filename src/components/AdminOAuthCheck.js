@@ -150,7 +150,7 @@ export default function AdminOAuthCheck({ onScopeLabel }) {
           <p className="admin-footnote">
             Checked {new Intl.DateTimeFormat('pl-PL', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(report.checkedAt))}
             {' · '}If full Drive scope is detected, regenerate the refresh token — see{' '}
-            <code className="admin-code">dokumentacja/regeneracja_oauth_scope.md</code>
+            <code className="admin-code">dokumentacja/oauth_drive_file.md</code>
           </p>
         </div>
       )}

@@ -152,39 +152,8 @@ h1 {
   font-weight: 500;
 }
 
-.dropzone-subtext {
-  color: var(--text-secondary);
-  font-size: 0.875rem;
-}
-
 .file-input {
   display: none;
-}
-
-.uploading-state {
-  margin-top: 2rem;
-  text-align: left;
-  animation: fadeIn 0.4s ease;
-}
-
-.file-info {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 0.5rem;
-  font-size: 0.875rem;
-}
-
-.file-name {
-  font-weight: 500;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 70%;
-}
-
-.file-progress {
-  color: var(--accent-color);
-  font-weight: 600;
 }
 
 .progress-bar-container {
@@ -229,30 +198,6 @@ h1 {
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
-}
-
-.status-message {
-  margin-top: 1.5rem;
-  padding: 1rem;
-  border-radius: 12px;
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  animation: slideUp 0.3s ease;
-}
-
-.status-success {
-  background: rgba(16, 185, 129, 0.1);
-  color: var(--success-color);
-  border: 1px solid rgba(16, 185, 129, 0.2);
-}
-
-.status-error {
-  background: rgba(239, 68, 68, 0.1);
-  color: var(--error-color);
-  border: 1px solid rgba(239, 68, 68, 0.2);
 }
 
 .btn {
@@ -1067,11 +1012,6 @@ h1 {
   margin-bottom: 0.25rem;
 }
 
-.admin-meta {
-  color: var(--text-secondary);
-  font-size: 0.8rem;
-}
-
 .admin-toolbar-actions {
   display: flex;
   gap: 0.5rem;
@@ -1218,59 +1158,6 @@ h1 {
   margin-bottom: 1rem;
 }
 
-.admin-active-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.admin-active-card {
-  border: 1px solid rgba(59, 130, 246, 0.35);
-  border-radius: 12px;
-  padding: 1rem;
-  background: rgba(59, 130, 246, 0.06);
-}
-
-.admin-active-card-done {
-  border-color: rgba(16, 185, 129, 0.35);
-  background: rgba(16, 185, 129, 0.06);
-}
-
-.admin-active-card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 1rem;
-  flex-wrap: wrap;
-  margin-bottom: 0.5rem;
-}
-
-.admin-active-email,
-.admin-active-token {
-  color: var(--text-secondary);
-  font-size: 0.8rem;
-  font-weight: 400;
-}
-
-.admin-active-card-meta {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  flex-shrink: 0;
-}
-
-.admin-active-overall {
-  font-weight: 700;
-  font-size: 1.1rem;
-  color: var(--accent-color);
-}
-
-.admin-active-summary {
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-  margin-bottom: 0.75rem;
-}
-
 .admin-badge {
   font-size: 0.7rem;
   font-weight: 700;
@@ -1286,68 +1173,9 @@ h1 {
   animation: adminPulse 2s infinite;
 }
 
-.admin-badge-success {
-  background: rgba(16, 185, 129, 0.2);
-  color: var(--success-color);
-}
-
 @keyframes adminPulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.6; }
-}
-
-.admin-active-files {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-}
-
-.admin-active-file-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 0.5rem;
-  margin-bottom: 0.25rem;
-  font-size: 0.8rem;
-}
-
-.admin-active-file-name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 70%;
-}
-
-.admin-active-file-meta {
-  color: var(--text-secondary);
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-.admin-progress-track {
-  height: 6px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 3px;
-  overflow: hidden;
-}
-
-.admin-progress-fill {
-  height: 100%;
-  background: #3b82f6;
-  border-radius: 3px;
-  transition: width 0.3s ease;
-}
-
-.admin-progress-done {
-  background: var(--success-color);
-}
-
-.admin-active-more {
-  margin-top: 0.5rem;
-  font-size: 0.75rem;
-  color: var(--text-secondary);
 }
 
 .admin-section-header-row .admin-section-title {
@@ -1650,10 +1478,6 @@ h1 {
   padding: 1.75rem 1.35rem 2rem;
 }
 
-.share-header {
-  margin-bottom: 1.25rem;
-}
-
 .share-portal-header {
   margin-bottom: 1.35rem;
   padding: 1rem 1.1rem 1.05rem;
@@ -1793,15 +1617,6 @@ h1 {
   position: relative;
   z-index: 1;
   margin: 0.85rem 0 0;
-}
-
-.share-eyebrow {
-  margin: 0 0 0.35rem;
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: #a5b4fc;
 }
 
 .share-title {
@@ -2086,12 +1901,6 @@ h1 {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.share-file-path {
-  word-break: break-word;
-  text-align: left;
-  line-height: 1.35;
 }
 
 .share-file-meta {

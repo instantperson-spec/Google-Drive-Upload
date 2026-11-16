@@ -94,7 +94,7 @@ Przy przerwaniu: ten sam link + te same pliki → wznowienie.
 
 Revoke share w Console → portal niedostępny; upload token bez zmian.
 
-Pobieranie dziś: ZIP w przeglądarce (pasek % / N z M). Plan na później: plik-po-pliku do wybranego folderu — [`plany/post-mvp_roadmap_…`](./plany/post-mvp_roadmap_05ad683d.plan.md).
+Pobieranie: domyślnie **plik-po-pliku** do wybranego folderu (`showDirectoryPicker`, Chrome/Edge). ZIP tylko jako fallback dla małych paczek (≤40 plików / ≤500 MB) albo gdy brak File System Access.
 
 ---
 

@@ -8,8 +8,6 @@
  *   "{uploaderName} - {email} - YYYY-MM-DD HH:MM"
  */
 
-const STAMP_RE = /\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/;
-
 /** Strip characters Drive / macOS dislike in folder names. */
 export function sanitizeFolderPart(value, maxLen = 80) {
   return String(value || '')
@@ -28,10 +26,6 @@ export function buildSessionFolderName({ projectName, uploaderName, stamp }) {
     throw new Error('projectName and uploaderName are required.');
   }
   return `${project} - ${name} - ${when}`;
-}
-
-export function isStampedSessionFolderName(name) {
-  return STAMP_RE.test(String(name || ''));
 }
 
 export function parseSessionFolderName(name) {
