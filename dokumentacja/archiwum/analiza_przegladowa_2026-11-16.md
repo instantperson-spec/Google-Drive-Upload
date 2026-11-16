@@ -99,8 +99,7 @@ Zostaje (świadomie): `mockups/`, `dokumentacja/archiwum/`, ops `scripts/*`, dup
 
 | Dokument | Rola |
 |---|---|
-| [`bezpieczenstwo.md`](./bezpieczenstwo.md) | Żywy skrót security |
-| Ten plik | Pełniejszy przegląd + re-check po rundach |
-| [`produkt_i_backlog.md`](./produkt_i_backlog.md) | Stan produktu (P0–P2 ✅) |
-| [`plany/post-mvp_roadmap_….plan.md`](./plany/post-mvp_roadmap_05ad683d.plan.md) | Aktywny plan → **P3** |
-| [`archiwum/`](./archiwum/) | Historia |
+| [`../bezpieczenstwo.md`](../bezpieczenstwo.md) | Żywy skrót security |
+| Ten plik (archiwum) | Snapshot przeglądu 2026-11-16 + re-check po rundach |
+| [`../produkt_i_backlog.md`](../produkt_i_backlog.md) | Stan produktu (P0–P2 ✅) |
+| [`../plany/post-mvp_roadmap_….plan.md`](../plany/post-mvp_roadmap_05ad683d.plan.md) | Aktywny plan → **P3** |

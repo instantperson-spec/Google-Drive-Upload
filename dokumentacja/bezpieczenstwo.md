@@ -1,7 +1,7 @@
 # Bezpieczeństwo — stan aktualny
 
-> Skrót na 2026-11-15 (jedyny żywy dokument stanu).  
-> Historia: [`archiwum/audyt-bezpieczenstwa.md`](./archiwum/audyt-bezpieczenstwa.md), [`archiwum/audyt-powdrozeniowy.md`](./archiwum/audyt-powdrozeniowy.md), VULN IX: [`archiwum/analiza_bezpieczenstwa.md`](./archiwum/analiza_bezpieczenstwa.md).  
+> Skrót na 2026-11-16 (jedyny żywy dokument stanu).  
+> Historia: [`archiwum/audyt-bezpieczenstwa.md`](./archiwum/audyt-bezpieczenstwa.md), [`archiwum/analiza_przegladowa_2026-11-16.md`](./archiwum/analiza_przegladowa_2026-11-16.md), VULN IX: [`archiwum/analiza_bezpieczenstwa.md`](./archiwum/analiza_bezpieczenstwa.md).  
 > Plan remediacji (done): [`archiwum/plany/security_audit_remediation.plan.md`](./archiwum/plany/security_audit_remediation.plan.md).
 
 ---
@@ -71,7 +71,7 @@ Lokalnie: Studio Console (Tauri / localhost) — woła `notify-client` z `ADMIN_
 | SA fallback w `getAuthClient` | Low | `.env.example` już OAuth-first |
 | `notify-client` (P2) | OK | Admin secret + tylko `prefillEmail` — bez open relay |
 
-Re-check po `fca5d29` (rundy + mail): [`analiza_przegladowa.md`](./analiza_przegladowa.md).
+Re-check po `fca5d29` (rundy + mail): [`archiwum/analiza_przegladowa_2026-11-16.md`](./archiwum/analiza_przegladowa_2026-11-16.md).
 
 ---
 

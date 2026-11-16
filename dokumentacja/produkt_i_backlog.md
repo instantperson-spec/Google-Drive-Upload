@@ -1,7 +1,7 @@
 # Produkt i backlog
 
-> Aktualizacja: 2026-11-15  
-> Historyczne „kierunki rozwoju” (IX): [`archiwum/kierunki_rozwoju.md`](./archiwum/kierunki_rozwoju.md)
+> Aktualizacja: 2026-11-16 (P1 rundy + P2 mail)  
+> Historyczne „kierunki rozwoju” (IX): [`archiwum/kierunki_rozwoju.md`](./archiwum/kierunki_rozwoju.md) · przegląd: [`archiwum/analiza_przegladowa_2026-11-16.md`](./archiwum/analiza_przegladowa_2026-11-16.md)
 
 ---
 
