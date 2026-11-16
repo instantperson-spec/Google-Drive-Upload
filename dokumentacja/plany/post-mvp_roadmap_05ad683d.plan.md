@@ -109,6 +109,8 @@ Cel: klient oznacza pliki, studio widzi status.
 - Console: lista „do poprawy” przy sesji + badge.
 - Bez kont / logowania — nadal sam share link.
 
+**Uwaga produktowa:** P3 dotyczy statusu **plików w paczce / surowce**, nie review gotowego cutu z timecode. Frame.io = inne narzędzie — [`frameio_review_module.plan.md`](./frameio_review_module.plan.md).
+
 ---
 
 ## Świadomie poza planem

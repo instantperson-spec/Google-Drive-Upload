@@ -59,10 +59,11 @@ Plan upload (archiwum): [`archiwum/plany/upload_ui_nebula_centered.plan.md`](./a
 | Admin: bez Live Monitor + History split | ✅ |
 | Upload: wymagana nazwa + sticky Start | ✅ |
 | [`post-mvp_roadmap_…`](./plany/post-mvp_roadmap_05ad683d.plan.md) | ⏳ **aktywny** — P0–P2 ✅ (rundy + mail); **następne: P3 feedback** |
+| [`frameio_review_module…`](./plany/frameio_review_module.plan.md) | 📋 pozycjonowanie — Frame.io = review cutu; ten portal = surowka (nie budować Frame w share) |
 | Security remediacja 2026-11-15 (P0–P2) | ✅ → [`archiwum/plany/security_audit_…`](./archiwum/plany/security_audit_remediation.plan.md) |
 | Binding+OOS + progress Drive+ETag | ✅ (bez Redis/KV) |
 
-**Poza planem:** konta klienta, dwukierunkowy sync z konfliktami, auto-watch folderu, ACL Drive na email klienta, pełny player NLE.
+**Poza planem:** konta klienta, dwukierunkowy sync z konfliktami, auto-watch folderu, ACL Drive na email klienta, pełny player NLE / proxy / review gotowego cutu w stylu Frame.io (osobne narzędzie — patrz pozycjonowanie).
 
 ---
 
