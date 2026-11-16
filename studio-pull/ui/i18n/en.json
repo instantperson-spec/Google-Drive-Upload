@@ -11,9 +11,14 @@
   },
   "kpi": {
     "sessions": "Sessions",
-    "oos": "Out of sync",
-    "shares": "Active shares",
-    "tokens": "Tokens"
+    "sessionsHint": "on Drive",
+    "volume": "Stored Volume",
+    "volumeFiles": "{count} files",
+    "shares": "Active Shares",
+    "sharesHint": "client portals",
+    "tokens": "Tokens",
+    "tokensHint": "of {total} total",
+    "oos": "Out of sync"
   },
   "tabs": {
     "projects": "Projects",

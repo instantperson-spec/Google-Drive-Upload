@@ -26,6 +26,8 @@ export async function listSessionFilesRecursive(authClient, sessionFolderId) {
         fields: 'nextPageToken, files(id, name, size, mimeType)',
         pageSize: 1000,
         pageToken,
+        supportsAllDrives: true,
+        includeItemsFromAllDrives: true,
       });
 
       for (const item of res.data.files || []) {
@@ -34,6 +36,7 @@ export async function listSessionFilesRecursive(authClient, sessionFolderId) {
           await walk(item.id, childPrefix);
         } else {
           if (SKIP_NAMES.has(item.name)) continue;
+          if (item.mimeType?.startsWith('application/vnd.google-apps.')) continue;
           const relativePath = prefix ? `${prefix}/${item.name}` : item.name;
           results.push({
             id: item.id,

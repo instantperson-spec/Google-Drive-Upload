@@ -29,16 +29,24 @@ async function findSharesFile(drive) {
     q: `'${mainFolderId}' in parents and name = '${SHARES_FILE_NAME}' and trashed = false`,
     fields: 'files(id)',
     pageSize: 1,
+    supportsAllDrives: true,
+    includeItemsFromAllDrives: true,
   });
   return res.data.files?.[0] || null;
 }
 
 async function readFileJson(drive, fileId) {
   const res = await drive.files.get(
-    { fileId, alt: 'media' },
+    { fileId, alt: 'media', supportsAllDrives: true },
     { responseType: 'text' }
   );
   return JSON.parse(res.data);
+}
+
+/** Active (non-revoked) share count for admin / studio KPI parity. */
+export async function countActiveShares() {
+  const registry = await readSharesRegistry();
+  return (registry.shares || []).filter((s) => s && !s.revoked).length;
 }
 
 /** @returns {Promise<object>} */

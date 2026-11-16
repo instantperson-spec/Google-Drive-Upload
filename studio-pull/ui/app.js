@@ -43,6 +43,15 @@
     }
   }
 
+  function formatBytes(bytes) {
+    const n = Number(bytes) || 0;
+    if (n === 0) return '0 B';
+    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.min(Math.floor(Math.log(n) / Math.log(1024)), units.length - 1);
+    const value = n / 1024 ** i;
+    return `${value.toFixed(i === 0 ? 0 : 2)} ${units[i]}`;
+  }
+
   function tokenStatusLabel(status) {
     if (status === 'active') return t('tokensPanel.statusActive');
     if (status === 'expired') return t('tokensPanel.statusExpired');
@@ -729,12 +738,32 @@
         sessionsCountEl.textContent = String(list.length);
         sessionsCountEl.classList.toggle('hidden', !list.length);
       }
+      const uniqueFolders = new Set(list.map((s) => s.folderId).filter(Boolean));
+      let storedBytes = 0;
+      let storedFiles = 0;
+      for (const folderId of uniqueFolders) {
+        const rows = list.filter((s) => s.folderId === folderId);
+        if (!rows.length) continue;
+        if (rows.some((s) => s.batch)) {
+          storedFiles += rows.reduce((sum, s) => sum + (Number(s.fileCount) || 0), 0);
+          storedBytes += rows.reduce((sum, s) => sum + (Number(s.totalBytes) || 0), 0);
+        } else {
+          storedFiles += Number(rows[0].fileCount) || 0;
+          storedBytes += Number(rows[0].totalBytes) || 0;
+        }
+      }
+
       const kpiSessions = $('kpi-sessions');
-      const kpiOos = $('kpi-oos');
+      const kpiVolume = $('kpi-volume');
+      const kpiVolumeHint = $('kpi-volume-hint');
       const kpiShares = $('kpi-shares');
       if (kpiSessions) kpiSessions.textContent = String(list.length);
-      if (kpiOos) kpiOos.textContent = String(oosCount);
+      if (kpiVolume) kpiVolume.textContent = formatBytes(storedBytes);
+      if (kpiVolumeHint) {
+        kpiVolumeHint.textContent = t('kpi.volumeFiles', { count: storedFiles });
+      }
       if (kpiShares) kpiShares.textContent = String(sharesByFolder.size);
+      // Keep oosCount for session row chips; no longer a top KPI.
 
       const first = list[0];
       const firstId = first.id || first.folderId;
@@ -1159,7 +1188,11 @@
         }
       }
       const kpiTokens = $('kpi-tokens');
+      const kpiTokensHint = $('kpi-tokens-hint');
       if (kpiTokens) kpiTokens.textContent = String(activeCount);
+      if (kpiTokensHint) {
+        kpiTokensHint.textContent = t('kpi.tokensHint', { total: list.length });
+      }
       if (!list.length) {
         tokensEl.textContent = t('tokensPanel.empty');
         return;

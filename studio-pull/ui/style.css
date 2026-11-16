@@ -249,6 +249,12 @@ body {
   letter-spacing: -0.02em;
 }
 
+.kpi-hint {
+  margin-top: 0.2rem;
+  font-size: 0.72rem;
+  color: var(--muted, #94a3b8);
+}
+
 .kpi-value.kpi-warn { color: var(--warn); }
 .kpi-value.kpi-accent { color: #a5b4fc; }
 

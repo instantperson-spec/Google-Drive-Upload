@@ -63,7 +63,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(false);
   const [fetchError, setFetchError] = useState('');
   const [tokenStats, setTokenStats] = useState({ active: 0, total: 0 });
-  const [oauthScopeLabel, setOauthScopeLabel] = useState('—');
+  const [activeShares, setActiveShares] = useState(0);
 
   const fetchActive = useCallback(async () => {
     setActiveLoading(true);
@@ -124,6 +124,22 @@ export default function AdminDashboard() {
     }
   }, []);
 
+  const fetchShareStats = useCallback(async () => {
+    try {
+      const res = await fetch('/api/admin/shares', { credentials: 'include' });
+      if (!res.ok) return;
+      const data = await res.json();
+      setActiveShares(Number(data.activeCount) || 0);
+    } catch {
+      /* non-critical */
+    }
+  }, []);
+
+  const refreshKpis = useCallback(
+    () => Promise.all([fetchActive(), fetchSessions(), fetchTokenStats(), fetchShareStats()]),
+    [fetchActive, fetchSessions, fetchTokenStats, fetchShareStats]
+  );
+
   useEffect(() => {
     (async () => {
       try {
@@ -131,7 +147,7 @@ export default function AdminDashboard() {
         const data = await res.json().catch(() => ({}));
         if (data.authenticated) {
           setAuthenticated(true);
-          await Promise.all([fetchActive(), fetchSessions(), fetchTokenStats()]);
+          await refreshKpis();
         } else {
           setAuthenticated(false);
         }
@@ -139,17 +155,16 @@ export default function AdminDashboard() {
         setAuthenticated(false);
       }
     })();
-  }, [fetchActive, fetchSessions, fetchTokenStats]);
+  }, [refreshKpis]);
 
-  // Passive refresh: Drive history + active progress every 60s
+  // Passive refresh: Drive history + KPIs every 60s
   useEffect(() => {
     if (!authenticated) return;
     const interval = setInterval(() => {
-      fetchSessions();
-      fetchActive();
+      refreshKpis();
     }, 60_000);
     return () => clearInterval(interval);
-  }, [authenticated, fetchSessions, fetchActive]);
+  }, [authenticated, refreshKpis]);
 
   const { inProgressRows, completedSessions } = useMemo(() => {
     const liveActive = activeSessions.filter((a) => a.sessionStatus !== 'completed');
@@ -227,7 +242,7 @@ export default function AdminDashboard() {
       if (!res.ok) throw new Error(data.error || 'Login failed');
       setPassword('');
       setAuthenticated(true);
-      await Promise.all([fetchActive(), fetchSessions(), fetchTokenStats()]);
+      await refreshKpis();
     } catch (err) {
       setLoginError(err.message);
     } finally {
@@ -245,8 +260,7 @@ export default function AdminDashboard() {
   };
 
   const refreshAll = () => {
-    fetchActive();
-    fetchSessions();
+    refreshKpis();
   };
 
   if (authenticated === null) {
@@ -284,14 +298,16 @@ export default function AdminDashboard() {
   }
 
   const historyCount = inProgressRows.length + completedSessions.length;
-  const storedBytes = completedSessions.reduce(
+  // Same universe as Studio: all Drive session folders (not only "completed").
+  const storedBytes = sessions.reduce(
     (sum, s) => sum + (Number(s.totalSize) || 0),
     0
   );
-  const storedFiles = completedSessions.reduce(
+  const storedFiles = sessions.reduce(
     (sum, s) => sum + (Number(s.fileCount) || 0),
     0
   );
+  const sessionCount = sessions.length;
 
   return (
     <div className="admin-dashboard">
@@ -323,10 +339,7 @@ export default function AdminDashboard() {
             <button
               type="button"
               className="btn admin-btn-primary"
-              onClick={() => {
-                refreshAll();
-                fetchTokenStats();
-              }}
+              onClick={refreshAll}
               disabled={loading || activeLoading}
             >
               {loading || activeLoading ? 'Refreshing…' : 'Refresh all'}
@@ -339,31 +352,33 @@ export default function AdminDashboard() {
 
         <div className="admin-kpi-row">
           <div className="admin-kpi-tile">
-            <div className="admin-kpi-label">Completed Sessions</div>
+            <div className="admin-kpi-label">Sessions</div>
             <div className="admin-kpi-value">
-              {completedSessions.length}
-              <span className="admin-kpi-hint">{inProgressRows.length ? `${inProgressRows.length} live` : 'Drive synced'}</span>
+              {sessionCount}
+              <span className="admin-kpi-hint">
+                {inProgressRows.length ? `${inProgressRows.length} live` : 'on Drive'}
+              </span>
             </div>
           </div>
           <div className="admin-kpi-tile">
             <div className="admin-kpi-label">Stored Volume</div>
             <div className="admin-kpi-value">
               {formatBytes(storedBytes)}
-              <span className="admin-kpi-hint">{storedFiles.toLocaleString('pl-PL')} files</span>
+              <span className="admin-kpi-hint">{storedFiles.toLocaleString()} files</span>
             </div>
           </div>
           <div className="admin-kpi-tile">
-            <div className="admin-kpi-label">Client Tokens</div>
+            <div className="admin-kpi-label">Active Shares</div>
             <div className="admin-kpi-value admin-kpi-accent">
-              {tokenStats.active} active
-              <span className="admin-kpi-hint">of {tokenStats.total} total</span>
+              {activeShares}
+              <span className="admin-kpi-hint">client portals</span>
             </div>
           </div>
           <div className="admin-kpi-tile">
-            <div className="admin-kpi-label">OAuth Scope</div>
-            <div className="admin-kpi-value admin-kpi-ok">
-              {oauthScopeLabel}
-              <span className="admin-kpi-hint">VULN-05</span>
+            <div className="admin-kpi-label">Tokens</div>
+            <div className="admin-kpi-value">
+              {tokenStats.active}
+              <span className="admin-kpi-hint">of {tokenStats.total} total</span>
             </div>
           </div>
         </div>
@@ -466,7 +481,7 @@ export default function AdminDashboard() {
       </section>
 
       <AdminTokenManager onStatsChange={setTokenStats} />
-      <AdminOAuthCheck onScopeLabel={setOauthScopeLabel} />
+      <AdminOAuthCheck />
     </div>
   );
 }

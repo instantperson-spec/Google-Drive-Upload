@@ -34,6 +34,8 @@ export async function GET(request) {
       fields: 'files(id, name, modifiedTime, createdTime)',
       orderBy: 'modifiedTime desc',
       pageSize: limit,
+      supportsAllDrives: true,
+      includeItemsFromAllDrives: true,
     });
 
     const folders = foldersRes.data.files || [];

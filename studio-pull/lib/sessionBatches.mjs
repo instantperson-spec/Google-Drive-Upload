@@ -35,6 +35,8 @@ export async function expandFoldersToSessions(drive, folders, progressByFolder =
     const prog = progressByFolder.get(f.id);
 
     if (isStampedSessionFolder(f.name)) {
+      const files = await walkDriveFolder(drive, f.id);
+      const bytes = files.reduce((sum, file) => sum + (Number(file.size) || 0), 0);
       out.push({
         id: f.id,
         folderId: f.id,
@@ -46,8 +48,9 @@ export async function expandFoldersToSessions(drive, folders, progressByFolder =
         token: prog?.token || null,
         since: null,
         until: null,
-        fileCount: null,
-        totalLabel: null,
+        fileCount: files.length,
+        totalBytes: bytes,
+        totalLabel: formatBytes(bytes),
         batch: false,
       });
       continue;
@@ -78,6 +81,7 @@ export async function expandFoldersToSessions(drive, folders, progressByFolder =
         since: null,
         until: null,
         fileCount: 0,
+        totalBytes: 0,
         totalLabel: '0 B',
         batch: false,
       });
@@ -99,6 +103,7 @@ export async function expandFoldersToSessions(drive, folders, progressByFolder =
         since: bounds.since,
         until: bounds.until,
         fileCount: stats.count,
+        totalBytes: stats.bytes,
         totalLabel: formatBytes(stats.bytes),
         batch: true,
       });
