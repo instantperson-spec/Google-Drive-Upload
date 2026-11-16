@@ -1,13 +1,22 @@
 import { NextResponse } from 'next/server';
 import { isAdminAuthenticated, unauthorizedAdminResponse } from '@/lib/adminAuth';
 import { createToken, listTokens, buildUploadUrl } from '@/lib/tokenStore';
+import { listLinkedTokenSlugs } from '@/lib/clientStore';
 import { getUploadOrigin } from '@/lib/uploadOrigin';
 import { rateLimit } from '@/lib/rateLimit';
 
-function enrichWithUrl(record, origin) {
+function enrichToken(record, origin, linkedSlugs) {
+  const hubBound =
+    Boolean(record.hubBound) ||
+    (typeof record.notes === 'string' &&
+      /auto-created on invited client hub signup/i.test(record.notes)) ||
+    linkedSlugs.has(String(record.token || ''));
+
   return {
     ...record,
-    uploadUrl: buildUploadUrl(origin, record.token),
+    hubBound,
+    // Hub-bound tokens are session-only — never advertise a shareable upload URL.
+    uploadUrl: hubBound ? null : buildUploadUrl(origin, record.token),
     status: record.revoked
       ? 'revoked'
       : record.expiresAt && new Date(record.expiresAt) < new Date()
@@ -21,9 +30,12 @@ export async function GET(request) {
 
   try {
     const origin = getUploadOrigin(request);
-    const tokens = await listTokens();
+    const [tokens, linkedSlugs] = await Promise.all([
+      listTokens(),
+      listLinkedTokenSlugs().catch(() => new Set()),
+    ]);
     return NextResponse.json({
-      tokens: tokens.map((t) => enrichWithUrl(t, origin)),
+      tokens: tokens.map((t) => enrichToken(t, origin, linkedSlugs)),
       fetchedAt: new Date().toISOString(),
     });
   } catch (error) {
@@ -53,7 +65,10 @@ export async function POST(request) {
     });
 
     const origin = getUploadOrigin(request);
-    return NextResponse.json({ token: enrichWithUrl(record, origin) }, { status: 201 });
+    return NextResponse.json(
+      { token: enrichToken(record, origin, new Set()) },
+      { status: 201 }
+    );
   } catch (error) {
     return NextResponse.json({ error: error.message || 'Failed to create token.' }, { status: 400 });
   }

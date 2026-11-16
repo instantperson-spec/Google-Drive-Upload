@@ -1,13 +1,19 @@
 import { NextResponse } from 'next/server';
-import { isTokenActive, isTokenActiveInEnv } from '@/lib/tokenStore';
+import {
+  isTokenActive,
+  isTokenActiveInEnv,
+  isTokenHubBound,
+} from '@/lib/tokenStore';
 import { getClientFromRequest } from '@/lib/clientAuth';
 
 /**
  * Server-side verification of the per-project upload token.
  *
- * Primary: header `x-upload-token` against `_uploader_tokens.json`.
- * Fallback: active client hub session → linkedToken (hub upload; token slug never sent to browser).
- * Env fallback: UPLOAD_TOKENS only when Drive store is unreachable for header tokens.
+ * Primary: header `x-upload-token` against `_uploader_tokens.json`
+ *   — rejected when the token is hub-bound (session-only).
+ * Fallback: active client hub session → linkedToken (slug never sent to browser).
+ * Env fallback: UPLOAD_TOKENS only when Drive store is unreachable for header tokens
+ *   (env tokens are never hub-bound).
  *
  * @returns {Promise<string|null>} the valid token, or null if unauthorized
  */
@@ -15,6 +21,7 @@ export async function verifyUploadToken(request) {
   const provided = request.headers.get('x-upload-token');
   if (provided) {
     try {
+      if (await isTokenHubBound(provided)) return null;
       if (await isTokenActive(provided)) return provided;
       return null;
     } catch (err) {

@@ -9,11 +9,21 @@
 
 | Link | Do czego | Auth |
 |---|---|---|
-| `https://DOMENA/?token=Nazwa` | Pierwszy upload (clip-only / jednorazowy) | Token uploadu |
+| `https://DOMENA/?token=Nazwa` | Clip / retainer upload (shareable) | Token uploadu |
 | `https://DOMENA/share/<id>` | Portal jednego projektu: rundy, pobieranie, dogrywki | ID share (bez `?token=`) |
-| `https://DOMENA/client` | Hub klienta projektowego: lista projektów + nowy upload | Email + hasło |
+| `https://DOMENA/client` | Hub klienta: lista projektów + nowy upload | **Email + hasło** (cookie) |
 
-Share tworzy **Studio Console** (**Opublikuj** albo „Wyślij link”) — nie panel `/admin`. Upload token **nie** otwiera pobierania.
+Share tworzy **Studio Console** (**Opublikuj** albo „Wyślij link”) — nie panel `/admin`.
+
+### Hasło vs token vs hub-bound
+
+| Credential | Loguje do `/client`? | Upload? | Udostępniać? |
+|---|---|---|---|
+| **Hasło hubu** | Tak (sesja `client_hub_session`) | Tak — przez sesję | Tylko klientowi (invite) |
+| **Token clip/retainer** (`/?token=`) | **Nie** | Tak | Tak — Copy link w `/admin` |
+| **Hub-bound** (auto przy signup) | **Nie** | Tylko po loginie hubu | **Nie** — brak Copy link; `/?token=` → 401 |
+
+Hub-bound to wewnętrzne powiązanie konta z uprawnieniem uploadu (flaga `hubBound` / linkedToken). **Nie jest drugim loginem** i nie wolno go wysyłać jako link.
 
 Produkcja (domyślna): `https://drive-uploader-three.vercel.app`
 
@@ -32,7 +42,7 @@ Produkcja (domyślna): `https://drive-uploader-three.vercel.app`
    Dostajesz URL (kopiowany) np.  
    `https://DOMENA/client?invite=<token>&signup=1&lang=pl`
 2. Klient otwiera link → zakładka signup, język z `lang`, email **zablokowany** na adres z invite.
-3. Po rejestracji: konto + linked retainer token; invite zużyty (jednorazowy, TTL 7 dni).
+3. Po rejestracji: konto + **hub-bound** linked token (session-only, bez `/?token=`); invite zużyty (jednorazowy, TTL 7 dni).
 4. Powrót klienta: `https://DOMENA/client?login=1&lang=en` (deep-link UI, bez sekretu).
 5. Bez `invite` — signup niedostępny (API 403). Login bez zmian.
 6. Admin: lista kont, Suspend / Restore, Password, Assign, Delete; pending invites: New URL + copy, Resend mail, Revoke.

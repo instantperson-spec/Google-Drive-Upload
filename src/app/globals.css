@@ -2423,6 +2423,29 @@ h1 {
   color: #c7d2fe;
 }
 
+.admin-hubbound-badge {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 0.4rem;
+  padding: 0.12rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: rgba(56, 189, 248, 0.16);
+  color: #7dd3fc;
+  vertical-align: middle;
+}
+
+.admin-cell-name .admin-hubbound-badge {
+  margin-left: 0.45rem;
+}
+
+td .admin-hubbound-badge {
+  margin-left: 0;
+}
+
 .admin-cell-name {
   font-weight: 600;
   color: var(--text-primary);

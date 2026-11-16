@@ -182,7 +182,8 @@ export default function AdminTokenManager({ onStatsChange }) {
 
       <p className="admin-empty-inline" style={{ marginTop: 0 }}>
         Tokens are stored in <code className="admin-code">_uploader_tokens.json</code> on Google Drive.
-        Revoke takes effect immediately — no redeploy needed.
+        Revoke takes effect immediately. <strong>Hub-bound</strong> rows are
+        session-only (no Copy link / no <code className="admin-code">/?token=</code>).
       </p>
 
       {error && <p className="admin-error admin-error-banner">{error}</p>}
@@ -306,21 +307,35 @@ export default function AdminTokenManager({ onStatsChange }) {
                 <tr key={t.id} className={t.status !== 'active' ? 'admin-token-row-inactive' : ''}>
                   <td className="admin-cell-name" title={t.clientName}>
                     {t.clientName}
+                    {t.hubBound ? (
+                      <span
+                        className="admin-hubbound-badge"
+                        title="Session-only — not a shareable /?token= link"
+                      >
+                        Hub-bound
+                      </span>
+                    ) : null}
                   </td>
                   <td className="admin-cell-email" title={t.prefillEmail || ''}>
                     {t.prefillEmail || '—'}
                   </td>
-                  <td title={t.token}>
+                  <td title={t.hubBound ? 'Internal binding (not a login/upload link)' : t.token}>
                     <code className="admin-code">{t.token}</code>
                   </td>
-                  <td>{t.type === 'retainer' ? 'Retainer' : 'One-time'}</td>
+                  <td>
+                    {t.hubBound
+                      ? 'Hub'
+                      : t.type === 'retainer'
+                        ? 'Retainer'
+                        : 'One-time'}
+                  </td>
                   <td>{t.locale === 'pl' ? 'PL' : 'EN'}</td>
                   <td>
                     <StatusBadge status={t.status} />
                   </td>
                   <td className="admin-cell-date">{formatDate(t.expiresAt)}</td>
                   <td className="admin-actions-cell">
-                    {t.status === 'active' ? (
+                    {t.status === 'active' && !t.hubBound && t.uploadUrl ? (
                       <button
                         type="button"
                         className="admin-copy-btn"

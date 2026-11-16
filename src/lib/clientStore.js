@@ -289,6 +289,17 @@ export async function listClients() {
   return registry.clients.map(publicClient);
 }
 
+/** Slugs currently linked to hub accounts (for hubBound soft-match). */
+export async function listLinkedTokenSlugs() {
+  const registry = await readClientsRegistry();
+  const set = new Set();
+  for (const c of registry.clients || []) {
+    const slug = c.linkedToken ? String(c.linkedToken).trim() : '';
+    if (slug) set.add(slug);
+  }
+  return set;
+}
+
 export async function getClientById(id) {
   const registry = await readClientsRegistry();
   return registry.clients.find((c) => c.id === id) || null;

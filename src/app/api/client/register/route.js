@@ -110,6 +110,7 @@ export async function POST(request) {
       prefillName: displayName,
       prefillEmail: email,
       locale,
+      hubBound: true,
     });
 
     const client = await createClient({

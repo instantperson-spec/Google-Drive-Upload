@@ -517,9 +517,16 @@ export default function AdminClientManager() {
                     <td className="admin-cell-email">{c.email}</td>
                     <td className="admin-cell-name">{c.displayName || '—'}</td>
                     <td>
-                      <code className="admin-code">
-                        {c.linkedToken || '—'}
-                      </code>
+                      {c.linkedToken ? (
+                        <span
+                          className="admin-hubbound-badge"
+                          title="Upload only via /client session — not a /?token= link"
+                        >
+                          Linked · hub-bound
+                        </span>
+                      ) : (
+                        '—'
+                      )}
                     </td>
                     <td>{membershipsFor(c.email).length}</td>
                     <td>

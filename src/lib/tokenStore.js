@@ -245,8 +245,36 @@ export async function listTokens() {
   const registry = await readRegistry();
   return registry.tokens.map((t) => ({
     ...t,
+    hubBound: Boolean(t.hubBound),
     status: t.revoked ? 'revoked' : (t.expiresAt && new Date(t.expiresAt) < new Date() ? 'expired' : 'active'),
   }));
+}
+
+/**
+ * True if this slug must only work via hub session cookie (not /?token= or x-upload-token).
+ * Soft-matches: explicit hubBound, auto-signup notes, or client.linkedToken set.
+ */
+export async function isTokenHubBound(tokenString) {
+  const slug = String(tokenString || '').trim();
+  if (!slug) return false;
+
+  const record = await getTokenRecord(slug);
+  if (record?.hubBound) return true;
+  if (
+    typeof record?.notes === 'string' &&
+    /auto-created on invited client hub signup/i.test(record.notes)
+  ) {
+    return true;
+  }
+
+  try {
+    const { listLinkedTokenSlugs } = await import('@/lib/clientStore');
+    const linked = await listLinkedTokenSlugs();
+    if (linked.has(slug)) return true;
+  } catch (err) {
+    console.error('isTokenHubBound linked lookup failed:', err.message || err);
+  }
+  return false;
 }
 
 export async function createToken({
@@ -259,6 +287,7 @@ export async function createToken({
   prefillName = null,
   prefillEmail = null,
   locale = DEFAULT_LOCALE,
+  hubBound = false,
 }) {
   if (!validateTokenSlug(token)) {
     throw new Error('Token must be 2–64 characters: letters, numbers, hyphen, underscore.');
@@ -296,6 +325,7 @@ export async function createToken({
       expiresAt: expiresAt || null,
       revoked: false,
       revokedAt: null,
+      hubBound: Boolean(hubBound),
       // Bound to token — upload form does not ask the client for these.
       prefillName: name,
       prefillEmail: email,
