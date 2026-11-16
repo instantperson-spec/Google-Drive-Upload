@@ -12,7 +12,7 @@
 | [`bezpieczenstwo.md`](./bezpieczenstwo.md) | **Jedyny żywy skrót** bezpieczeństwa (+ residual) |
 | [`produkt_i_backlog.md`](./produkt_i_backlog.md) | Co działa + backlog produktu |
 | [`plany/post-mvp_roadmap_05ad683d.plan.md`](./plany/post-mvp_roadmap_05ad683d.plan.md) | Roadmap: P0–P2 ✅ → **P3 feedback** |
-| [`plany/frameio_review_module.plan.md`](./plany/frameio_review_module.plan.md) | Projekt modułu Review (Frame.io-lite), bez kodu |
+| [`plany/frameio_review_module.plan.md`](./plany/frameio_review_module.plan.md) | Frame.io vs portal surowki — pozycjonowanie (bez budowy Frame) |
 | [`../mockups/`](../mockups/) | Referencja UI |
 
 ## Archiwum

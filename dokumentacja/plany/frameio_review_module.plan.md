@@ -1,237 +1,118 @@
 ---
-name: Moduł Review (Frame.io-lite)
-overview: "Analiza możliwości i projekt wdrożenia warstwy review w stylu Frame.io na istniejącym portalu share + rundach — bez klonowania pełnego Frame.io, bez kont klienta, bez kodu w tym dokumencie."
+name: Frame.io vs portal surowki — pozycjonowanie
+overview: "Korekta analizy: Frame.io służy review gotowego wideo; ten produkt służy przesyłaniu i komunikacji wokół surowki (materiałów do / wokół gotowego cutu). Nie budować Frame.io-lite w portalu share."
 todos:
-  - id: r0-p3-feedback
-    content: "R0 = P3: Approve / Changes requested + notatka per plik / runda"
+  - id: positioning
+    content: "Utrwalić rozdział: Frame.io = final review; portal = surowka + handoff"
+    status: completed
+  - id: p3-surowka
+    content: "P3 feedback = status/notatka przy plikach surowki / paczki dostawy — nie TC na finalu"
     status: pending
-  - id: r1-preview
-    content: "R1: in-browser preview MP4/H.264 w portalu (stream z Drive)"
-    status: pending
-  - id: r2-timecode
-    content: "R2: komentarze z timecode / markers na pliku wideo"
-    status: pending
-  - id: r3-round-compare
-    content: "R3 (opcjonalnie): porównanie rund Draft N vs N-1 w UI Review"
-    status: pending
+  - id: out-of-scope-frame
+    content: "Świadomie poza portalem: player TC, pins, drawings, proxy, NLE plugins"
+    status: completed
 isProject: false
 ---
 
-# Moduł Review — analiza i projekt wdrożenia (Frame.io-lite)
+# Frame.io vs portal surowki — pozycjonowanie (bez kodu)
 
-> Data: 2026-11-16 · **Bez kodu** — decyzje produktowe i architektura.  
-> Kontekst: P0–P2 wdrożone (binding, plik-po-pliku, rundy, mail); następny krok roadmapy = **P3 feedback**.
-
----
-
-## 1. Cel
-
-Odpowiedzieć: czy i jak dodać moduł „jak Frame.io” do Drive Uploader / Studio Console / portalu share — **jako warstwę Review**, nie jako osobny produkt ani pełny klon.
-
-**Sukces biznesowy:** klient ocenia dostawę w przeglądarce (status + opcjonalnie podgląd + komentarz przy klatce); studio widzi listę „do poprawy” w Console — bez Slacka / telefonu.
+> Data: 2026-11-16 · **Korekta** wcześniejszej wersji „Frame.io-lite”.  
+> Ten dokument **nie** jest planem budowy Frame.io w Waszym stacku.
 
 ---
 
-## 2. Czym jest Frame.io (mapa funkcji)
+## 1. Dwa różne joby
 
-| Warstwa Frame.io | Opis | Priorytet dla Was |
+| | **Frame.io** | **Ten produkt (Drive Uploader / share)** |
 |---|---|---|
-| Share / guest review | Link bez pełnego konta | **Wysoki** — już macie share id |
-| Version stack | Wersje ujęć / dostaw | **Wysoki** — rundy Draft/Final ≈ stack dostawy |
-| Approve / Request changes | Status per asset | **Wysoki** — to P3 |
-| In-browser player | Odtwarzanie + scrub | **Średni–wysoki** — rdzeń „feel” Frame.io |
-| Timecode comments / pins | Komentarz przy TC | **Średni** — Frame.io-lite |
-| Drawings / annotations | Rysowanie na klatce | Niski (v3+) |
-| Proxy transcoder | Lekkie proxy do web | **Poza zakresem** (koszt / infra) |
-| NLE plugins | Premiere, FCP, DaVinci | **Poza zakresem** (roadmapa już to wyklucza) |
-| Multi-user accounts / orgs | Role, projekty, SSO | **Poza zakresem** (B2B share-link) |
-| Live collab / presence | Wielu recenzentów naraz | Poza zakresem v1–v2 |
+| Obiekt | **Gotowe / półgotowe wideo** (cut, wersja do akceptacji) | **Surowka** — materiały źródłowe i związane z produkcją cutu |
+| Główna czynność | Oglądanie + komentarz przy klatce / TC | Przesyłanie, organizacja, pobieranie, dogrywki |
+| Sukces | „Popraw od 01:12:03” / Approve cutu | „Surowka jest u studia / klient dostał paczkę / dograł brakujące” |
+| Typowy użytkownik w momencie | Recenzent cutu | Klient oddający materiał; studio wracające z dostawą plików |
 
-**Wniosek:** Frame.io = review + media pipeline + ecosystem. Wy potrzebujecie **review na Waszych rundach**, nie pipeline’u Adobe.
+**Frame.io nie zastępuje portalu surowki. Portal surowki nie ma być Frame.io.**
+
+Rundy Draft/Final u Was = wersje **paczki plików** (handoff), nie stack frame-accurate review jednego mastera.
 
 ---
 
-## 3. Co już macie (fit)
+## 2. Co robi dziś Wasz portal (właściwy zakres)
 
 ```
-Upload (?token=) → Drive sesja → Console Sync → Opublikuj (runda)
-                                              ↓
-                                    /share/<id>  (lista, filtr od publikacji,
-                                                  plik-po-pliku, FromClient)
-                                              ↓
-                                    mail prefillEmail
+Klient  --upload surowki-->  Drive sesja  --pull/Sync-->  Studio
+                                      |
+                                      v
+                              Opublikuj paczkę (runda)
+                                      |
+                                      v
+                              /share  (pobieranie, FromClient dogrywki, mail)
 ```
 
-| Element produktu | Odpowiednik Frame.io | Luka |
-|---|---|---|
-| Rundy + snapshot | Version / delivery stack | Brak UI „compare versions” |
-| Share link | Guest review URL | Brak playera i statusów approve |
-| FromClient | Client upload back | Nie jest threadem komentarzy |
-| Studio Console badge OOS | „Something needs attention” | Brak badge „feedback klienta” |
-| P3 w planie | Approve / Changes | **Niezaimplementowane** |
+- Upload z tokenem = oddanie surowki / materiałów.  
+- Share = komunikacja wokół **plików** (co jest, co nowe od publikacji, dogrywki).  
+- Console = operacje studia na surowce i paczkach, nie recenzja cutu w playerze.
 
-Świadomie poza planem dziś (i powinno zostać poza Frame.io-lite): konta klienta, pełny player NLE, proxy wszystkich kodeków.
+To jest **workflow materiałowy**, nie **workflow review cutu**.
 
 ---
 
-## 4. Werdykt możliwości
+## 3. Gdzie Frame.io nadal może istnieć obok (nie w środku)
 
-| Opcja | Ocena |
+Typowy łańcuch B2B:
+
+1. Klient wrzuca **surowkę** → **Wasze narzędzie**.  
+2. Studio montuje.  
+3. Studio wrzuca **cut do akceptacji** → **Frame.io** (lub podobne).  
+4. Po akceptacji cutu — ewentualnie znowu Wasz share na finalne pliki / stempy / eksporty jako paczka plików (bez TC review).
+
+Integracja „wyślij link Frame.io z Console” = opcjonalny później skrót operacyjny, **nie** embedding Frame.io w `/share`.
+
+---
+
+## 4. Co z P3 feedback? (nadal sensowne — ale nie Frame)
+
+P3 z [`post-mvp_roadmap`](./post-mvp_roadmap_05ad683d.plan.md) zostaje, ale w semantyce **surowki / paczki**:
+
+| Sens P3 | Nie-sens (Frame) |
 |---|---|
-| A. Pełny klon Frame.io | **Nie** — infra proxy, pluginy, konta = inny produkt |
-| B. Integracja z Frame.io API (hosting mediów u nich) | Możliwe, ale **podwaja** storage/auth i psuje model „wszystko na Drive” |
-| C. **Moduł Review na share + rundach** | **Tak — rekomendowane** |
+| Plik: Approve / „brakuje / do wymiany” + notatka | Komentarz „przy 01:12 na timeline finalu” |
+| Studio: lista plików do dogrania / poprawy w paczce | Player + pins + drawings |
+| Kontekst: runda = wersja paczki handoff | Kontekst: wersja cutu w playerze |
 
-**Rekomendacja: opcja C**, fazami R0→R2 (R3 opcjonalnie). R0 = istniejące P3.
-
----
-
-## 5. Projekt produktu (Frame.io-lite)
-
-### Persona i job
-
-- **Klient:** otwiera mail / share → widzi rundę → oznacza pliki / zostawia notatkę (później: ogląda MP4 i pinuje TC) → studio wie, co poprawić.  
-- **Studio:** w Console przy sesji: „3 pliki Changes requested” → poprawki → nowy Draft / Final.
-
-### Zasady UX (spójne z produktem)
-
-- Nadal **jeden share link** — bez logowania klienta.  
-- Review zawsze w kontekście **aktualnej rundy** (`roundId`).  
-- FromClient zostaje dogrywką plików; **nie** mieszać z wątkiem komentarzy.  
-- UI portalu: jedna sekcja „Review” / statusy na liście plików — bez dashboardu Frame.io.
-
-### Stany pliku (R0)
-
-`unreviewed` | `approved` | `changes_requested`  
-+ opcjonalna notatka (krótki tekst).
-
-### Markers (R2)
-
-Na plikach wideo: `{ id, tSec, body, authorLabel?, createdAt }`  
-Autor = „Klient” (z share) albo prefillName z tokenu jeśli znany po stronie share.token.
+Przykłady notatek OK dla surowki: „brak slotu B-roll z dnia 2”, „ten WAV jest cichy / zły take”, „proszę dograć logo w SVG”.  
+Przykłady **poza** portalem: „od tego ujęcia zmień cut” z TC na masterze → Frame.io.
 
 ---
 
-## 6. Architektura (koncept, bez kodu)
+## 5. Wycofane z rekomendacji (względem poprzedniej wersji planu)
 
-### Powierzchnia
+Następujące **nie** są celem tego portalu:
 
-```
-Internet
-  /share/<id>              → lista + (R0) statusy + (R1) player + (R2) markers
-  /api/share/<id>/…        → GET lista; POST feedback (share id)
-  Studio Console           → badge / lista „do poprawy” (czyta Drive JSON)
-```
+- In-browser preview jako rdzeń produktu (R1 „jak Frame”)  
+- Komentarze timecode / markers na wideo (R2)  
+- Drawing na klatce, proxy transcoder, pluginy NLE  
+- Marketing „Frame.io-lite”
 
-### Dane (Drive, jak reszta produktu)
+Opcjonalny lekki preview MP4 przy surowce (czy „to ten plik?”) może być wygodą UX później — **nie** mylić z review gotowego cutu.
 
-Propozycja: **`_team_feedback.json`** w folderze sesji (obok `_team_manifest.json`).
+---
 
-```
-{
-  version: 1,
-  updatedAt,
-  byRound: {
-    [roundId]: {
-      [relativePath]: {
-        status: "approved" | "changes_requested" | "unreviewed",
-        note: "...",
-        updatedAt,
-        markers: [ { id, tSec, body, createdAt } ]   // od R2
-      }
-    }
-  }
-}
-```
+## 6. Zaktualizowany werdykt
 
-Alternatywa: pole w manifeście rundy — gorsze przy częstych zapisach feedbacku (konflikty z publish). **Osobny plik + ETag/If-Match** jak progress/tokeny.
-
-### Auth / bezpieczeństwo
-
-- Zapis feedbacku: **tylko share id** (jak list/download/FromClient) + rate limit.  
-- Bez OTP (VULN-08 accepted) — ryzyko: kto ma link, może zmieniać statusy; revoke share = stop.  
-- Preview stream: nie wystawiać raw Google access token do przeglądarki; tylko Wasz proxy/stream z walidacją `assertFileInShareFolder` + MIME allowlist.  
-- Limit długości notatki / liczby markers per plik (abuse).
-
-### Preview (R1) — ograniczenia
-
-| Działa w przeglądarce | Nie działa bez proxy |
+| Pytanie | Odpowiedź |
 |---|---|
-| MP4 H.264 + AAC | ProRes, DNx, BRAW, R3D, wiele MXF |
-| WebM / część HEVC (zależnie od OS) | Kontenery „kamerowe” |
+| Czy budować moduł Frame.io w portalu? | **Nie** |
+| Czy P3 (status pliku + notatka) ma sens? | **Tak** — jako komunikacja o surowce / paczce, nie o TC finalu |
+| Czy rundy ≈ Frame version stack? | Tylko luźno: wersje **paczki plików**, nie stack cutu |
+| Gdzie żyje review gotowego wideo? | Poza tym produktem (np. Frame.io) |
 
-Polityka produktu: **preview tylko gdy MIME/whitelist OK**; inaczej CTA „Pobierz”. Nie obiecywać „wszystkie kodeki jak Frame.io”.
-
-Pasmo: stream przez Vercel ma limity `maxDuration` / body — dla dużych plików rozważyć krótkie Range requests albo „otwórz w nowej karcie” z Controlled download URL; unikać składania całego pliku w RAM (lekcja ZIP).
-
-### Console (studio)
-
-- Przy sesji z aktywnym share: licznik `changes_requested` z `_team_feedback.json` dla `roundId`.  
-- Lista ścieżek + notatka (read-only w Console v1).  
-- Po nowym Opublikuj: feedback dotyczy **nowej** rundy (stara zostaje w `byRound` historycznie).
+**Jedno zdanie:** ten portal = **przesyłanie i komunikacja wokół surowki**; Frame.io = **review gotowego wideo** — inne narzędzie, inny moment w projekcie.
 
 ---
 
-## 7. Fazy wdrożenia
+## 7. Co robić dalej (produkt)
 
-```mermaid
-flowchart LR
-  R0[R0 P3 Feedback plik] --> R1[R1 Preview MP4]
-  R1 --> R2[R2 Timecode comments]
-  R2 --> R3[R3 Compare rundy]
-```
-
-| Faza | Zakres | Kryterium sukcesu | Zależności |
-|---|---|---|---|
-| **R0** | Approve / Changes / notatka; zapis Drive; badge Console | Studio widzi listę „do poprawy” bez Slacka | Rundy (P1) już są |
-| **R1** | Player w portalu dla whitelisted MIME; scrub | Klient ogląda draft bez pełnego downloadu | R0 + stream Range |
-| **R2** | Markers TC + lista obok playera | Komentarz „u 01:12:03” trafia do Console | R1 |
-| **R3** | UI diff vs poprzednia runda (reuse `vsPrevRound`) | Klient filtruje „co nowe od Draft N-1” w trybie Review | R0 + istniejący diff |
-| **RX** | Proxy farm, NLE plugins, rysowanie, konta | — | **Nie w roadmapie** |
-
-**Kolejność obowiązkowa:** R0 przed R1 (statusy mają wartość bez playera; player bez statusów = tylko „ładniejszy download”).
-
----
-
-## 8. Świadomie poza Frame.io-lite
-
-- Transkodowanie proxy na serwerze / Cloud Run / MediaConvert  
-- Pluginy Premiere / Final Cut / Resolve  
-- Współdzielone konta, role, SSO  
-- Live presence (kilku recenzentów naraz)  
-- Drawing na klatce, waveform audio advanced  
-- Porównywanie klatka-w-klatkę (A/B wipe) — dopiero po R3 jeśli w ogóle  
-
----
-
-## 9. Ryzyka i mitygacje
-
-| Ryzyko | Mitygacja |
-|---|---|
-| Oczekiwanie „jak Frame.io na ProRes” | Copy w UI: preview tylko MP4; reszta = pobierz |
-| Koszt / timeout streamu Vercel | Range + limit rozmiaru preview; duże pliki → download |
-| Race przy zapisie feedbacku | ETag If-Match na `_team_feedback.json` |
-| Spam statusów przez wyciek linku | Rate limit; revoke share; krótka TTL share (opcjonalnie później) |
-| Scope creep UI | R0 lista statusów; R1/R2 w jednym panelu pliku — bez nowego „app shell” |
-
----
-
-## 10. Relacja do istniejącej dokumentacji
-
-| Dokument | Rola |
-|---|---|
-| [`post-mvp_roadmap_….plan.md`](./post-mvp_roadmap_05ad683d.plan.md) | P3 = **R0** tego planu |
-| [`produkt_i_backlog.md`](../produkt_i_backlog.md) | Backlog produktu — dodać odniesienie do Review |
-| [`bezpieczenstwo.md`](../bezpieczenstwo.md) | Przy R0/R1 uzupełnić powierzchnię `POST feedback` / stream |
-| [`operacje.md`](../operacje.md) | Po R0: procedura „klient oznaczył Changes” |
-
----
-
-## 11. Rekomendowany start
-
-1. **Zaimplementować P3 / R0** (Approve / Changes / notatka + Console badge) — domyka obecną roadmapę.  
-2. Zmierzyć, czy klienci w ogóle oglądają w przeglądarce, czy tylko pobierają — dopiero wtedy **R1**.  
-3. **R2** tylko jeśli studio realnie pracuje na TC z klientami (postprodukcja wideo); dla foto/docs R0 wystarczy.  
-4. Nie planować RX (proxy/NLE) w tym produkcie.
-
-**Jedno zdanie:** Frame.io-lite u Was = **review na rundach przez share link**, nie nowy hosting mediów.
+1. Trzymać roadmapę: **P3 = feedback przy plikach paczki / surowki** (bez TC).  
+2. W copy UI (portal / mail / Console) unikać języka „review cutu” / „approve filmu” — raczej „status pliku”, „do dogrania”, „zaakceptowane w paczce”.  
+3. Nie planować playera TC w `/share` jako odpowiedzi na Frame.io.  
+4. Jeśli studio potrzebuje review cutu — procedury operacyjne wskazują Frame.io (lub równoważny), nie ten share.
