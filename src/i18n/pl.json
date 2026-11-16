@@ -1,4 +1,9 @@
 {
+  "lang": {
+    "en": "EN",
+    "pl": "PL",
+    "aria": "Język interfejsu"
+  },
   "page": {
     "title": "Wyślij pliki",
     "subtitle": "Prześlij pliki i foldery bezpiecznie do studia."
@@ -132,6 +137,7 @@
     "mailPublishRound": "Runda:",
     "mailPublishBody": "Możesz pobrać pliki w portalu projektu (bez logowania):",
     "mailPublishCta": "Otwórz portal projektu",
-    "mailPublishLink": "Link:"
+    "mailPublishLink": "Link:",
+    "draft": "Draft"
   }
 }

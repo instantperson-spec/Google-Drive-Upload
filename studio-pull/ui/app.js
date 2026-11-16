@@ -1,4 +1,6 @@
-(() => {
+(async () => {
+  const t = (...args) => window.StudioI18n.t(...args);
+
   const $ = (id) => document.getElementById(id);
 
   const CONSOLE_TOKEN =
@@ -15,6 +17,37 @@
     return new EventSource(
       `${path}${sep}consoleToken=${encodeURIComponent(CONSOLE_TOKEN)}`
     );
+  }
+
+  function localeTag() {
+    return window.StudioI18n.getLocale() === 'pl' ? 'pl-PL' : 'en-US';
+  }
+
+  function formatDateTime(value) {
+    if (!value) return t('common.emDash');
+    try {
+      return new Date(value).toLocaleString(localeTag());
+    } catch {
+      return String(value);
+    }
+  }
+
+  function formatExpires(iso) {
+    if (!iso) return t('common.emDash');
+    try {
+      return new Intl.DateTimeFormat(localeTag(), { dateStyle: 'medium' }).format(
+        new Date(iso)
+      );
+    } catch {
+      return String(iso);
+    }
+  }
+
+  function tokenStatusLabel(status) {
+    if (status === 'active') return t('tokensPanel.statusActive');
+    if (status === 'expired') return t('tokensPanel.statusExpired');
+    if (status === 'revoked') return t('tokensPanel.statusRevoked');
+    return String(status || '');
   }
 
   const sessionsEl = $('sessions');
@@ -75,6 +108,9 @@
     return `${destPath.replace(/\/$/, '')}/${sub}`;
   }
 
+  const flashEl = $('flash');
+  let flashTimer = null;
+
   function offerShareAfterSync(folderId, label, token) {
     if (!flashEl || !folderId) return;
     let actions = flashEl.querySelector('.flash-actions');
@@ -87,7 +123,7 @@
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'btn ok tiny';
-    btn.textContent = 'Wyślij link klientowi (kopiuj)';
+    btn.textContent = t('notify.offerShare');
     btn.addEventListener('click', async () => {
       try {
         await shareSession(folderId, label, token);
@@ -97,9 +133,6 @@
     });
     actions.appendChild(btn);
   }
-
-  const flashEl = $('flash');
-  let flashTimer = null;
 
   /** In-app banner — Tauri often hides window.alert/confirm behind the window. */
   function notify(message, kind = 'ok') {
@@ -131,18 +164,18 @@
     statusEl.className = 'status' + (cls ? ` ${cls}` : '');
 
     if (running) {
-      statusTitleEl.textContent = 'Syncing…';
+      statusTitleEl.textContent = t('status.syncing');
       statusSubEl.textContent = text || '';
       return;
     }
     if (cls === 'ok' || cls === 'warn' || cls === 'error') {
       statusTitleEl.textContent =
-        cls === 'ok' ? 'Gotowe' : cls === 'error' ? 'Błąd' : 'Uwaga';
+        cls === 'ok' ? t('status.done') : cls === 'error' ? t('status.error') : t('status.warn');
       statusSubEl.textContent = text || '';
       return;
     }
-    statusTitleEl.textContent = 'Gotowy';
-    statusSubEl.textContent = text || 'Zaznacz sesje i folder bazowy.';
+    statusTitleEl.textContent = t('status.ready');
+    statusSubEl.textContent = text || t('status.readyHint');
   }
 
   function appendLog(line) {
@@ -166,15 +199,15 @@
     btnPreview.disabled = running || !previewSessionId;
 
     if (!running && !canStart) {
-      if (!selected.size && !destPath) setStatus('Zaznacz sesje i folder projektu.');
-      else if (!selected.size) setStatus('Zaznacz co najmniej jedną sesję.');
-      else if (!destPath) setStatus('Wybierz folder projektu na /Volumes/…');
+      if (!selected.size && !destPath) setStatus(t('status.selectSessionsAndFolder'));
+      else if (!selected.size) setStatus(t('status.selectOneSession'));
+      else if (!destPath) setStatus(t('status.selectFolder'));
     }
   }
 
   function switchTab(name) {
-    document.querySelectorAll('.tab').forEach((t) => {
-      t.classList.toggle('active', t.dataset.tab === name);
+    document.querySelectorAll('.tab').forEach((tabBtn) => {
+      tabBtn.classList.toggle('active', tabBtn.dataset.tab === name);
     });
     $('panel-pull').classList.toggle('hidden', name !== 'pull');
     $('panel-tokens').classList.toggle('hidden', name !== 'tokens');
@@ -204,14 +237,14 @@
   async function pullFromClient(session) {
     if (running || !session?.folderId) return;
     if (!projectFolderPath(session)) {
-      notify('Najpierw Pobierz sesję (folder projektu).', 'warn');
+      notify(t('notify.needDownloadFirst'), 'warn');
       return;
     }
     running = true;
     updateStartEnabled();
     logEl.textContent = '';
     setProgress(0, 1);
-    notify('Pobieranie FromClient/…', 'ok');
+    notify(t('notify.pullFromClientStart'), 'ok');
     try {
       const res = await apiFetch('/api/pull-from-client', {
         method: 'POST',
@@ -219,8 +252,8 @@
         body: JSON.stringify({ folderId: session.folderId }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Pull FromClient failed');
-      setStatus(`FromClient → ${data.localPath}`);
+      if (!res.ok) throw new Error(data.error || t('errors.pullFromClientFailed'));
+      setStatus(t('status.fromClientPath', { path: data.localPath }));
     } catch (err) {
       running = false;
       updateStartEnabled();
@@ -230,20 +263,16 @@
 
   async function syncSession(session) {
     if (running || !session?.folderId) return;
-    // Strict: only the folder recorded at pull — never invent parent/base path.
     const pathHint = projectFolderPath(session);
     if (!pathHint) {
-      notify(
-        'Najpierw Pobierz sesję (albo „Folder projektu”), żeby Sync wiedział który katalog.',
-        'warn'
-      );
+      notify(t('notify.needDownloadForSync'), 'warn');
       return;
     }
     running = true;
     updateStartEnabled();
     logEl.textContent = '';
     setProgress(0, 1);
-    notify(`Sync start ← ${pathHint}`, 'ok');
+    notify(t('notify.syncStart', { path: pathHint }), 'ok');
     try {
       const res = await apiFetch('/api/sync', {
         method: 'POST',
@@ -256,8 +285,8 @@
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Sync failed');
-      setStatus(`Sync → ${data.localPath}`);
+      if (!res.ok) throw new Error(data.error || t('errors.syncFailed'));
+      setStatus(t('status.syncResultPath', { path: data.localPath }));
       if (data.nestedWarning) {
         notify(data.nestedWarning, 'warn');
       }
@@ -278,13 +307,13 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           defaultPath: suggested,
-          prompt: 'Folder projektu (ten sam co po Pobierz — download = sync)',
+          prompt: t('dest.linkPrompt'),
         }),
       });
       const picked = await pick.json();
       if (picked.cancelled) return;
       if (!pick.ok) {
-        notify(picked.error || 'Folder odrzucony', 'error');
+        notify(picked.error || t('dest.rejected'), 'error');
         return;
       }
       const res = await apiFetch('/api/bindings', {
@@ -298,8 +327,8 @@
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Link failed');
-      notify(`Wskazano sync ← ${data.binding.localPath}`, 'ok');
+      if (!res.ok) throw new Error(data.error || t('errors.linkFailed'));
+      notify(t('notify.linkedSync', { path: data.binding.localPath }), 'ok');
       loadSessions();
     } catch (err) {
       notify(err.message || String(err), 'error');
@@ -313,24 +342,21 @@
       body: JSON.stringify({ folderId, label, token }),
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Share failed');
+    if (!res.ok) throw new Error(data.error || t('errors.shareFailed'));
     const url = data.share?.url;
     try {
       await navigator.clipboard.writeText(url);
-      notify(`Share gotowy (skopiowany):\n${url}`, 'ok');
+      notify(t('notify.shareReadyCopied', { url }), 'ok');
     } catch {
-      notify(`Share gotowy — skopiuj: ${url}`, 'warn');
+      notify(t('notify.shareReadyCopy', { url }), 'warn');
     }
     await loadSessions();
   }
 
   async function publishSession(session, { markFinal = false } = {}) {
     const folderId = session.folderId;
-    if (!folderId) throw new Error('Brak folderId');
-    notify(
-      markFinal ? 'Publikacja Final…' : 'Publikacja Draft…',
-      'ok'
-    );
+    if (!folderId) throw new Error(t('errors.missingFolderId'));
+    notify(markFinal ? t('notify.publishingFinal') : t('notify.publishingDraft'), 'ok');
     const res = await apiFetch('/api/publish', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -342,28 +368,36 @@
       }),
     });
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.error || 'Publish failed');
+    if (!res.ok) throw new Error(data.error || t('errors.publishFailed'));
     const url = data.share?.url;
-    const roundLabel = data.round?.label || 'Draft';
+    const roundLabel = data.round?.label || t('sessions.draft');
     if (url) {
       try {
         await navigator.clipboard.writeText(url);
-        notify(`Opublikowano ${roundLabel} — link skopiowany:\n${url}`, 'ok');
+        notify(t('notify.publishedCopied', { round: roundLabel, url }), 'ok');
       } catch {
-        notify(`Opublikowano ${roundLabel} — skopiuj: ${url}`, 'warn');
+        notify(t('notify.publishedCopy', { round: roundLabel, url }), 'warn');
       }
     } else {
-      notify(`Opublikowano ${roundLabel}`, 'ok');
+      notify(t('notify.published', { round: roundLabel }), 'ok');
     }
     if (data.mail?.sent) {
-      notify(`Mail wysłany do klienta${data.mail.to ? `: ${data.mail.to}` : ''}`, 'ok');
+      notify(
+        t('notify.mailSent', {
+          to: data.mail.to ? `: ${data.mail.to}` : '',
+        }),
+        'ok'
+      );
     } else if (data.mail && !data.mail.skipped) {
       notify(
-        `Share OK, mail nieposłany: ${data.mail.error || data.mail.skipped || 'sprawdź SMTP / ADMIN_SECRET / prefillEmail'}`,
+        t('notify.mailFailed', {
+          reason:
+            data.mail.error || data.mail.skipped || t('notify.mailFailedFallback'),
+        }),
         'warn'
       );
     } else if (data.mail?.skipped === 'missing_ADMIN_SECRET') {
-      notify('Share OK. Mail pominięty — brak ADMIN_SECRET w .env.local', 'warn');
+      notify(t('notify.mailSkippedSecret'), 'warn');
     }
     await loadSessions();
     return data;
@@ -371,16 +405,16 @@
 
   async function revokeShare(shareId) {
     try {
-      notify('Unieważnianie share linku…', 'warn');
+      notify(t('notify.revoking'), 'warn');
       const res = await apiFetch(`/api/shares/${encodeURIComponent(shareId)}`, {
         method: 'DELETE',
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        notify(data.error || 'Revoke failed', 'error');
+        notify(data.error || t('notify.revokeFailed'), 'error');
         return;
       }
-      notify('Share unieważniony — stary link /share/… już nie działa.', 'ok');
+      notify(t('notify.revoked'), 'ok');
       await loadSessions();
     } catch (err) {
       notify(err.message || String(err), 'error');
@@ -388,19 +422,19 @@
   }
 
   async function loadSessions() {
-    sessionsEl.textContent = 'Ładowanie…';
+    sessionsEl.textContent = t('sessions.loading');
     try {
       const [res, sharesByFolder] = await Promise.all([
         apiFetch('/api/sessions'),
         loadSharesByFolder(),
       ]);
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Błąd listy sesji');
+      if (!res.ok) throw new Error(data.error || t('sessions.listError'));
       const list = data.sessions || [];
       sessionMap.clear();
       selected.clear();
       if (!list.length) {
-        sessionsEl.textContent = 'Brak folderów sesji.';
+        sessionsEl.textContent = t('sessions.empty');
         previewSessionId = null;
         updateStartEnabled();
         return;
@@ -414,63 +448,89 @@
         if (s.syncStatus === 'out_of_sync') oosCount += 1;
         const row = document.createElement('div');
         row.className = 'session-row';
-        row.innerHTML = `
-          <label class="session-check">
-            <input type="checkbox" data-id="" />
-          </label>
-          <div class="session-body">
-            <span class="session-name"></span>
-            <span class="session-meta"></span>
-            <span class="session-local"></span>
-          </div>
-          <div class="session-actions"></div>
-          <label class="session-preview-pick" title="Podgląd tej sesji">
-            <input type="radio" name="preview-session" value="" />
-            Podgląd
-          </label>`;
-        row.querySelector('input[type=checkbox]').dataset.id = sid;
-        row.querySelector('input[type=radio]').value = sid;
-        row.querySelector('.session-name').textContent = s.name;
+        const checkLabel = document.createElement('label');
+        checkLabel.className = 'session-check';
+        const checkInput = document.createElement('input');
+        checkInput.type = 'checkbox';
+        checkInput.dataset.id = sid;
+        checkLabel.appendChild(checkInput);
+
+        const sessionBody = document.createElement('div');
+        sessionBody.className = 'session-body';
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'session-name';
+        nameSpan.textContent = s.name;
+        const metaSpan = document.createElement('span');
+        metaSpan.className = 'session-meta';
+        const localEl = document.createElement('span');
+        localEl.className = 'session-local';
+
+        sessionBody.appendChild(nameSpan);
+        sessionBody.appendChild(metaSpan);
+        sessionBody.appendChild(localEl);
+
+        const actions = document.createElement('div');
+        actions.className = 'session-actions';
+
+        const previewLabel = document.createElement('label');
+        previewLabel.className = 'session-preview-pick';
+        previewLabel.title = t('sessions.previewPickTitle');
+        const radio = document.createElement('input');
+        radio.type = 'radio';
+        radio.name = 'preview-session';
+        radio.value = sid;
+        const previewText = document.createTextNode(t('sessions.previewPick'));
+        previewLabel.appendChild(radio);
+        previewLabel.appendChild(previewText);
+
+        row.appendChild(checkLabel);
+        row.appendChild(sessionBody);
+        row.appendChild(actions);
+        row.appendChild(previewLabel);
+
         const bits = [];
         if (s.batch && s.fileCount != null) {
-          bits.push(`${s.fileCount} plików · ${s.totalLabel || ''}`);
+          bits.push(t('sessions.filesMeta', { count: s.fileCount, total: s.totalLabel || '' }));
         }
         if (s.since && s.until) {
-          bits.push(`dzień ${String(s.since).slice(0, 10)}`);
+          bits.push(t('sessions.day', { date: String(s.since).slice(0, 10) }));
         } else {
           const whenRaw = s.lastActivity || s.modifiedTime || s.createdTime;
-          bits.push(whenRaw ? `aktywność ${new Date(whenRaw).toLocaleString()}` : '—');
+          bits.push(
+            whenRaw
+              ? t('sessions.activity', { when: formatDateTime(whenRaw) })
+              : t('common.emDash')
+          );
         }
-        if (s.token) bits.push(`token:${s.token}`);
+        if (s.token) bits.push(t('sessions.tokenRef', { token: s.token }));
         if (s.lastSyncedAt) {
-          bits.push(`sync ${new Date(s.lastSyncedAt).toLocaleString()}`);
+          bits.push(t('sessions.syncAt', { when: formatDateTime(s.lastSyncedAt) }));
         }
         if (s.fromClientCount > 0) {
-          bits.push(`dogrywki:${s.fromClientCount}`);
+          bits.push(t('sessions.uploadsCount', { count: s.fromClientCount }));
         }
         const reasons = s.syncReasons || {};
-        if (reasons.fromClientPending) bits.push('DOGRYWKI');
-        if (reasons.studioRemoteNewer) bits.push('ZMIANY DRIVE');
-        row.querySelector('.session-meta').textContent = bits.join(' · ');
+        if (reasons.fromClientPending) bits.push(t('sessions.flagUploads'));
+        if (reasons.studioRemoteNewer) bits.push(t('sessions.flagDriveChanges'));
+        metaSpan.textContent = bits.join(' · ');
         if (s.syncStatus === 'out_of_sync') {
           row.classList.add('session-out-of-sync');
         }
 
         const syncPath = projectFolderPath(s);
-        const localEl = row.querySelector('.session-local');
         if (syncPath) {
           const chips = [];
           if (reasons.fromClientPending) {
-            chips.push('Dogrywki do pobrania');
+            chips.push(t('sessions.chipUploads'));
           }
           if (reasons.studioRemoteNewer) {
-            chips.push('Zmiany na Drive od Sync');
+            chips.push(t('sessions.chipDrive'));
           }
           const syncLabel = chips.length
             ? chips.join(' · ')
             : s.lastSyncedAt
-              ? `Zsynchronizowano ${new Date(s.lastSyncedAt).toLocaleString()}`
-              : 'Jeszcze nie sync';
+              ? t('sessions.syncedAt', { when: formatDateTime(s.lastSyncedAt) })
+              : t('sessions.notSyncedYet');
           localEl.innerHTML = '';
           const pathLine = document.createElement('div');
           pathLine.textContent = syncPath;
@@ -503,17 +563,16 @@
         } else {
           const expected = expectedPullPath(s);
           localEl.textContent = expected
-            ? `Po Pobierz: ${expected}`
-            : 'Ustaw folder projektu powyżej, potem Pobierz';
+            ? t('sessions.afterDownload', { path: expected })
+            : t('sessions.setFolderFirst');
           if (expected) localEl.style.color = 'var(--warn)';
         }
 
-        const actions = row.querySelector('.session-actions');
-        const mkBtn = (text, cls, fn, parent = actions) => {
+        const mkBtn = (label, cls, fn, parent = actions) => {
           const b = document.createElement('button');
           b.type = 'button';
           b.className = `btn ${cls} tiny`;
-          b.textContent = text;
+          b.textContent = label;
           b.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -529,7 +588,7 @@
         menuBtn.type = 'button';
         menuBtn.className = 'btn ghost tiny';
         menuBtn.textContent = '⋯';
-        menuBtn.title = 'Więcej';
+        menuBtn.title = t('sessions.more');
         const menuPop = document.createElement('div');
         menuPop.className = 'session-menu-pop';
         menuBtn.addEventListener('click', (e) => {
@@ -545,8 +604,7 @@
         menuWrap.appendChild(menuPop);
 
         const needsClientPull =
-          syncPath &&
-          (s.fromClientCount > 0 || s.missingLocalFromClient > 0);
+          syncPath && (s.fromClientCount > 0 || s.missingLocalFromClient > 0);
         const activeShare = sharesByFolder.get(s.folderId);
 
         if (activeShare?.rounds?.length) {
@@ -556,52 +614,52 @@
             const chip = document.createElement('span');
             chip.className =
               r.id === activeShare.roundId ? 'round-chip is-current' : 'round-chip';
-            chip.textContent = r.label || 'Draft';
+            chip.textContent = r.label || t('sessions.draft');
             chip.title = r.publishedAt
-              ? `Opublikowano ${new Date(r.publishedAt).toLocaleString()}`
+              ? t('sessions.publishedAt', { when: formatDateTime(r.publishedAt) })
               : '';
             roundsEl.appendChild(chip);
           }
-          row.querySelector('.session-body').appendChild(roundsEl);
+          sessionBody.appendChild(roundsEl);
         }
 
         if (needsClientPull) {
-          const btnClient = mkBtn('Pobierz od klienta', 'ghost', () =>
+          const btnClient = mkBtn(t('sessions.pullFromClient'), 'ghost', () =>
             pullFromClient(s)
           );
-          btnClient.title = 'Ściągnij FromClient/ do folderu projektu';
+          btnClient.title = t('sessions.pullFromClientTitle');
           if (reasons.fromClientPending || s.missingLocalFromClient > 0) {
             btnClient.classList.add('warn-accent');
           }
         }
 
-        const pubBtn = mkBtn('Opublikuj', 'primary', async () => {
+        const pubBtn = mkBtn(t('sessions.publish'), 'primary', async () => {
           try {
             await publishSession(s, { markFinal: false });
           } catch (err) {
             notify(err.message || String(err), 'error');
           }
         });
-        pubBtn.title = 'Snapshot Draft N + share link + mail do klienta';
+        pubBtn.title = t('sessions.publishTitle');
         if (!syncPath) pubBtn.disabled = true;
 
         if (!needsClientPull) {
-          const syncBtn = mkBtn('Sync → Drive', 'ok', () => syncSession(s));
-          syncBtn.title = 'Tylko folder z Pobierz → Drive origin';
+          const syncBtn = mkBtn(t('sessions.syncDrive'), 'ok', () => syncSession(s));
+          syncBtn.title = t('sessions.syncDriveTitle');
           if (!syncPath) syncBtn.disabled = true;
         }
 
         if (activeShare) {
-          mkBtn('Kopiuj link', 'ghost', async () => {
+          mkBtn(t('sessions.copyLink'), 'ghost', async () => {
             try {
               await navigator.clipboard.writeText(activeShare.url);
-              notify(`Skopiowano link klienta:\n${activeShare.url}`, 'ok');
+              notify(t('notify.copiedClientLink', { url: activeShare.url }), 'ok');
             } catch {
-              notify(`Skopiuj ręcznie: ${activeShare.url}`, 'warn');
+              notify(t('notify.copyManual', { url: activeShare.url }), 'warn');
             }
           });
         } else {
-          mkBtn('Wyślij link', 'ghost', async () => {
+          mkBtn(t('sessions.sendLink'), 'ghost', async () => {
             try {
               await shareSession(s.folderId, s.name, s.token);
             } catch (err) {
@@ -612,59 +670,67 @@
 
         if (syncPath) {
           mkBtn(
-            s.nestedWarning ? 'Wskaż właściwy folder' : 'Zmień folder sync',
+            s.nestedWarning ? t('sessions.pickCorrectFolder') : t('sessions.changeSyncFolder'),
             s.nestedWarning ? 'warn' : 'ghost',
             () => linkSessionFolder(s),
             menuPop
           );
         } else {
-          mkBtn('Wskaż folder sync', 'ghost', () => linkSessionFolder(s), menuPop);
+          mkBtn(t('sessions.pickSyncFolder'), 'ghost', () => linkSessionFolder(s), menuPop);
         }
 
-        mkBtn('Opublikuj Final', 'ghost', async () => {
-          menuPop.classList.remove('open');
-          try {
-            await publishSession(s, { markFinal: true });
-          } catch (err) {
-            notify(err.message || String(err), 'error');
-          }
-        }, menuPop);
+        mkBtn(
+          t('sessions.publishFinal'),
+          'ghost',
+          async () => {
+            menuPop.classList.remove('open');
+            try {
+              await publishSession(s, { markFinal: true });
+            } catch (err) {
+              notify(err.message || String(err), 'error');
+            }
+          },
+          menuPop
+        );
 
         if (needsClientPull) {
-          const syncInMenu = mkBtn('Sync → Drive', 'ok', () => syncSession(s), menuPop);
+          const syncInMenu = mkBtn(t('sessions.syncDrive'), 'ok', () => syncSession(s), menuPop);
           if (!syncPath) syncInMenu.disabled = true;
         }
 
         if (activeShare) {
-          const btnRev = mkBtn('Cofnij link', 'danger', () => {
-            if (btnRev.dataset.armed === '1') {
-              btnRev.dataset.armed = '';
-              menuPop.classList.remove('open');
-              revokeShare(activeShare.id);
-              return;
-            }
-            btnRev.dataset.armed = '1';
-            btnRev.textContent = 'Na pewno? Jeszcze raz';
-            notify('Kliknij jeszcze raz, żeby unieważnić link klienta.', 'warn');
-            setTimeout(() => {
+          const btnRev = mkBtn(
+            t('sessions.revokeLink'),
+            'danger',
+            () => {
               if (btnRev.dataset.armed === '1') {
                 btnRev.dataset.armed = '';
-                btnRev.textContent = 'Cofnij link';
+                menuPop.classList.remove('open');
+                revokeShare(activeShare.id);
+                return;
               }
-            }, 5000);
-          }, menuPop);
+              btnRev.dataset.armed = '1';
+              btnRev.textContent = t('sessions.revokeConfirm');
+              notify(t('notify.revokeAgain'), 'warn');
+              setTimeout(() => {
+                if (btnRev.dataset.armed === '1') {
+                  btnRev.dataset.armed = '';
+                  btnRev.textContent = t('sessions.revokeLink');
+                }
+              }, 5000);
+            },
+            menuPop
+          );
         }
 
         actions.appendChild(menuWrap);
 
-        const cb = row.querySelector('input[type=checkbox]');
-        cb.addEventListener('change', () => {
-          if (cb.checked) selected.add(sid);
+        checkInput.addEventListener('change', () => {
+          if (checkInput.checked) selected.add(sid);
           else selected.delete(sid);
           updateStartEnabled();
         });
 
-        const radio = row.querySelector('input[type=radio]');
         radio.addEventListener('change', () => {
           previewSessionId = sid;
           updateStartEnabled();
@@ -711,7 +777,7 @@
     if (!previewSessionId) return;
     const session = sessionMap.get(previewSessionId);
     if (!session?.folderId) return;
-    previewMeta.textContent = 'Ładowanie listy plików…';
+    previewMeta.textContent = t('preview.loading');
     previewEl.classList.add('hidden');
     previewEl.innerHTML = '';
     try {
@@ -723,21 +789,29 @@
         `/api/sessions/${encodeURIComponent(session.folderId)}/files${qs}`
       );
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Błąd podglądu');
-      previewMeta.textContent = `${data.fileCount} plików · ${data.totalLabel}`;
+      if (!res.ok) throw new Error(data.error || t('preview.error'));
+      previewMeta.textContent = t('preview.meta', {
+        count: data.fileCount,
+        total: data.totalLabel,
+      });
       const ul = document.createElement('ul');
       ul.className = 'preview-list';
       for (const f of (data.files || []).slice(0, 500)) {
         const li = document.createElement('li');
-        li.innerHTML = `<span class="p-path"></span><span class="p-size"></span>`;
-        li.querySelector('.p-path').textContent = f.relativePath;
-        li.querySelector('.p-size').textContent = f.sizeLabel;
+        const pathSpan = document.createElement('span');
+        pathSpan.className = 'p-path';
+        pathSpan.textContent = f.relativePath;
+        const sizeSpan = document.createElement('span');
+        sizeSpan.className = 'p-size';
+        sizeSpan.textContent = f.sizeLabel;
+        li.appendChild(pathSpan);
+        li.appendChild(sizeSpan);
         ul.appendChild(li);
       }
       if ((data.files || []).length > 500) {
         const more = document.createElement('li');
         more.className = 'muted';
-        more.textContent = `… i ${data.files.length - 500} więcej`;
+        more.textContent = t('preview.more', { count: data.files.length - 500 });
         ul.appendChild(more);
       }
       previewEl.appendChild(ul);
@@ -749,25 +823,25 @@
 
   async function pickDest() {
     destErrorEl.classList.add('hidden');
-    setStatus('Otwieranie dialogu folderu…');
+    setStatus(t('dest.opening'));
     try {
       const res = await apiFetch('/api/pick-dest', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           defaultPath: destPath || '/Volumes',
-          prompt: 'Wskaż folder bazowy na dysku zewnętrznym (download / sync)',
+          prompt: t('dest.pickPrompt'),
         }),
       });
       const data = await res.json();
       if (data.cancelled) {
-        setStatus('Anulowano wybór folderu.');
+        setStatus(t('dest.cancelled'));
         return;
       }
       if (!res.ok) {
-        destErrorEl.textContent = data.error || 'Nieprawidłowy folder';
+        destErrorEl.textContent = data.error || t('dest.invalid');
         destErrorEl.classList.remove('hidden');
-        setStatus('Wybierz folder na /Volumes/… (nie Documents).', 'error');
+        setStatus(t('dest.needVolumes'), 'error');
         return;
       }
       destPath = String(data.path || '').trim();
@@ -778,7 +852,7 @@
         /* ignore */
       }
       destErrorEl.classList.add('hidden');
-      setStatus(`Baza: ${destPath}`);
+      setStatus(t('dest.base', { path: destPath }));
       updateStartEnabled();
       loadSessions();
     } catch (err) {
@@ -797,7 +871,7 @@
       /* ignore */
     }
     updateStartEnabled();
-    if (destPath) setStatus(`Baza: ${destPath}`);
+    if (destPath) setStatus(t('dest.base', { path: destPath }));
   }
 
   function onDestCommitted() {
@@ -828,13 +902,12 @@
       };
     });
 
-    // Global "fresh only" only for rows without their own day window (stamped folders).
     let since = null;
     const needsGlobalFresh = sessions.some((s) => !s.since);
     if (needsGlobalFresh && freshOnlyEl?.checked) {
       const local = freshSinceEl?.value;
       if (!local) {
-        setStatus('Ustaw datę „Od” albo wyłącz filtr świeżych plików.', 'warn');
+        setStatus(t('status.needFreshDate'), 'warn');
         return;
       }
       since = new Date(local).toISOString();
@@ -844,7 +917,7 @@
     updateStartEnabled();
     logEl.textContent = '';
     setProgress(0, 1);
-    setStatus(`Start kolejki (${sessions.length})…`);
+    setStatus(t('status.queueStart', { count: sessions.length }));
 
     try {
       const res = await apiFetch('/api/pull', {
@@ -853,8 +926,8 @@
         body: JSON.stringify({ dest: destPath, sessions, since }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Nie udało się uruchomić');
-      setStatus(`Kolejka → ${data.dest}`);
+      if (!res.ok) throw new Error(data.error || t('status.startFailed'));
+      setStatus(t('status.queueTo', { dest: data.dest }));
     } catch (err) {
       running = false;
       updateStartEnabled();
@@ -864,79 +937,151 @@
 
   async function cancelPull() {
     await apiFetch('/api/pull/cancel', { method: 'POST' });
-    setStatus('Anulowanie…', 'warn');
+    setStatus(t('status.cancelling'), 'warn');
   }
 
   function onEvent(event) {
     switch (event.type) {
       case 'queue_start':
-        appendLog(`Kolejka: ${event.sessionCount} sesji → ${event.dest}`);
-        if (event.since) appendLog(`Filtr świeżych: createdTime ≥ ${event.since}`);
+        appendLog(
+          t('log.queue', { count: event.sessionCount, dest: event.dest })
+        );
+        if (event.since) {
+          appendLog(t('log.freshFilter', { since: event.since }));
+        }
         break;
       case 'sync_start':
-        appendLog(`── Sync → Drive: ${event.label || event.folderId}`);
-        appendLog(`   ← ${event.dest}`);
-        setStatus(`Sync: ${event.label || event.folderId}`);
+        appendLog(t('log.syncDrive', { label: event.label || event.folderId }));
+        appendLog(t('log.from', { dest: event.dest }));
+        setStatus(t('status.syncingSession', { label: event.label || event.folderId }));
         break;
       case 'log':
         if (event.message) appendLog(event.message);
         break;
       case 'session_start':
-        appendLog(`── Sesja ${event.index}/${event.total}: ${event.name}`);
-        appendLog(`   → ${event.dest}`);
-        setStatus(`Sesja ${event.index}/${event.total}: ${event.name}`);
+        appendLog(
+          t('log.session', {
+            index: event.index,
+            total: event.total,
+            name: event.name,
+          })
+        );
+        appendLog(t('log.to', { dest: event.dest }));
+        setStatus(
+          t('status.sessionProgress', {
+            index: event.index,
+            total: event.total,
+            name: event.name,
+          })
+        );
         break;
       case 'listing':
-        appendLog(`Listing ${event.folderId}`);
+        appendLog(t('log.listing', { folderId: event.folderId }));
         break;
       case 'listing_done':
         if (event.mode === 'sync') {
           appendLog(
-            `Do wysłania: ${event.fileCount}/${event.listedTotal || '?'} (skip ${event.skipCount || 0}), ${event.totalLabel}`
+            t('log.toUpload', {
+              fileCount: event.fileCount,
+              listedTotal: event.listedTotal || '?',
+              skipCount: event.skipCount || 0,
+              totalLabel: event.totalLabel,
+            })
           );
         } else {
           appendLog(
             event.filtered
-              ? `Plików po filtrze: ${event.fileCount}/${event.listedTotal || '?'} (od ${event.since || '?'}), ${event.totalLabel}`
-              : `Plików: ${event.fileCount}, ${event.totalLabel}`
+              ? t('log.filesFiltered', {
+                  fileCount: event.fileCount,
+                  listedTotal: event.listedTotal || '?',
+                  since: event.since || '?',
+                  totalLabel: event.totalLabel,
+                })
+              : t('log.files', {
+                  fileCount: event.fileCount,
+                  totalLabel: event.totalLabel,
+                })
           );
         }
         setProgress(0, event.fileCount || 1);
         break;
       case 'skip':
-        appendLog(`[${event.index}/${event.total}] skip ${event.relativePath}`);
+        appendLog(
+          t('log.skip', {
+            index: event.index,
+            total: event.total,
+            path: event.relativePath,
+          })
+        );
         if (event.index) setProgress(event.index, event.total);
         break;
       case 'progress':
         if (event.phase === 'start') {
-          const verb = event.mode === 'sync' ? (event.action === 'replace' ? 'put' : 'new') : 'get';
-          appendLog(`[${event.index}/${event.total}] ${verb} ${event.relativePath}`);
+          const verb =
+            event.mode === 'sync' ? (event.action === 'replace' ? 'put' : 'new') : 'get';
+          appendLog(
+            t('log.transfer', {
+              index: event.index,
+              total: event.total,
+              verb,
+              path: event.relativePath,
+            })
+          );
           setStatus(
-            `${event.sessionName || ''} [${event.index}/${event.total}] ${event.relativePath}`
+            t('status.fileProgress', {
+              name: event.sessionName || '',
+              index: event.index,
+              total: event.total,
+              path: event.relativePath,
+            })
           );
         } else if (event.phase === 'pct') {
           setStatus(
-            `${event.sessionName || ''} [${event.index}/${event.total}] ${event.relativePath} — ${event.pct}%`
+            t('status.fileProgressPct', {
+              name: event.sessionName || '',
+              index: event.index,
+              total: event.total,
+              path: event.relativePath,
+              pct: event.pct,
+            })
           );
         } else if (event.phase === 'done') {
-          appendLog(`[${event.index}/${event.total}] done ${event.relativePath}`);
+          appendLog(
+            t('log.transferDone', {
+              index: event.index,
+              total: event.total,
+              path: event.relativePath,
+            })
+          );
           setProgress(event.index, event.total);
         }
         break;
       case 'error':
-        appendLog(`FAIL ${event.relativePath}: ${event.message}`);
+        appendLog(
+          t('log.fileFail', {
+            path: event.relativePath,
+            message: event.message,
+          })
+        );
         break;
       case 'session_done':
         appendLog(
           event.empty
-            ? `Sesja pusta: ${event.name}`
-            : `Sesja OK: ${event.name} (dl ${event.downloaded}, skip ${event.skipped}, fail ${event.failed})`
+            ? t('log.sessionEmpty', { name: event.name })
+            : t('log.sessionOk', {
+                name: event.name,
+                downloaded: event.downloaded,
+                skipped: event.skipped,
+                failed: event.failed,
+              })
         );
-        if (event.localPath) appendLog(`   powiązano → ${event.localPath}`);
+        if (event.localPath) {
+          appendLog(t('log.bound', { path: event.localPath }));
+        }
         break;
       case 'cancelled':
-        appendLog('Anulowano.');
-        setStatus('Anulowano.', 'warn');
+        appendLog(t('log.cancelled'));
+        setStatus(t('log.cancelled'), 'warn');
         break;
       case 'summary':
         running = false;
@@ -944,23 +1089,35 @@
         {
           let line;
           if (event.mode === 'sync') {
-            line = `Sync OK — up ${event.uploaded}, skip ${event.skipped}, fail ${event.failed}, ${event.bytesLabel}`;
+            line = t('log.syncOk', {
+              uploaded: event.uploaded,
+              skipped: event.skipped,
+              failed: event.failed,
+              bytes: event.bytesLabel,
+            });
           } else if (event.mode === 'fromClient') {
-            line = `FromClient OK — dl ${event.downloaded}, skip ${event.skipped}, fail ${event.failed}, ${event.bytesLabel}`;
+            line = t('log.fromClientOk', {
+              downloaded: event.downloaded,
+              skipped: event.skipped,
+              failed: event.failed,
+              bytes: event.bytesLabel,
+            });
           } else {
-            line = `Pobrano — dl ${event.downloaded}, skip ${event.skipped}, fail ${event.failed}, ${event.bytesLabel}`;
+            line = t('log.downloaded', {
+              downloaded: event.downloaded,
+              skipped: event.skipped,
+              failed: event.failed,
+              bytes: event.bytesLabel,
+            });
           }
           appendLog(line);
           setStatus(line, event.failed ? 'warn' : 'ok');
           setProgress(1, 1);
           if (event.mode === 'fromClient' && !event.failed) {
-            notify('Dogrywki klienta w folderze projektu (FromClient/).', 'ok');
+            notify(t('notify.clientUploadsInFolder'), 'ok');
           }
           if (event.mode === 'sync' && !event.failed && event.folderId) {
-            notify(
-              'Sync gotowy. Następny krok: wyślij link klientowi.',
-              event.failed ? 'warn' : 'ok'
-            );
+            notify(t('notify.syncReadyNext'), event.failed ? 'warn' : 'ok');
             const sess = [...sessionMap.values()].find(
               (x) => x.folderId === event.folderId
             );
@@ -976,7 +1133,7 @@
       case 'fatal':
         running = false;
         updateStartEnabled();
-        appendLog(`FATAL: ${event.message}`);
+        appendLog(t('log.fatal', { message: event.message }));
         setStatus(event.message, 'error');
         break;
       default:
@@ -993,15 +1150,6 @@
     }
   };
 
-  function formatExpires(iso) {
-    if (!iso) return '—';
-    try {
-      return new Intl.DateTimeFormat('pl-PL', { dateStyle: 'medium' }).format(new Date(iso));
-    } catch {
-      return String(iso);
-    }
-  }
-
   function statusBadgeClass(status) {
     if (status === 'active') return 'token-badge token-badge-active';
     if (status === 'expired') return 'token-badge token-badge-expired';
@@ -1009,17 +1157,17 @@
   }
 
   async function loadTokens() {
-    tokensEl.textContent = 'Ładowanie…';
+    tokensEl.textContent = t('tokensPanel.loading');
     const countEl = $('tokens-active-count');
     try {
       const res = await apiFetch('/api/tokens');
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Błąd tokenów');
+      if (!res.ok) throw new Error(data.error || t('tokensPanel.error'));
       const list = data.tokens || [];
-      const activeCount = list.filter((t) => t.status === 'active').length;
+      const activeCount = list.filter((tok) => tok.status === 'active').length;
       if (countEl) {
         if (activeCount > 0) {
-          countEl.textContent = `${activeCount} active`;
+          countEl.textContent = t('tokensPanel.activeCount', { count: activeCount });
           countEl.classList.remove('hidden');
         } else {
           countEl.classList.add('hidden');
@@ -1028,7 +1176,7 @@
       const kpiTokens = $('kpi-tokens');
       if (kpiTokens) kpiTokens.textContent = String(activeCount);
       if (!list.length) {
-        tokensEl.textContent = 'No tokens yet.';
+        tokensEl.textContent = t('tokensPanel.empty');
         return;
       }
       tokensEl.innerHTML = '';
@@ -1036,70 +1184,93 @@
       wrap.className = 'token-table-wrap';
       const table = document.createElement('table');
       table.className = 'token-table';
-      table.innerHTML =
-        '<thead><tr><th>Client</th><th>Email</th><th>Token</th><th>Type</th><th>Locale</th><th>Status</th><th>Expires</th><th>Link</th><th></th></tr></thead>';
+      const thead = document.createElement('thead');
+      const headRow = document.createElement('tr');
+      for (const colKey of [
+        'colClient',
+        'colEmail',
+        'colToken',
+        'colType',
+        'colLocale',
+        'colStatus',
+        'colExpires',
+        'colLink',
+      ]) {
+        const th = document.createElement('th');
+        th.textContent = t(`tokensPanel.${colKey}`);
+        headRow.appendChild(th);
+      }
+      headRow.appendChild(document.createElement('th'));
+      thead.appendChild(headRow);
+      table.appendChild(thead);
       const tbody = document.createElement('tbody');
-      for (const t of list) {
+      for (const tok of list) {
         const tr = document.createElement('tr');
-        if (t.status !== 'active') tr.className = 'inactive';
-        tr.innerHTML = `
-          <td></td><td></td><td><code class="token-code"></code></td><td></td><td></td>
-          <td><span class="${statusBadgeClass(t.status)}"></span></td>
-          <td class="token-cell-date"></td>
-          <td class="token-actions"></td>
-          <td class="token-actions"></td>`;
-        tr.cells[0].textContent = t.clientName;
-        tr.cells[1].textContent = t.prefillEmail || '—';
-        tr.cells[2].querySelector('code').textContent = t.token;
-        tr.cells[3].textContent = t.type === 'one-time' ? 'One-time' : 'Retainer';
-        tr.cells[4].textContent = (t.locale || 'en').toUpperCase();
-        tr.cells[5].querySelector('span').textContent = t.status;
-        tr.cells[6].textContent = formatExpires(t.expiresAt);
-        const linkCell = tr.cells[7];
-        const actions = tr.cells[8];
+        if (tok.status !== 'active') tr.className = 'inactive';
+        const cells = Array.from({ length: 9 }, () => {
+          const td = document.createElement('td');
+          tr.appendChild(td);
+          return td;
+        });
+        cells[0].textContent = tok.clientName;
+        cells[1].textContent = tok.prefillEmail || t('common.emDash');
+        const code = document.createElement('code');
+        code.className = 'token-code';
+        code.textContent = tok.token;
+        cells[2].appendChild(code);
+        cells[3].textContent =
+          tok.type === 'one-time' ? t('tokensPanel.oneTime') : t('tokensPanel.retainer');
+        cells[4].textContent = (tok.locale || 'en').toUpperCase();
+        const badge = document.createElement('span');
+        badge.className = statusBadgeClass(tok.status);
+        badge.textContent = tokenStatusLabel(tok.status);
+        cells[5].appendChild(badge);
+        cells[6].textContent = formatExpires(tok.expiresAt);
+        cells[6].className = 'token-cell-date';
+        const linkCell = cells[7];
+        const actions = cells[8];
+        actions.className = 'token-actions';
+        linkCell.className = 'token-actions';
 
-        if (t.status === 'active') {
+        if (tok.status === 'active') {
           const copyBtn = document.createElement('button');
           copyBtn.type = 'button';
           copyBtn.className = 'btn ghost tiny';
-          copyBtn.textContent = 'Copy link';
+          copyBtn.textContent = t('tokensPanel.copyLink');
           copyBtn.addEventListener('click', async () => {
             try {
-              await navigator.clipboard.writeText(t.uploadUrl);
-              copyBtn.textContent = 'Copied';
+              await navigator.clipboard.writeText(tok.uploadUrl);
+              copyBtn.textContent = t('tokensPanel.copied');
               setTimeout(() => {
-                copyBtn.textContent = 'Copy link';
+                copyBtn.textContent = t('tokensPanel.copyLink');
               }, 1500);
             } catch {
-              window.prompt('Copy:', t.uploadUrl);
+              window.prompt(t('tokensPanel.copyPrompt'), tok.uploadUrl);
             }
           });
           linkCell.appendChild(copyBtn);
         }
 
-        if (t.status === 'active' && !t.prefillEmail) {
+        if (tok.status === 'active' && !tok.prefillEmail) {
           const setEmail = document.createElement('button');
           setEmail.type = 'button';
           setEmail.className = 'btn ghost tiny';
-          setEmail.textContent = 'Set email';
+          setEmail.textContent = t('tokensPanel.setEmail');
           setEmail.addEventListener('click', async () => {
-            const email = window.prompt(
-              `Client email for „${t.token}” (locked on upload form):`,
-              ''
-            );
+            const email = window.prompt(t('tokensPanel.setEmailPrompt', { token: tok.token }), '');
             if (email == null) return;
-            const res = await apiFetch(`/api/tokens/${encodeURIComponent(t.id)}`, {
+            const patchRes = await apiFetch(`/api/tokens/${encodeURIComponent(tok.id)}`, {
               method: 'PATCH',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 action: 'identity',
-                clientName: t.clientName,
+                clientName: tok.clientName,
                 clientEmail: email.trim(),
               }),
             });
-            const data = await res.json().catch(() => ({}));
-            if (!res.ok) {
-              window.alert(data.error || 'Set email failed');
+            const patchData = await patchRes.json().catch(() => ({}));
+            if (!patchRes.ok) {
+              window.alert(patchData.error || t('tokensPanel.setEmailFailed'));
               return;
             }
             loadTokens();
@@ -1107,13 +1278,13 @@
           actions.appendChild(setEmail);
         }
 
-        if (t.status === 'active') {
+        if (tok.status === 'active') {
           const rev = document.createElement('button');
           rev.type = 'button';
           rev.className = 'btn danger tiny';
-          rev.textContent = 'Revoke';
+          rev.textContent = t('tokensPanel.revoke');
           rev.addEventListener('click', async () => {
-            await apiFetch(`/api/tokens/${encodeURIComponent(t.id)}`, {
+            await apiFetch(`/api/tokens/${encodeURIComponent(tok.id)}`, {
               method: 'PATCH',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ action: 'revoke' }),
@@ -1121,13 +1292,13 @@
             loadTokens();
           });
           actions.appendChild(rev);
-        } else if (t.status === 'revoked') {
+        } else if (tok.status === 'revoked') {
           const rest = document.createElement('button');
           rest.type = 'button';
           rest.className = 'btn ok tiny';
-          rest.textContent = 'Restore';
+          rest.textContent = t('tokensPanel.restore');
           rest.addEventListener('click', async () => {
-            await apiFetch(`/api/tokens/${encodeURIComponent(t.id)}`, {
+            await apiFetch(`/api/tokens/${encodeURIComponent(tok.id)}`, {
               method: 'PATCH',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ action: 'restore' }),
@@ -1140,14 +1311,14 @@
         const loc = document.createElement('button');
         loc.type = 'button';
         loc.className = 'btn ghost tiny';
-        loc.textContent = t.locale === 'pl' ? '→ EN' : '→ PL';
+        loc.textContent = tok.locale === 'pl' ? t('tokensPanel.toEn') : t('tokensPanel.toPl');
         loc.addEventListener('click', async () => {
-          await apiFetch(`/api/tokens/${encodeURIComponent(t.id)}`, {
+          await apiFetch(`/api/tokens/${encodeURIComponent(tok.id)}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               action: 'locale',
-              locale: t.locale === 'pl' ? 'en' : 'pl',
+              locale: tok.locale === 'pl' ? 'en' : 'pl',
             }),
           });
           loadTokens();
@@ -1157,15 +1328,15 @@
         const del = document.createElement('button');
         del.type = 'button';
         del.className = 'btn danger tiny';
-        del.textContent = 'Delete';
+        del.textContent = t('tokensPanel.delete');
         del.addEventListener('click', async () => {
-          if (!window.confirm(`Na pewno usunąć token „${t.token}”?`)) return;
-          const delRes = await apiFetch(`/api/tokens/${encodeURIComponent(t.id)}`, {
+          if (!window.confirm(t('tokensPanel.deleteConfirm', { token: tok.token }))) return;
+          const delRes = await apiFetch(`/api/tokens/${encodeURIComponent(tok.id)}`, {
             method: 'DELETE',
           });
           const delData = await delRes.json().catch(() => ({}));
           if (!delRes.ok) {
-            window.alert(delData.error || 'Delete failed');
+            window.alert(delData.error || t('tokensPanel.deleteFailed'));
             return;
           }
           loadTokens();
@@ -1194,7 +1365,7 @@
         body: JSON.stringify(body),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Create failed');
+      if (!res.ok) throw new Error(data.error || t('tokensPanel.createFailed'));
       if (data.token?.uploadUrl) {
         try {
           await navigator.clipboard.writeText(data.token.uploadUrl);
@@ -1227,6 +1398,21 @@
         el.classList.remove('open');
       });
     }
+  });
+
+  await window.StudioI18n.init();
+
+  document.querySelectorAll('[data-lang]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const next = btn.getAttribute('data-lang');
+      if (next) window.StudioI18n.setLocale(next);
+    });
+  });
+
+  window.addEventListener('studio-locale', () => {
+    loadSessions();
+    loadTokens();
+    updateStartEnabled();
   });
 
   updateStartEnabled();

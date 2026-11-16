@@ -5,6 +5,27 @@ import JSZip from 'jszip';
 import { CHUNK_SIZE, uploadChunk } from '@/lib/chunkUpload';
 import { LocaleProvider, useT } from '@/context/LocaleContext';
 import { normalizeLocale } from '@/lib/locales';
+import LocaleSwitch from '@/components/LocaleSwitch';
+
+const SHARE_LOCALE_KEY = 'sharePortal.locale';
+
+function readStoredShareLocale() {
+  try {
+    const saved = localStorage.getItem(SHARE_LOCALE_KEY);
+    if (saved === 'pl' || saved === 'en') return saved;
+  } catch {
+    /* ignore */
+  }
+  return null;
+}
+
+function storeShareLocale(locale) {
+  try {
+    localStorage.setItem(SHARE_LOCALE_KEY, normalizeLocale(locale));
+  } catch {
+    /* ignore */
+  }
+}
 
 function formatBytes(n) {
   if (n >= 1024 ** 3) return `${(n / 1024 ** 3).toFixed(2)} GB`;
@@ -154,7 +175,7 @@ function FileSection({ title, hint, items, downloadLabel, onDownload, busy, t })
   );
 }
 
-function SharePageInner({ shareId, onLocale }) {
+function SharePageInner({ shareId, locale, onLocale, onTokenLocale }) {
   const t = useT();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -178,15 +199,21 @@ function SharePageInner({ shareId, onLocale }) {
         roundId: data.share?.roundId || data.round?.id || null,
       });
       setFiles(data.files || []);
-      if (data.locale && typeof onLocale === 'function') {
-        onLocale(normalizeLocale(data.locale));
+      if (data.locale && typeof onTokenLocale === 'function') {
+        onTokenLocale(normalizeLocale(data.locale));
       }
     } catch (err) {
       setError(err.message || String(err));
     } finally {
       setLoading(false);
     }
-  }, [shareId, onLocale, t]);
+  }, [shareId, onTokenLocale, t]);
+
+  function handleLocaleChange(next) {
+    const normalized = normalizeLocale(next);
+    storeShareLocale(normalized);
+    if (typeof onLocale === 'function') onLocale(normalized);
+  }
 
   useEffect(() => {
     load();
@@ -467,8 +494,13 @@ function SharePageInner({ shareId, onLocale }) {
     return (
       <div className="glass-panel share-panel">
         <div className="share-portal-header">
-          <p className="share-access-label">{t('share.accessLabel')}</p>
-          <h1 className="share-portal-title">{t('share.portalTitle')}</h1>
+          <div className="share-portal-header-top">
+            <div>
+              <p className="share-access-label">{t('share.accessLabel')}</p>
+              <h1 className="share-portal-title">{t('share.portalTitle')}</h1>
+            </div>
+            <LocaleSwitch locale={locale} onChange={handleLocaleChange} />
+          </div>
         </div>
         <h2 className="share-title">{t('share.unavailableTitle')}</h2>
         <p className="share-error">{error}</p>
@@ -512,13 +544,14 @@ function SharePageInner({ shareId, onLocale }) {
                 </span>
                 {hasRounds && (
                   <span className="share-round-pill">
-                    {share.roundLabel || 'Draft'}
+                    {share.roundLabel || t('share.draft')}
                   </span>
                 )}
               </div>
               <h1 className="share-portal-title">{t('share.portalTitle')}</h1>
             </div>
           </div>
+          <LocaleSwitch locale={locale} onChange={handleLocaleChange} />
         </div>
 
         <div className="share-project-bar">
@@ -713,11 +746,21 @@ function SharePageInner({ shareId, onLocale }) {
 }
 
 export default function SharePage({ shareId }) {
-  const [locale, setLocale] = useState('en');
+  const [locale, setLocale] = useState(() => readStoredShareLocale() || 'en');
+
+  const onTokenLocale = useCallback((tokenLocale) => {
+    if (readStoredShareLocale()) return;
+    setLocale(normalizeLocale(tokenLocale));
+  }, []);
 
   return (
     <LocaleProvider locale={locale}>
-      <SharePageInner shareId={shareId} onLocale={setLocale} />
+      <SharePageInner
+        shareId={shareId}
+        locale={locale}
+        onLocale={setLocale}
+        onTokenLocale={onTokenLocale}
+      />
     </LocaleProvider>
   );
 }

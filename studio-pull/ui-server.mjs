@@ -98,6 +98,7 @@ function contentType(filePath) {
   if (filePath.endsWith('.jpg') || filePath.endsWith('.jpeg')) return 'image/jpeg';
   if (filePath.endsWith('.png')) return 'image/png';
   if (filePath.endsWith('.webp')) return 'image/webp';
+  if (filePath.endsWith('.json')) return 'application/json; charset=utf-8';
   return 'application/octet-stream';
 }
 

@@ -1,4 +1,9 @@
 {
+  "lang": {
+    "en": "EN",
+    "pl": "PL",
+    "aria": "Interface language"
+  },
   "page": {
     "title": "Send Files",
     "subtitle": "Upload files and folders securely to the studio."
@@ -132,6 +137,7 @@
     "mailPublishRound": "Round:",
     "mailPublishBody": "You can download the files in the project portal (no login):",
     "mailPublishCta": "Open project portal",
-    "mailPublishLink": "Link:"
+    "mailPublishLink": "Link:",
+    "draft": "Draft"
   }
 }
