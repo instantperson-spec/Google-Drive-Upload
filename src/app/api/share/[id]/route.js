@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getActiveShare, listShareFiles } from '@/lib/shareStore';
 import { getAuthClient, isSessionFolder } from '@/lib/googleAuth';
+import { getTokenLocale } from '@/lib/tokenStore';
+import { DEFAULT_LOCALE } from '@/lib/locales';
 import { rateLimit } from '@/lib/rateLimit';
 
 export async function GET(request, { params }) {
@@ -19,9 +21,10 @@ export async function GET(request, { params }) {
       return NextResponse.json({ error: 'Invalid share folder.' }, { status: 403 });
     }
 
-    const { files, round, rounds } = await listShareFiles(share.folderId, {
-      roundId: share.roundId || null,
-    });
+    const [{ files, round, rounds }, locale] = await Promise.all([
+      listShareFiles(share.folderId, { roundId: share.roundId || null }),
+      share.token ? getTokenLocale(share.token) : Promise.resolve(DEFAULT_LOCALE),
+    ]);
     const counts = { original: 0, modified: 0, new: 0, fromClient: 0, sincePublish: 0 };
     for (const f of files) {
       if (counts[f.status] != null) counts[f.status] += 1;
@@ -40,6 +43,7 @@ export async function GET(request, { params }) {
         roundId: share.roundId || round?.id || null,
         roundLabel: share.roundLabel || round?.label || null,
       },
+      locale: locale || DEFAULT_LOCALE,
       round,
       rounds: rounds || [],
       files: files.map((f) => ({

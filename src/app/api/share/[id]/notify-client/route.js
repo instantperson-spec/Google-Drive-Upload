@@ -4,6 +4,11 @@ import { getActiveShare } from '@/lib/shareStore';
 import { getTokenRecord } from '@/lib/tokenStore';
 import { verifyAdminPassword } from '@/lib/adminAuth';
 import { rateLimit } from '@/lib/rateLimit';
+import { DEFAULT_LOCALE, normalizeLocale } from '@/lib/locales';
+import en from '@/i18n/en.json';
+import pl from '@/i18n/pl.json';
+
+const MESSAGES = { en, pl };
 
 const escapeHtml = (value) =>
   String(value ?? '')
@@ -13,9 +18,24 @@ const escapeHtml = (value) =>
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#39;');
 
+function resolvePath(obj, path) {
+  return path.split('.').reduce((acc, part) => acc?.[part], obj);
+}
+
+function t(locale, key, vars = {}) {
+  const primary = MESSAGES[normalizeLocale(locale)] ?? MESSAGES.en;
+  let out = resolvePath(primary, key) ?? resolvePath(MESSAGES.en, key) ?? key;
+  if (typeof out !== 'string') return key;
+  for (const [k, v] of Object.entries(vars)) {
+    out = out.replaceAll(`{${k}}`, String(v));
+  }
+  return out;
+}
+
 /**
  * Studio Console → mail client after Opublikuj.
  * Auth: x-admin-secret === ADMIN_SECRET
+ * Locale: token.locale (not browser / not hardcoded PL)
  */
 export async function POST(request, { params }) {
   const limited = rateLimit(request, 'share-notify-client', 10);
@@ -40,7 +60,7 @@ export async function POST(request, { params }) {
     const roundLabel =
       String(body.roundLabel || share.roundLabel || '').trim() || 'Draft';
     const projectLabel =
-      String(body.label || share.label || 'Projekt').slice(0, 120);
+      String(body.label || share.label || 'Project').slice(0, 120);
 
     if (!share.token) {
       return NextResponse.json(
@@ -68,6 +88,7 @@ export async function POST(request, { params }) {
       );
     }
 
+    const locale = normalizeLocale(tokenRecord?.locale || DEFAULT_LOCALE);
     const origin = (
       process.env.PUBLIC_UPLOAD_URL ||
       process.env.NEXT_PUBLIC_UPLOAD_URL ||
@@ -89,27 +110,31 @@ export async function POST(request, { params }) {
     const safeProject = escapeHtml(projectLabel);
     const safeRound = escapeHtml(roundLabel);
     const safeUrl = escapeHtml(shareUrl);
+    const subject = t(locale, 'share.mailPublishSubject', {
+      project: projectLabel,
+      round: roundLabel,
+    });
 
     await transporter.sendMail({
       from: `Drive Uploader <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
       to,
-      subject: `${projectLabel} — ${roundLabel} gotowy do pobrania`,
+      subject,
       html: `
         <div style="font-family: sans-serif; padding: 20px; color: #333;">
-          <h2 style="color: #4f46e5;">Nowa publikacja od studia</h2>
-          <p>Projekt: <strong>${safeProject}</strong></p>
-          <p>Runda: <strong>${safeRound}</strong></p>
-          <p>Możesz pobrać pliki w portalu projektu (bez logowania):</p>
+          <h2 style="color: #4f46e5;">${escapeHtml(t(locale, 'share.mailPublishHeading'))}</h2>
+          <p>${escapeHtml(t(locale, 'share.mailPublishProject'))} <strong>${safeProject}</strong></p>
+          <p>${escapeHtml(t(locale, 'share.mailPublishRound'))} <strong>${safeRound}</strong></p>
+          <p>${escapeHtml(t(locale, 'share.mailPublishBody'))}</p>
           <p style="margin: 24px 0;">
             <a href="${safeUrl}"
                style="display:inline-block;padding:12px 20px;background:#4f46e5;color:#fff;text-decoration:none;border-radius:8px;font-weight:700;">
-              Otwórz portal projektu
+              ${escapeHtml(t(locale, 'share.mailPublishCta'))}
             </a>
           </p>
-          <p style="font-size:13px;color:#666;">Link: ${safeUrl}</p>
+          <p style="font-size:13px;color:#666;">${escapeHtml(t(locale, 'share.mailPublishLink'))} ${safeUrl}</p>
         </div>
       `,
-      text: `${projectLabel} — ${roundLabel}\n\nOtwórz portal: ${shareUrl}\n`,
+      text: `${subject}\n\n${shareUrl}\n`,
     });
 
     return NextResponse.json({
@@ -117,6 +142,7 @@ export async function POST(request, { params }) {
       to,
       shareId: share.id,
       roundLabel,
+      locale,
       url: shareUrl,
     });
   } catch (err) {

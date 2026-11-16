@@ -13,11 +13,11 @@ function formatBytes(n) {
   return `${n || 0} B`;
 }
 
-function statusLabel(status) {
-  if (status === 'fromClient') return 'Dograne przez Ciebie';
-  if (status === 'modified') return 'Zmienione przez studio';
-  if (status === 'new') return 'Nowe od studia';
-  return 'Twoje (oryginał)';
+function statusLabel(status, t) {
+  if (status === 'fromClient') return t('share.statusFromClient');
+  if (status === 'modified') return t('share.statusModified');
+  if (status === 'new') return t('share.statusNew');
+  return t('share.statusOriginal');
 }
 
 function fileExt(nameOrPath) {
@@ -54,7 +54,7 @@ async function uploadFileViaShare(shareId, file, onPct) {
     }
   );
   const initData = await initRes.json();
-  if (!initRes.ok) throw new Error(initData.error || 'Nie udało się zacząć uploadu');
+  if (!initRes.ok) throw new Error(initData.error || 'uploadStartFailed');
 
   const uploadUrl = initData.uploadUrl;
   let start = 0;
@@ -100,7 +100,7 @@ function ProgressPanel({ job }) {
   );
 }
 
-function FileSection({ title, hint, items, downloadLabel, onDownload, busy }) {
+function FileSection({ title, hint, items, downloadLabel, onDownload, busy, t }) {
   if (!items.length) return null;
   return (
     <section className="share-section">
@@ -116,7 +116,7 @@ function FileSection({ title, hint, items, downloadLabel, onDownload, busy }) {
             disabled={busy}
             onClick={onDownload}
           >
-            {busy ? 'Trwa…' : downloadLabel || 'Pobierz'}
+            {busy ? t('share.busyShort') : downloadLabel || t('share.download')}
           </button>
         ) : null}
       </div>
@@ -142,7 +142,7 @@ function FileSection({ title, hint, items, downloadLabel, onDownload, busy }) {
               </div>
               <span className="share-file-meta">
                 <span className={`share-badge share-badge-${f.status}`}>
-                  {statusLabel(f.status)}
+                  {statusLabel(f.status, t)}
                 </span>
                 <span className="share-file-size">{formatBytes(f.size)}</span>
               </span>
@@ -154,7 +154,7 @@ function FileSection({ title, hint, items, downloadLabel, onDownload, busy }) {
   );
 }
 
-function SharePageInner({ shareId }) {
+function SharePageInner({ shareId, onLocale }) {
   const t = useT();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -171,19 +171,22 @@ function SharePageInner({ shareId }) {
     try {
       const res = await fetch(`/api/share/${encodeURIComponent(shareId)}`);
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Nie udało się otworzyć linku');
+      if (!res.ok) throw new Error(data.error || t('share.openFailed'));
       setShare({
         ...(data.share || {}),
         roundLabel: data.share?.roundLabel || data.round?.label || null,
         roundId: data.share?.roundId || data.round?.id || null,
       });
       setFiles(data.files || []);
+      if (data.locale && typeof onLocale === 'function') {
+        onLocale(normalizeLocale(data.locale));
+      }
     } catch (err) {
       setError(err.message || String(err));
     } finally {
       setLoading(false);
     }
-  }, [shareId]);
+  }, [shareId, onLocale, t]);
 
   useEffect(() => {
     load();
@@ -214,8 +217,8 @@ function SharePageInner({ shareId }) {
     if (!list.length) {
       setJob({
         phase: 'error',
-        title: 'Brak plików',
-        detail: 'Nie ma nic do pobrania w tej kategorii.',
+        title: t('share.noFilesTitle'),
+        detail: t('share.noFilesDetail'),
         pct: 0,
       });
       return;
@@ -231,8 +234,8 @@ function SharePageInner({ shareId }) {
     setBusy(true);
     setJob({
       phase: 'start',
-      title: actionLabel || 'Pobieranie',
-      detail: `Start — ${total} plików…`,
+      title: actionLabel || t('share.downloading'),
+      detail: t('share.startFiles', { total }),
       pct: 2,
     });
     await yieldToUi();
@@ -255,8 +258,12 @@ function SharePageInner({ shareId }) {
           const f = list[i];
           setJob({
             phase: 'fetch',
-            title: 'Pobieranie',
-            detail: `${i + 1} / ${total}: ${f.name || f.relativePath}`,
+            title: t('share.downloading'),
+            detail: t('share.downloadProgress', {
+              current: i + 1,
+              total,
+              name: f.name || f.relativePath,
+            }),
             pct: Math.max(3, Math.round(((i + 0.2) / total) * 97)),
           });
           await yieldToUi();
@@ -266,7 +273,9 @@ function SharePageInner({ shareId }) {
           );
           if (!res.ok) {
             const err = await res.json().catch(() => ({}));
-            throw new Error(err.error || `Błąd: ${f.relativePath}`);
+            throw new Error(
+              err.error || t('share.fileError', { path: f.relativePath })
+            );
           }
           const blob = await res.blob();
           const rel = String(f.relativePath || f.name || `file-${i}`).replace(/\\/g, '/');
@@ -281,17 +290,15 @@ function SharePageInner({ shareId }) {
 
         setJob({
           phase: 'done',
-          title: 'Gotowe',
-          detail: `Zapisano ${total} plików do wybranego folderu.`,
+          title: t('share.done'),
+          detail: t('share.savedToFolder', { total }),
           pct: 100,
         });
         return;
       }
 
       if (!zipOk) {
-        throw new Error(
-          'Ta paczka jest za duża na ZIP w przeglądarce. Użyj Chrome/Edge (wybór folderu) albo pobierz mniejszą kategorię.'
-        );
+        throw new Error(t('share.zipTooBig'));
       }
 
       const zip = new JSZip();
@@ -299,8 +306,12 @@ function SharePageInner({ shareId }) {
         const f = list[i];
         setJob({
           phase: 'fetch',
-          title: 'Pobieranie',
-          detail: `${i + 1} / ${total}: ${f.name || f.relativePath}`,
+          title: t('share.downloading'),
+          detail: t('share.downloadProgress', {
+            current: i + 1,
+            total,
+            name: f.name || f.relativePath,
+          }),
           pct: Math.max(3, Math.round(((i + 0.15) / total) * 85)),
         });
         await yieldToUi();
@@ -310,7 +321,9 @@ function SharePageInner({ shareId }) {
         );
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));
-          throw new Error(err.error || `Błąd: ${f.relativePath}`);
+          throw new Error(
+            err.error || t('share.fileError', { path: f.relativePath })
+          );
         }
         const blob = await res.blob();
         zip.file(f.relativePath, blob);
@@ -318,8 +331,8 @@ function SharePageInner({ shareId }) {
 
       setJob({
         phase: 'zip',
-        title: 'Przygotowanie paczki',
-        detail: 'Składanie plików…',
+        title: t('share.preparingZip'),
+        detail: t('share.assembling'),
         pct: 86,
       });
       await yieldToUi();
@@ -330,8 +343,10 @@ function SharePageInner({ shareId }) {
           const zipPct = 86 + Math.round((meta.percent || 0) * 0.13);
           setJob({
             phase: 'zip',
-            title: 'Przygotowanie paczki',
-            detail: `${Math.round(meta.percent || 0)}% — nie zamykaj karty`,
+            title: t('share.preparingZip'),
+            detail: t('share.zipProgress', {
+              pct: Math.round(meta.percent || 0),
+            }),
             pct: Math.min(99, zipPct),
           });
         }
@@ -347,22 +362,22 @@ function SharePageInner({ shareId }) {
 
       setJob({
         phase: 'done',
-        title: 'Gotowe',
-        detail: `Zapisano ${zipName} (${total} plików).`,
+        title: t('share.done'),
+        detail: t('share.savedZip', { zipName, total }),
         pct: 100,
       });
     } catch (err) {
       if (err?.name === 'AbortError') {
         setJob({
           phase: 'error',
-          title: 'Anulowano',
-          detail: 'Nie wybrano folderu.',
+          title: t('share.cancelled'),
+          detail: t('share.noFolder'),
           pct: 0,
         });
       } else {
         setJob({
           phase: 'error',
-          title: 'Błąd pobierania',
+          title: t('share.downloadError'),
           detail: err.message || String(err),
           pct: 0,
         });
@@ -379,8 +394,8 @@ function SharePageInner({ shareId }) {
     setBusy(true);
     setJob({
       phase: 'start',
-      title: 'Dogrywanie plików',
-      detail: `Start — ${list.length} plików…`,
+      title: t('share.uploadingTitle'),
+      detail: t('share.startFiles', { total: list.length }),
       pct: 2,
     });
     await yieldToUi();
@@ -390,8 +405,12 @@ function SharePageInner({ shareId }) {
         const file = list[i];
         setJob({
           phase: 'upload',
-          title: 'Wysyłanie do studia',
-          detail: `${i + 1} / ${list.length}: ${file.name}`,
+          title: t('share.sendingStudio'),
+          detail: t('share.downloadProgress', {
+            current: i + 1,
+            total: list.length,
+            name: file.name,
+          }),
           pct: Math.round((i / list.length) * 100),
         });
         await yieldToUi();
@@ -400,8 +419,13 @@ function SharePageInner({ shareId }) {
           const overall = Math.round(((i + pct / 100) / list.length) * 100);
           setJob({
             phase: 'upload',
-            title: 'Wysyłanie do studia',
-            detail: `${i + 1} / ${list.length}: ${file.name} — ${pct}%`,
+            title: t('share.sendingStudio'),
+            detail: t('share.downloadProgressPct', {
+              current: i + 1,
+              total: list.length,
+              name: file.name,
+              pct,
+            }),
             pct: overall,
           });
         });
@@ -409,17 +433,21 @@ function SharePageInner({ shareId }) {
 
       setJob({
         phase: 'done',
-        title: 'Dogrywanie zakończone',
-        detail: 'Studio zobaczy pliki w Console (FromClient).',
+        title: t('share.uploadDoneTitle'),
+        detail: t('share.uploadDoneDetail'),
         pct: 100,
       });
       setFilter('client');
       await load();
     } catch (err) {
+      const msg =
+        err.message === 'uploadStartFailed'
+          ? t('share.uploadStartFailed')
+          : err.message || String(err);
       setJob({
         phase: 'error',
-        title: 'Błąd dogrywania',
-        detail: err.message || String(err),
+        title: t('share.uploadError'),
+        detail: msg,
         pct: 0,
       });
     } finally {
@@ -501,14 +529,14 @@ function SharePageInner({ shareId }) {
         <p className="share-muted share-intro">{t('share.intro')}</p>
       </header>
 
-      <div className="share-stats" aria-label="Podsumowanie i filtry">
+      <div className="share-stats" aria-label={t('share.statsAria')}>
         <button
           type="button"
           className={`share-stat${filter === 'all' ? ' is-active' : ''}`}
           onClick={() => setFilter('all')}
         >
           <strong>{files.length}</strong>
-          <span>wszystkie</span>
+          <span>{t('share.filterAll')}</span>
         </button>
         {hasRounds && (
           <button
@@ -517,7 +545,7 @@ function SharePageInner({ shareId }) {
             onClick={() => setFilter('since')}
           >
             <strong>{sincePublishFiles.length}</strong>
-            <span>od publikacji</span>
+            <span>{t('share.filterSince')}</span>
           </button>
         )}
         <button
@@ -526,7 +554,7 @@ function SharePageInner({ shareId }) {
           onClick={() => setFilter('original')}
         >
           <strong>{yourFiles.length}</strong>
-          <span>Twoje</span>
+          <span>{t('share.filterYours')}</span>
         </button>
         <button
           type="button"
@@ -534,7 +562,7 @@ function SharePageInner({ shareId }) {
           onClick={() => setFilter('studio')}
         >
           <strong>{studioFiles.length}</strong>
-          <span>od studia</span>
+          <span>{t('share.filterStudio')}</span>
         </button>
         <button
           type="button"
@@ -542,7 +570,7 @@ function SharePageInner({ shareId }) {
           onClick={() => setFilter('client')}
         >
           <strong>{fromClientFiles.length}</strong>
-          <span>dogrywki</span>
+          <span>{t('share.filterClient')}</span>
         </button>
       </div>
 
@@ -561,10 +589,8 @@ function SharePageInner({ shareId }) {
           if (!busy) handleIncomingFiles(e.dataTransfer.files);
         }}
       >
-        <p className="share-dropzone-title">Dograj nowe pliki</p>
-        <p className="share-muted">
-          Upuść tu pliki albo wybierz z dysku. Trafią do studia (FromClient).
-        </p>
+        <p className="share-dropzone-title">{t('share.dropTitle')}</p>
+        <p className="share-muted">{t('share.dropHint')}</p>
         <label className={`share-file-input-label${busy ? ' disabled' : ''}`}>
           <input
             type="file"
@@ -575,7 +601,7 @@ function SharePageInner({ shareId }) {
               e.target.value = '';
             }}
           />
-          {busy ? 'Poczekaj na koniec…' : 'Wybierz pliki…'}
+          {busy ? t('share.waitBusy') : t('share.chooseFiles')}
         </label>
       </div>
 
@@ -583,7 +609,7 @@ function SharePageInner({ shareId }) {
         <section className="share-section">
           <div className="share-section-head">
             <div className="share-section-title-row">
-              <h2>Wszystkie pliki</h2>
+              <h2>{t('share.allTitle')}</h2>
               <span className="share-section-count">{files.length}</span>
             </div>
             <button
@@ -591,34 +617,37 @@ function SharePageInner({ shareId }) {
               className="btn share-section-download"
               disabled={busy}
               onClick={() =>
-                downloadSet(files, `${zipBase}-wszystko.zip`, 'Pobierz wszystko')
+                downloadSet(
+                  files,
+                  `${zipBase}-all.zip`,
+                  t('share.downloadAll')
+                )
               }
             >
-              {busy ? 'Trwa…' : 'Pobierz wszystko'}
+              {busy ? t('share.busyShort') : t('share.downloadAll')}
             </button>
           </div>
-          <p className="share-section-hint">
-            Cały projekt — oryginały, studio i dogrywki.
-          </p>
+          <p className="share-section-hint">{t('share.allHint')}</p>
         </section>
       ) : null}
 
       {showSince ? (
         <FileSection
-          title="Od ostatniej publikacji"
+          t={t}
+          title={t('share.sinceTitle')}
           hint={
             share?.roundLabel
-              ? `Zmiany względem poprzedniej rundy (aktywna: ${share.roundLabel}).`
-              : 'Nowe i zmienione względem poprzedniej publikacji.'
+              ? t('share.sinceHint', { round: share.roundLabel })
+              : t('share.sinceHintDefault')
           }
           items={sincePublishFiles}
           busy={busy}
-          downloadLabel="Pobierz od publikacji"
+          downloadLabel={t('share.downloadSince')}
           onDownload={() =>
             downloadSet(
               sincePublishFiles,
-              `${zipBase}-od-publikacji.zip`,
-              'Pobierz od publikacji'
+              `${zipBase}-since-publish.zip`,
+              t('share.downloadSince')
             )
           }
         />
@@ -626,47 +655,58 @@ function SharePageInner({ shareId }) {
 
       {!showSince && showStudio ? (
         <FileSection
-          title="Od studia"
-          hint="Nowe i zmienione przez studio."
+          t={t}
+          title={t('share.studioTitle')}
+          hint={t('share.studioHint')}
           items={studioFiles}
           busy={busy}
-          downloadLabel="Pobierz od studia"
+          downloadLabel={t('share.downloadStudio')}
           onDownload={() =>
-            downloadSet(studioFiles, `${zipBase}-od-studia.zip`, 'Pobierz od studia')
+            downloadSet(
+              studioFiles,
+              `${zipBase}-from-studio.zip`,
+              t('share.downloadStudio')
+            )
           }
         />
       ) : null}
       {!showSince && showOriginal ? (
         <FileSection
-          title="Twoje pliki (oryginał)"
-          hint="To, co wysłałeś na początku."
+          t={t}
+          title={t('share.originalTitle')}
+          hint={t('share.originalHint')}
           items={yourFiles}
           busy={busy}
-          downloadLabel="Pobierz oryginały"
+          downloadLabel={t('share.downloadOriginal')}
           onDownload={() =>
-            downloadSet(yourFiles, `${zipBase}-oryginal.zip`, 'Pobierz oryginały')
+            downloadSet(
+              yourFiles,
+              `${zipBase}-original.zip`,
+              t('share.downloadOriginal')
+            )
           }
         />
       ) : null}
       {!showSince && showClient ? (
         <FileSection
-          title="Twoje dogrywki"
-          hint="Pliki dodane później przez ten portal."
+          t={t}
+          title={t('share.clientTitle')}
+          hint={t('share.clientHint')}
           items={fromClientFiles}
           busy={busy}
-          downloadLabel="Pobierz dogrywki"
+          downloadLabel={t('share.downloadClient')}
           onDownload={() =>
             downloadSet(
               fromClientFiles,
-              `${zipBase}-dogrywki.zip`,
-              'Pobierz dogrywki'
+              `${zipBase}-uploads.zip`,
+              t('share.downloadClient')
             )
           }
         />
       ) : null}
 
       {!files.length ? (
-        <p className="share-muted share-empty">Brak plików w tym projekcie.</p>
+        <p className="share-muted share-empty">{t('share.empty')}</p>
       ) : null}
     </div>
   );
@@ -675,14 +715,9 @@ function SharePageInner({ shareId }) {
 export default function SharePage({ shareId }) {
   const [locale, setLocale] = useState('en');
 
-  useEffect(() => {
-    const browser = typeof navigator !== 'undefined' ? navigator.language : 'en';
-    setLocale(normalizeLocale(browser?.toLowerCase().startsWith('pl') ? 'pl' : 'en'));
-  }, []);
-
   return (
     <LocaleProvider locale={locale}>
-      <SharePageInner shareId={shareId} />
+      <SharePageInner shareId={shareId} onLocale={setLocale} />
     </LocaleProvider>
   );
 }
