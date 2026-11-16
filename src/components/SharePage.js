@@ -198,6 +198,10 @@ function SharePageInner({ shareId, locale, onLocale, onTokenLocale }) {
   const [job, setJob] = useState(null);
   const [dragOver, setDragOver] = useState(false);
   const [filter, setFilter] = useState('all');
+  // Legacy "since" filter removed — map to single studio bucket.
+  useEffect(() => {
+    if (filter === 'since') setFilter('studio');
+  }, [filter]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -233,6 +237,7 @@ function SharePageInner({ shareId, locale, onLocale, onTokenLocale }) {
     load();
   }, [load]);
 
+  // One client-facing studio bucket: new OR updated by studio (vs original upload).
   const studioFiles = useMemo(
     () => files.filter((f) => f.status === 'new' || f.status === 'modified'),
     [files]
@@ -245,14 +250,6 @@ function SharePageInner({ shareId, locale, onLocale, onTokenLocale }) {
     () => files.filter((f) => f.status === 'fromClient'),
     [files]
   );
-  const sincePublishFiles = useMemo(
-    () =>
-      files.filter(
-        (f) => f.vsPrevRound === 'added' || f.vsPrevRound === 'changed'
-      ),
-    [files]
-  );
-  const hasStudioUpdates = Boolean(share?.roundId || share?.publishedAt);
   const lastSentLabel = share?.publishedAt
     ? new Intl.DateTimeFormat(undefined, {
         dateStyle: 'medium',
@@ -535,7 +532,6 @@ function SharePageInner({ shareId, locale, onLocale, onTokenLocale }) {
       .slice(0, 80) || 'project';
 
   const showAllHero = filter === 'all';
-  const showSince = filter === 'since' && hasStudioUpdates;
   const showStudio = filter === 'all' || filter === 'studio';
   const showOriginal = filter === 'all' || filter === 'original';
   const showClient = filter === 'all' || filter === 'client';
@@ -591,24 +587,6 @@ function SharePageInner({ shareId, locale, onLocale, onTokenLocale }) {
           <strong>{files.length}</strong>
           <span>{t('share.filterAll')}</span>
         </button>
-        {hasStudioUpdates && (
-          <button
-            type="button"
-            className={`share-stat${filter === 'since' ? ' is-active' : ''}`}
-            onClick={() => setFilter('since')}
-          >
-            <strong>{sincePublishFiles.length}</strong>
-            <span>{t('share.filterSince')}</span>
-          </button>
-        )}
-        <button
-          type="button"
-          className={`share-stat${filter === 'original' ? ' is-active' : ''}`}
-          onClick={() => setFilter('original')}
-        >
-          <strong>{yourFiles.length}</strong>
-          <span>{t('share.filterYours')}</span>
-        </button>
         <button
           type="button"
           className={`share-stat${filter === 'studio' ? ' is-active' : ''}`}
@@ -616,6 +594,14 @@ function SharePageInner({ shareId, locale, onLocale, onTokenLocale }) {
         >
           <strong>{studioFiles.length}</strong>
           <span>{t('share.filterStudio')}</span>
+        </button>
+        <button
+          type="button"
+          className={`share-stat${filter === 'original' ? ' is-active' : ''}`}
+          onClick={() => setFilter('original')}
+        >
+          <strong>{yourFiles.length}</strong>
+          <span>{t('share.filterYours')}</span>
         </button>
         <button
           type="button"
@@ -684,33 +670,15 @@ function SharePageInner({ shareId, locale, onLocale, onTokenLocale }) {
         </section>
       ) : null}
 
-      {showSince ? (
-        <FileSection
-          t={t}
-          title={t('share.sinceTitle')}
-          hint={
-            lastSentLabel
-              ? t('share.sinceHint', { when: lastSentLabel })
-              : t('share.sinceHintDefault')
-          }
-          items={sincePublishFiles}
-          busy={busy}
-          downloadLabel={t('share.downloadSince')}
-          onDownload={() =>
-            downloadSet(
-              sincePublishFiles,
-              `${zipBase}-studio-updates.zip`,
-              t('share.downloadSince')
-            )
-          }
-        />
-      ) : null}
-
-      {!showSince && showStudio ? (
+      {showStudio ? (
         <FileSection
           t={t}
           title={t('share.studioTitle')}
-          hint={t('share.studioHint')}
+          hint={
+            lastSentLabel
+              ? t('share.studioHintWithDate', { when: lastSentLabel })
+              : t('share.studioHint')
+          }
           items={studioFiles}
           busy={busy}
           downloadLabel={t('share.downloadStudio')}
@@ -723,7 +691,7 @@ function SharePageInner({ shareId, locale, onLocale, onTokenLocale }) {
           }
         />
       ) : null}
-      {!showSince && showOriginal ? (
+      {showOriginal ? (
         <FileSection
           t={t}
           title={t('share.originalTitle')}
@@ -740,7 +708,7 @@ function SharePageInner({ shareId, locale, onLocale, onTokenLocale }) {
           }
         />
       ) : null}
-      {!showSince && showClient ? (
+      {showClient ? (
         <FileSection
           t={t}
           title={t('share.clientTitle')}
