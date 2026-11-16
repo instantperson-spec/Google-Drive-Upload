@@ -56,7 +56,7 @@
     <nav class="tabs" role="tablist">
       <button type="button" class="tab active" data-tab="pull" data-i18n="tabs.projects">Projects</button>
       <button type="button" class="tab" data-tab="tokens" data-i18n="tabs.tokens">Tokens</button>
-      <button type="button" class="tab" data-tab="invites" data-i18n="tabs.invites">Invites</button>
+      <button type="button" class="tab" data-tab="clients" data-i18n="tabs.clients">Clients</button>
     </nav>
 
     <div id="panel-pull" class="panel">
@@ -167,17 +167,18 @@
       </section>
     </div>
 
-    <div id="panel-invites" class="panel hidden">
+    <div id="panel-clients" class="panel hidden">
       <section class="card">
         <div class="row">
           <div class="section-title-row">
-            <h2 data-i18n="invitesPanel.title">Hub invites</h2>
-            <span id="invites-pending-count" class="section-count hidden"></span>
+            <h2 data-i18n="clientsPanel.title">Client hub</h2>
+            <span id="clients-active-count" class="section-count hidden"></span>
           </div>
-          <button type="button" id="btn-invites-refresh" class="btn secondary" data-i18n="invitesPanel.refresh">Refresh</button>
+          <button type="button" id="btn-clients-refresh" class="btn secondary" data-i18n="clientsPanel.refresh">Refresh</button>
         </div>
-        <p class="hint" data-i18n-html="invitesPanel.hintHtml">Invite creates a password account on /client — not a /?token= upload link.</p>
+        <p class="hint" data-i18n-html="clientsPanel.hintHtml">Invite → password account on /client. Assign a Drive session so the client sees the project. Requires ADMIN_SECRET.</p>
 
+        <h3 class="section-title-row" data-i18n="invitesPanel.title">Hub invites</h3>
         <form id="invite-form" class="token-form">
           <label><span data-i18n="invitesPanel.email">Email</span> <input name="email" type="email" required placeholder="client@email.com" /></label>
           <label><span data-i18n="invitesPanel.lang">Language</span>
@@ -196,8 +197,45 @@
         <p id="invite-form-error" class="error hidden"></p>
         <p id="invite-url" class="hint hidden" style="word-break:break-all"></p>
 
-        <h3 class="section-title-row" style="margin-top:1rem" data-i18n="invitesPanel.pendingTitle">Pending invites</h3>
+        <div class="row" style="margin-top:1rem">
+          <h3 class="section-title-row" style="margin:0">
+            <span data-i18n="invitesPanel.pendingTitle">Pending invites</span>
+            <span id="invites-pending-count" class="section-count hidden"></span>
+          </h3>
+        </div>
         <div id="invites" class="tokens" data-i18n="invitesPanel.loading">Loading…</div>
+      </section>
+
+      <section class="card" id="assign-card" hidden>
+        <h3 data-i18n="clientsPanel.assignTitle">Assign project</h3>
+        <p id="assign-target" class="hint"></p>
+        <form id="assign-form" class="token-form">
+          <label class="span-2"><span data-i18n="clientsPanel.sessionFolder">Session folder</span>
+            <select name="folderId" id="assign-folder" required>
+              <option value="" data-i18n="clientsPanel.selectSession">Select session…</option>
+            </select>
+          </label>
+          <label class="span-2"><span data-i18n="clientsPanel.labelOptional">Label (optional)</span>
+            <input name="label" type="text" data-i18n-placeholder="clientsPanel.labelPlaceholder" placeholder="Project label" />
+          </label>
+          <button type="submit" class="btn primary" data-i18n="clientsPanel.assign">Assign</button>
+          <button type="button" id="assign-cancel" class="btn secondary" data-i18n="clientsPanel.cancel">Cancel</button>
+        </form>
+        <p id="assign-form-error" class="error hidden"></p>
+      </section>
+
+      <section class="card">
+        <h3 class="section-title-row">
+          <span data-i18n="clientsPanel.accountsTitle">Accounts</span>
+        </h3>
+        <div id="hub-accounts" class="tokens" data-i18n="clientsPanel.loading">Loading…</div>
+      </section>
+
+      <section class="card">
+        <h3 class="section-title-row">
+          <span data-i18n="clientsPanel.assignmentsTitle">Assignments</span>
+        </h3>
+        <div id="hub-assignments" class="tokens" data-i18n="clientsPanel.loading">Loading…</div>
       </section>
     </div>
   </main>

@@ -220,10 +220,15 @@
     });
     $('panel-pull').classList.toggle('hidden', name !== 'pull');
     $('panel-tokens').classList.toggle('hidden', name !== 'tokens');
-    $('panel-invites').classList.toggle('hidden', name !== 'invites');
+    $('panel-clients').classList.toggle('hidden', name !== 'clients');
     if (name === 'tokens') loadTokens();
-    if (name === 'invites') loadInvites();
+    if (name === 'clients') loadClientsHub();
   }
+
+  /** @type {{ clients: object[], memberships: object[] }} */
+  let hubState = { clients: [], memberships: [] };
+  /** @type {object|null} */
+  let assignForClient = null;
 
   async function copyInviteUrl(url) {
     if (!url) return;
@@ -340,6 +345,320 @@
     } catch (err) {
       el.textContent = err.message || String(err);
     }
+  }
+
+  function membershipsFor(email) {
+    return hubState.memberships.filter((m) => m.clientEmail === email);
+  }
+
+  function hideAssignForm() {
+    assignForClient = null;
+    const card = $('assign-card');
+    if (card) card.hidden = true;
+    const err = $('assign-form-error');
+    if (err) err.classList.add('hidden');
+  }
+
+  async function fillAssignFolderSelect() {
+    const sel = $('assign-folder');
+    if (!sel) return;
+    const shares = await loadSharesByFolder();
+    if (!sessionMap.size) {
+      try {
+        await loadSessions();
+      } catch {
+        /* ignore */
+      }
+    }
+    const keepFirst = sel.querySelector('option[value=""]');
+    sel.innerHTML = '';
+    if (keepFirst) sel.appendChild(keepFirst);
+    else {
+      const opt = document.createElement('option');
+      opt.value = '';
+      opt.textContent = t('clientsPanel.selectSession');
+      sel.appendChild(opt);
+    }
+    const seen = new Set();
+    for (const s of sessionMap.values()) {
+      const folderId = s.folderId || s.id;
+      if (!folderId || seen.has(folderId)) continue;
+      seen.add(folderId);
+      const opt = document.createElement('option');
+      opt.value = folderId;
+      const label =
+        s.name || s.projectName || s.folderName || folderId || '';
+      const share = shares.get(folderId);
+      opt.textContent = share
+        ? `${String(label).slice(0, 80)} · share`
+        : String(label).slice(0, 80);
+      sel.appendChild(opt);
+    }
+  }
+
+  async function openAssignForm(client) {
+    assignForClient = client;
+    const card = $('assign-card');
+    card.hidden = false;
+    $('assign-target').textContent = t('clientsPanel.assignTo', {
+      email: client.email,
+    });
+    await fillAssignFolderSelect();
+    card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  async function patchClient(id, body) {
+    const res = await apiFetch(`/api/clients/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || t('clientsPanel.error'));
+    return data;
+  }
+
+  function renderHubAccounts() {
+    const el = $('hub-accounts');
+    const countEl = $('clients-active-count');
+    const clients = hubState.clients || [];
+    const active = clients.filter((c) => c.status === 'active').length;
+    if (countEl) {
+      if (clients.length) {
+        countEl.textContent = t('clientsPanel.activeCount', { count: active });
+        countEl.classList.remove('hidden');
+      } else {
+        countEl.classList.add('hidden');
+      }
+    }
+
+    if (!clients.length) {
+      el.textContent = t('clientsPanel.accountsEmpty');
+      return;
+    }
+
+    el.innerHTML = '';
+    const wrap = document.createElement('div');
+    wrap.className = 'token-table-wrap';
+    const table = document.createElement('table');
+    table.className = 'token-table';
+    const thead = document.createElement('thead');
+    const hr = document.createElement('tr');
+    for (const key of [
+      'colEmail',
+      'colName',
+      'colUpload',
+      'colAssigned',
+      'colStatus',
+      'colCreated',
+      '',
+    ]) {
+      const th = document.createElement('th');
+      th.textContent = key ? t(`clientsPanel.${key}`) : '';
+      hr.appendChild(th);
+    }
+    thead.appendChild(hr);
+    table.appendChild(thead);
+    const tbody = document.createElement('tbody');
+
+    for (const c of clients) {
+      const tr = document.createElement('tr');
+      if (c.status !== 'active') tr.classList.add('inactive');
+      const cells = [0, 1, 2, 3, 4, 5, 6].map(() => document.createElement('td'));
+      cells[0].textContent = c.email;
+      cells[1].textContent = c.displayName || t('common.emDash');
+      cells[2].textContent = c.linkedToken
+        ? t('clientsPanel.viaHubLogin')
+        : t('clientsPanel.uploadNone');
+      cells[3].textContent = String(membershipsFor(c.email).length);
+      const badge = document.createElement('span');
+      badge.className =
+        c.status === 'active'
+          ? 'token-badge token-badge-active'
+          : 'token-badge token-badge-revoked';
+      badge.textContent =
+        c.status === 'active'
+          ? t('clientsPanel.statusActive')
+          : t('clientsPanel.statusSuspended');
+      cells[4].appendChild(badge);
+      cells[5].textContent = formatDateTime(c.createdAt);
+      cells[5].className = 'token-cell-date';
+      cells[6].className = 'token-actions';
+
+      const mk = (label, onClick, danger = false) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = danger ? 'btn tiny secondary' : 'btn tiny secondary';
+        btn.textContent = label;
+        btn.addEventListener('click', async () => {
+          try {
+            await onClick();
+          } catch (err) {
+            notify(err.message || String(err), 'err');
+          }
+        });
+        return btn;
+      };
+
+      cells[6].appendChild(
+        mk(t('clientsPanel.assign'), () => openAssignForm(c))
+      );
+      cells[6].appendChild(
+        mk(t('clientsPanel.password'), async () => {
+          const pw = window.prompt(t('clientsPanel.passwordPrompt'), '');
+          if (!pw || pw.length < 8) {
+            if (pw !== null) notify(t('clientsPanel.passwordTooShort'), 'err');
+            return;
+          }
+          await patchClient(c.id, { action: 'password', password: pw });
+          notify(t('clientsPanel.passwordSet'), 'ok');
+          await loadClientsHub();
+        })
+      );
+      if (c.status === 'active') {
+        cells[6].appendChild(
+          mk(t('clientsPanel.suspend'), async () => {
+            await patchClient(c.id, { action: 'revoke' });
+            await loadClientsHub();
+          })
+        );
+      } else {
+        cells[6].appendChild(
+          mk(t('clientsPanel.restore'), async () => {
+            await patchClient(c.id, { action: 'restore' });
+            await loadClientsHub();
+          })
+        );
+      }
+      cells[6].appendChild(
+        mk(
+          t('clientsPanel.delete'),
+          async () => {
+            if (!window.confirm(t('clientsPanel.deleteConfirm', { email: c.email })))
+              return;
+            const res = await apiFetch(`/api/clients/${encodeURIComponent(c.id)}`, {
+              method: 'DELETE',
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.error || t('clientsPanel.deleteFailed'));
+            hideAssignForm();
+            await loadClientsHub();
+          },
+          true
+        )
+      );
+
+      cells.forEach((cell) => tr.appendChild(cell));
+      tbody.appendChild(tr);
+    }
+
+    table.appendChild(tbody);
+    wrap.appendChild(table);
+    el.appendChild(wrap);
+  }
+
+  function renderHubAssignments() {
+    const el = $('hub-assignments');
+    const list = hubState.memberships || [];
+    if (!list.length) {
+      el.textContent = t('clientsPanel.assignmentsEmpty');
+      return;
+    }
+
+    el.innerHTML = '';
+    const wrap = document.createElement('div');
+    wrap.className = 'token-table-wrap';
+    const table = document.createElement('table');
+    table.className = 'token-table';
+    const thead = document.createElement('thead');
+    const hr = document.createElement('tr');
+    for (const key of [
+      'colClient',
+      'colFolder',
+      'colLabel',
+      'colShare',
+      'colWhen',
+      '',
+    ]) {
+      const th = document.createElement('th');
+      th.textContent = key ? t(`clientsPanel.${key}`) : '';
+      hr.appendChild(th);
+    }
+    thead.appendChild(hr);
+    table.appendChild(thead);
+    const tbody = document.createElement('tbody');
+
+    for (const m of list) {
+      const tr = document.createElement('tr');
+      const cells = [0, 1, 2, 3, 4, 5].map(() => document.createElement('td'));
+      cells[0].textContent = m.clientEmail;
+      cells[1].innerHTML = `<code class="token-code">${escapeHtml(
+        String(m.folderId || '').slice(0, 14)
+      )}…</code>`;
+      cells[2].textContent = m.label || t('common.emDash');
+      cells[3].textContent = m.shareId || t('common.emDash');
+      cells[4].textContent = formatDateTime(m.assignedAt);
+      cells[4].className = 'token-cell-date';
+      cells[5].className = 'token-actions';
+      const client = hubState.clients.find((c) => c.email === m.clientEmail);
+      if (client) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn tiny secondary';
+        btn.textContent = t('clientsPanel.unassign');
+        btn.addEventListener('click', async () => {
+          try {
+            await patchClient(client.id, {
+              action: 'unassign',
+              membershipId: m.id,
+            });
+            await loadClientsHub();
+          } catch (err) {
+            notify(err.message || String(err), 'err');
+          }
+        });
+        cells[5].appendChild(btn);
+      }
+      cells.forEach((cell) => tr.appendChild(cell));
+      tbody.appendChild(tr);
+    }
+
+    table.appendChild(tbody);
+    wrap.appendChild(table);
+    el.appendChild(wrap);
+  }
+
+  function escapeHtml(value) {
+    return String(value ?? '')
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;');
+  }
+
+  async function loadHubClients() {
+    const accountsEl = $('hub-accounts');
+    const assignEl = $('hub-assignments');
+    accountsEl.textContent = t('clientsPanel.loading');
+    assignEl.textContent = t('clientsPanel.loading');
+    try {
+      const res = await apiFetch('/api/clients');
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || t('clientsPanel.error'));
+      hubState = {
+        clients: data.clients || [],
+        memberships: data.memberships || [],
+      };
+      renderHubAccounts();
+      renderHubAssignments();
+    } catch (err) {
+      accountsEl.textContent = err.message || String(err);
+      assignEl.textContent = '';
+    }
+  }
+
+  async function loadClientsHub() {
+    await Promise.all([loadInvites(), loadHubClients()]);
   }
 
   document.querySelectorAll('.tab').forEach((tab) => {
@@ -1577,7 +1896,7 @@
   destEl.addEventListener('input', onDestTyped);
   destEl.addEventListener('change', onDestCommitted);
   $('btn-tokens-refresh').addEventListener('click', loadTokens);
-  $('btn-invites-refresh').addEventListener('click', loadInvites);
+  $('btn-clients-refresh').addEventListener('click', loadClientsHub);
 
   const inviteForm = $('invite-form');
   const inviteFormError = $('invite-form-error');
@@ -1606,18 +1925,51 @@
         urlEl.dataset.keep = '1';
       }
       if (data.mail && data.mail.ok === false && !data.mail.skipped) {
-        notify(
-          data.mail.error || t('invitesPanel.smtpOff'),
-          'err'
-        );
+        notify(data.mail.error || t('invitesPanel.smtpOff'), 'err');
       }
       inviteForm.reset();
       const localeSel = inviteForm.querySelector('[name="locale"]');
       if (localeSel) localeSel.value = fd.get('locale') || 'en';
-      await loadInvites();
+      await loadClientsHub();
     } catch (err) {
       inviteFormError.textContent = err.message || String(err);
       inviteFormError.classList.remove('hidden');
+    }
+  });
+
+  $('assign-cancel').addEventListener('click', hideAssignForm);
+  $('assign-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const errEl = $('assign-form-error');
+    errEl.classList.add('hidden');
+    if (!assignForClient) return;
+    const fd = new FormData(e.target);
+    const folderId = String(fd.get('folderId') || '').trim();
+    if (!folderId) return;
+    try {
+      const shares = await loadSharesByFolder();
+      const share = shares.get(folderId);
+      const session = [...sessionMap.values()].find(
+        (s) => s.folderId === folderId || s.id === folderId
+      );
+      const label =
+        String(fd.get('label') || '').trim() ||
+        session?.name ||
+        session?.projectName ||
+        share?.label ||
+        null;
+      await patchClient(assignForClient.id, {
+        action: 'assign',
+        folderId,
+        shareId: share?.id || null,
+        label,
+      });
+      hideAssignForm();
+      notify(t('clientsPanel.assignOk'), 'ok');
+      await loadClientsHub();
+    } catch (err) {
+      errEl.textContent = err.message || String(err);
+      errEl.classList.remove('hidden');
     }
   });
 
@@ -1641,7 +1993,7 @@
   window.addEventListener('studio-locale', () => {
     loadSessions();
     loadTokens();
-    if (!$('panel-invites').classList.contains('hidden')) loadInvites();
+    if (!$('panel-clients').classList.contains('hidden')) loadClientsHub();
     updateStartEnabled();
   });
 

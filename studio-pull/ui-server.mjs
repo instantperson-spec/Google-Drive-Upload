@@ -1054,28 +1054,24 @@ function vercelAdminOrigin() {
 }
 
 /**
- * Proxy hub invite admin APIs to Vercel (same store/SMTP as /admin).
+ * Proxy admin APIs to Vercel (hub invites/clients — same Drive store as /admin).
  * Requires ADMIN_SECRET in .env.local.
+ * @param {string} adminPath e.g. `/api/admin/clients` or `/api/admin/clients/:id`
  */
-async function proxyClientInvites(req, res, { id = null } = {}) {
+async function proxyVercelAdmin(req, res, adminPath) {
   const env = loadEnvFile();
   const secret = env.ADMIN_SECRET || '';
   if (!secret) {
     sendJson(res, 503, {
       error:
-        'ADMIN_SECRET missing in .env.local — required to create hub invites via Vercel.',
+        'ADMIN_SECRET missing in .env.local — required for hub clients/invites via Vercel.',
     });
     return;
   }
 
-  const origin = vercelAdminOrigin();
-  const path = id
-    ? `/api/admin/client-invites/${encodeURIComponent(id)}`
-    : '/api/admin/client-invites';
-  const url = `${origin}${path}`;
-
+  const url = `${vercelAdminOrigin()}${adminPath}`;
   let bodyText;
-  if (req.method === 'POST' || req.method === 'PATCH') {
+  if (req.method === 'POST' || req.method === 'PATCH' || req.method === 'PUT') {
     const body = await readBody(req);
     bodyText = JSON.stringify(body || {});
   }
@@ -1093,9 +1089,23 @@ async function proxyClientInvites(req, res, { id = null } = {}) {
     sendJson(res, upstream.status, data);
   } catch (err) {
     sendJson(res, 502, {
-      error: err.message || 'Failed to reach Vercel invite API.',
+      error: err.message || 'Failed to reach Vercel admin API.',
     });
   }
+}
+
+async function proxyClientInvites(req, res, { id = null } = {}) {
+  const path = id
+    ? `/api/admin/client-invites/${encodeURIComponent(id)}`
+    : '/api/admin/client-invites';
+  await proxyVercelAdmin(req, res, path);
+}
+
+async function proxyClients(req, res, { id = null } = {}) {
+  const path = id
+    ? `/api/admin/clients/${encodeURIComponent(id)}`
+    : '/api/admin/clients';
+  await proxyVercelAdmin(req, res, path);
 }
 
 const server = http.createServer(async (req, res) => {
@@ -1237,6 +1247,21 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'PATCH' && inviteMatch) {
       await proxyClientInvites(req, res, {
         id: decodeURIComponent(inviteMatch[1]),
+      });
+      return;
+    }
+
+    if (
+      (req.method === 'GET' || req.method === 'POST') &&
+      pathname === '/api/clients'
+    ) {
+      await proxyClients(req, res);
+      return;
+    }
+    const clientMatch = pathname.match(/^\/api\/clients\/([^/]+)$/);
+    if (clientMatch && (req.method === 'PATCH' || req.method === 'DELETE')) {
+      await proxyClients(req, res, {
+        id: decodeURIComponent(clientMatch[1]),
       });
       return;
     }
