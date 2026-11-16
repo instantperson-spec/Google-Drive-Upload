@@ -278,43 +278,58 @@ export default function AdminTokenManager({ onStatsChange }) {
 
       {!loading && tokens.length > 0 && (
         <div className="admin-table-wrap">
-          <table className="admin-table">
+          <table className="admin-table admin-tokens-table">
+            <colgroup>
+              <col className="admin-col-client" />
+              <col className="admin-col-email" />
+              <col className="admin-col-token" />
+              <col className="admin-col-type" />
+              <col className="admin-col-locale" />
+              <col className="admin-col-status" />
+              <col className="admin-col-expires" />
+              <col className="admin-col-actions" />
+            </colgroup>
             <thead>
               <tr>
                 <th>Client</th>
                 <th>Email</th>
                 <th>Token</th>
                 <th>Type</th>
-                <th>Locale</th>
+                <th>Lang</th>
                 <th>Status</th>
                 <th>Expires</th>
-                <th>Link</th>
-                <th></th>
+                <th className="admin-actions-col">Actions</th>
               </tr>
             </thead>
             <tbody>
               {tokens.map((t) => (
                 <tr key={t.id} className={t.status !== 'active' ? 'admin-token-row-inactive' : ''}>
-                  <td className="admin-cell-name">{t.clientName}</td>
-                  <td className="admin-cell-email">{t.prefillEmail || '—'}</td>
-                  <td><code className="admin-code">{t.token}</code></td>
+                  <td className="admin-cell-name" title={t.clientName}>
+                    {t.clientName}
+                  </td>
+                  <td className="admin-cell-email" title={t.prefillEmail || ''}>
+                    {t.prefillEmail || '—'}
+                  </td>
+                  <td title={t.token}>
+                    <code className="admin-code">{t.token}</code>
+                  </td>
                   <td>{t.type === 'retainer' ? 'Retainer' : 'One-time'}</td>
                   <td>{t.locale === 'pl' ? 'PL' : 'EN'}</td>
-                  <td><StatusBadge status={t.status} /></td>
-                  <td className="admin-cell-date">{formatDate(t.expiresAt)}</td>
                   <td>
-                    {t.status === 'active' && (
+                    <StatusBadge status={t.status} />
+                  </td>
+                  <td className="admin-cell-date">{formatDate(t.expiresAt)}</td>
+                  <td className="admin-actions-cell">
+                    {t.status === 'active' ? (
                       <button
                         type="button"
                         className="admin-copy-btn"
                         onClick={() => copyLink(t.id, t.uploadUrl)}
                       >
-                        {copiedId === t.id ? 'Copied!' : 'Copy link'}
+                        {copiedId === t.id ? 'Copied!' : 'Copy'}
                       </button>
-                    )}
-                  </td>
-                  <td style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
-                    {!t.prefillEmail && t.status === 'active' && (
+                    ) : null}
+                    {!t.prefillEmail && t.status === 'active' ? (
                       <button
                         type="button"
                         className="admin-copy-btn"
@@ -323,7 +338,7 @@ export default function AdminTokenManager({ onStatsChange }) {
                       >
                         Set email
                       </button>
-                    )}
+                    ) : null}
                     {t.status === 'active' ? (
                       <button
                         type="button"

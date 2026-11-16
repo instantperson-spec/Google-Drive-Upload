@@ -1018,15 +1018,21 @@ h1 {
 }
 
 .admin-table-wrap {
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
   max-block-size: min(520px, 72vh);
   border-radius: 16px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   background: #0c111e;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .admin-table {
   width: 100%;
+  max-width: 100%;
+  table-layout: fixed;
   border-collapse: separate;
   border-spacing: 0;
   font-size: 0.875rem;
@@ -1034,23 +1040,35 @@ h1 {
 
 .admin-table th {
   text-align: left;
-  padding: 0.78rem 1rem;
+  padding: 0.7rem 0.7rem;
   background: #131a2d;
   color: var(--text-secondary);
   font-weight: 700;
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   text-transform: uppercase;
-  letter-spacing: 0.07em;
+  letter-spacing: 0.06em;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   position: sticky;
   top: 0;
   z-index: 1;
 }
 
 .admin-table td {
-  padding: 0.75rem 1rem;
+  padding: 0.65rem 0.7rem;
   border-top: 1px solid var(--glass-border);
   vertical-align: middle;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-table td.admin-actions-cell,
+.admin-table th.admin-actions-col {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
 }
 
 .admin-table tbody tr:hover {
@@ -1059,7 +1077,6 @@ h1 {
 
 .admin-cell-name {
   font-weight: 500;
-  max-width: 200px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1067,10 +1084,17 @@ h1 {
 
 .admin-cell-email {
   color: var(--text-secondary);
-  max-width: 220px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.admin-table .admin-code {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: bottom;
 }
 
 .admin-cell-date {
@@ -1249,17 +1273,27 @@ h1 {
   opacity: 0.55;
 }
 
+.admin-tokens-table .admin-col-client { width: 14%; }
+.admin-tokens-table .admin-col-email { width: 18%; }
+.admin-tokens-table .admin-col-token { width: 14%; }
+.admin-tokens-table .admin-col-type { width: 9%; }
+.admin-tokens-table .admin-col-locale { width: 5%; }
+.admin-tokens-table .admin-col-status { width: 8%; }
+.admin-tokens-table .admin-col-expires { width: 10%; }
+.admin-tokens-table .admin-col-actions { width: 22%; }
+
 .admin-copy-btn,
 .admin-revoke-btn,
 .admin-restore-btn {
   background: transparent;
   border: 1px solid var(--glass-border);
   color: var(--text-primary);
-  padding: 0.25rem 0.6rem;
+  padding: 0.25rem 0.55rem;
   border-radius: 6px;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   cursor: pointer;
   white-space: nowrap;
+  flex: 0 0 auto;
 }
 
 .admin-copy-btn:hover {
