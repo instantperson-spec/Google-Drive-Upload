@@ -71,7 +71,7 @@ Cel: klient wie, **co jest nowe od ostatniego linku**.
 
 **Model**
 - Sync może być roboczy (nie dla klienta).
-- **Opublikuj Draft N** w Console tworzy rundę: snapshot path→size (+ etykieta Draft 1 / 2 / Final).
+- **Opublikuj** w Console tworzy rundę: snapshot path→size (+ etykieta Draft 1 / 2 / …).
 - Share wskazuje **najnowszą opublikowaną rundę** (lub konkretną rundę w URL).
 - Na portalu: „Od ostatniej publikacji” = diff vs poprzednia runda; „Całość od Twojego uploadu” = jak dziś vs baseline klienta.
 

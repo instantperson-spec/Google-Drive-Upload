@@ -148,20 +148,18 @@ export async function createShareLocal({
 }
 
 /**
- * Publish Draft N (or Final), upsert share with roundId, return share + round.
+ * Publish next Draft N, upsert share with roundId, return share + round.
  */
 export async function publishAndShare({
   folderId,
   token = null,
   label = null,
-  markFinal = false,
   roundLabel = null,
 } = {}) {
   if (!folderId) throw new Error('folderId is required.');
   const { drive, env } = createDriveClient();
   const { round, manifest } = await publishRound(drive, folderId, {
     label: roundLabel,
-    markFinal: Boolean(markFinal),
   });
   const meta = roundsMeta(manifest);
   const share = await createShareLocal({

@@ -14,7 +14,7 @@
 | Flat upload + `/api/build-structure` + `_manifest.json` | ✅ |
 | Czarna lista rozszerzeń (server) | ✅ |
 | `/admin` — Modern Glass + Nebula (hero/KPI), History, tokeny, OAuth test | ✅ |
-| Studio Console — Modern Glass + Nebula; **Opublikuj** Draft/Final + chipy rund | ✅ |
+| Studio Console — Modern Glass + Nebula; **Opublikuj** (Draft N) + chipy rund | ✅ |
 | Portal `/share/<id>` — rundy, filtr „od publikacji”, plik-po-pliku, dogrywki | ✅ |
 | Mail do `prefillEmail` przy Opublikuj (`/api/share/…/notify-client`) | ✅ |
 | UI share: nagłówek „Portal projektu” (PL/EN), Nebula + glass | ✅ |

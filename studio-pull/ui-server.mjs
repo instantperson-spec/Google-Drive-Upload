@@ -960,7 +960,6 @@ async function handlePublish(req, res) {
       folderId,
       token: body.token || binding?.token || null,
       label: body.label || binding?.label || null,
-      markFinal: Boolean(body.final || body.markFinal),
       roundLabel: body.roundLabel || body.labelRound || null,
     });
     const mail = body.skipMail

@@ -80,7 +80,7 @@ https://DOMENA/?token=StudioAlfa
 ## Delivery: Sync → Opublikuj → share → mail
 
 1. Studio Console: **Pobierz** → **Sync** (roboczy).  
-2. **Opublikuj** (Draft N) albo **Opublikuj Final** — zapisuje rundę w `_team_manifest.json`, upsert share z `roundId`.  
+2. **Opublikuj** — zapisuje kolejną rundę (`Draft N`) w `_team_manifest.json`, upsert share z `roundId`.  
 3. Link `https://DOMENA/share/<id>` (kopiowany).  
 4. Mail do `prefillEmail` tokenu — jeśli w `.env.local` Console jest `ADMIN_SECRET` (= Vercel) i SMTP na Vercel.  
    Endpoint: `POST /api/share/<id>/notify-client` (auth: `x-admin-secret`).  

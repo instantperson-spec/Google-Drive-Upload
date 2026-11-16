@@ -353,10 +353,10 @@
     await loadSessions();
   }
 
-  async function publishSession(session, { markFinal = false } = {}) {
+  async function publishSession(session) {
     const folderId = session.folderId;
     if (!folderId) throw new Error(t('errors.missingFolderId'));
-    notify(markFinal ? t('notify.publishingFinal') : t('notify.publishingDraft'), 'ok');
+    notify(t('notify.publishing'), 'ok');
     const res = await apiFetch('/api/publish', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -364,7 +364,6 @@
         folderId,
         token: session.token || null,
         label: session.name || null,
-        final: markFinal,
       }),
     });
     const data = await res.json().catch(() => ({}));
@@ -635,7 +634,7 @@
 
         const pubBtn = mkBtn(t('sessions.publish'), 'primary', async () => {
           try {
-            await publishSession(s, { markFinal: false });
+            await publishSession(s);
           } catch (err) {
             notify(err.message || String(err), 'error');
           }
@@ -678,20 +677,6 @@
         } else {
           mkBtn(t('sessions.pickSyncFolder'), 'ghost', () => linkSessionFolder(s), menuPop);
         }
-
-        mkBtn(
-          t('sessions.publishFinal'),
-          'ghost',
-          async () => {
-            menuPop.classList.remove('open');
-            try {
-              await publishSession(s, { markFinal: true });
-            } catch (err) {
-              notify(err.message || String(err), 'error');
-            }
-          },
-          menuPop
-        );
 
         if (needsClientPull) {
           const syncInMenu = mkBtn(t('sessions.syncDrive'), 'ok', () => syncSession(s), menuPop);

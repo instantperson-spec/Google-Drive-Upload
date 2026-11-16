@@ -148,19 +148,17 @@ export function roundsMeta(manifest) {
  * Walk Drive session folder, append a published round, write manifest.
  * @returns {Promise<{ fileId: string, manifest: object, round: object }>}
  */
-export async function publishRound(drive, folderId, { label = null, markFinal = false } = {}) {
+export async function publishRound(drive, folderId, { label = null } = {}) {
   if (!folderId) throw new Error('folderId is required.');
   const { fileId, manifest } = await readManifest(drive, folderId);
   const files = await walkDriveFolder(drive, folderId);
   const snapshot = snapshotFromDriveFiles(files);
   if (!Object.keys(snapshot).length) {
-    throw new Error('Brak plików do publikacji (pusta sesja lub tylko FromClient/).');
+    throw new Error('Nothing to publish (empty session or only FromClient/).');
   }
 
   const nextNum = (manifest.rounds?.length || 0) + 1;
-  const roundLabel = markFinal
-    ? 'Final'
-    : String(label || '').trim() || `Draft ${nextNum}`;
+  const roundLabel = String(label || '').trim() || `Draft ${nextNum}`;
   const round = {
     id: `rnd_${crypto.randomBytes(8).toString('hex')}`,
     label: roundLabel,
