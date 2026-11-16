@@ -26,15 +26,20 @@ Produkcja (domyślna): `https://drive-uploader-three.vercel.app`
 | **Clip-only** | Pojedyncze klipy / jednorazowy drop | `/?token=…` i ewentualnie `/share/…` jak dziś |
 | **Project client** | Stała współpraca, wiele projektów | Konto w `/admin` → Client hub → login `/client` |
 
-### Hub klienta (`/client`) — self-signup
+### Hub klienta (`/client`) — tylko po zaproszeniu
 
-1. Klient otwiera `https://DOMENA/client` → **Załóż konto** (imię, email, hasło, język). Bez tokenu zaproszenia.
-2. Przy rejestracji system tworzy konto + linked retainer token (do „Nowy upload” z hubu; slug nie jest pokazywany klientowi).
-3. Po loginie: lista projektów **owned** (share / uploady z linked tokenem) oraz **assigned** (admin → Assign).
-4. **Otwórz projekt** → `/share/<id>`; **Nowy upload** → `/client/upload`.
-5. **`/admin` → Client hub accounts:** lista kont, **Suspend / Restore**, reset hasła, **Assign** folderu, **Delete**. Admin **nie** zakłada kont — to robi klient.
+1. **`/admin` → Client hub → Invite client`**: email + `lang` + opcjonalnie **Send email** (SMTP).  
+   Dostajesz URL (kopiowany) np.  
+   `https://DOMENA/client?invite=<token>&signup=1&lang=pl`
+2. Klient otwiera link → zakładka signup, język z `lang`, email **zablokowany** na adres z invite.
+3. Po rejestracji: konto + linked retainer token; invite zużyty (jednorazowy, TTL 7 dni).
+4. Powrót klienta: `https://DOMENA/client?login=1&lang=en` (deep-link UI, bez sekretu).
+5. Bez `invite` — signup niedostępny (API 403). Login bez zmian.
+6. Admin: lista kont, Suspend / Restore, Password, Assign, Delete; pending invites: New URL + copy, Resend mail, Revoke.
 
-Plik rejestru: `_uploader_clients.json` na Drive. Sesja: cookie `client_hub_session` (`CLIENT_SESSION_SECRET` || `ADMIN_SECRET`). Mockup UI: [`mockups/signup.html`](../mockups/signup.html) (centered card · aurora).
+Query (publiczne, tylko UX): `lang=en|pl|eng`, `login=1`, `signup=1` (+ `invite`).
+
+Plik: `_uploader_clients.json` (`clients`, `memberships`, `invites`). Sesja: `client_hub_session`.
 
 ---
 

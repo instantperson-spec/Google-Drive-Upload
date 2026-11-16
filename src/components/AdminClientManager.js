@@ -4,14 +4,17 @@ import { useCallback, useEffect, useState } from 'react';
 
 function formatDate(iso) {
   if (!iso) return '—';
-  return new Intl.DateTimeFormat('pl-PL', { dateStyle: 'medium' }).format(
-    new Date(iso)
-  );
+  return new Intl.DateTimeFormat('pl-PL', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(new Date(iso));
 }
 
 export default function AdminClientManager() {
   const [clients, setClients] = useState([]);
   const [memberships, setMemberships] = useState([]);
+  const [invites, setInvites] = useState([]);
+  const [smtpConfigured, setSmtpConfigured] = useState(false);
   const [sessions, setSessions] = useState([]);
   const [shares, setShares] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -21,15 +24,25 @@ export default function AdminClientManager() {
   const [assignLabel, setAssignLabel] = useState('');
   const [passwordFor, setPasswordFor] = useState(null);
   const [newPassword, setNewPassword] = useState('');
+  const [inviteForm, setInviteForm] = useState({
+    email: '',
+    locale: 'en',
+    note: '',
+    sendEmail: true,
+  });
+  const [creatingInvite, setCreatingInvite] = useState(false);
+  const [lastInviteUrl, setLastInviteUrl] = useState('');
+  const [copied, setCopied] = useState(false);
 
   const refresh = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
-      const [cRes, sRes, shRes] = await Promise.all([
+      const [cRes, sRes, shRes, iRes] = await Promise.all([
         fetch('/api/admin/clients', { credentials: 'include' }),
         fetch('/api/admin/sessions?limit=80', { credentials: 'include' }),
         fetch('/api/admin/shares', { credentials: 'include' }),
+        fetch('/api/admin/client-invites', { credentials: 'include' }),
       ]);
       const cData = await cRes.json().catch(() => ({}));
       if (!cRes.ok) throw new Error(cData.error || 'Failed to load clients');
@@ -44,6 +57,11 @@ export default function AdminClientManager() {
         const shData = await shRes.json();
         setShares(shData.shares || []);
       }
+      if (iRes.ok) {
+        const iData = await iRes.json();
+        setInvites(iData.invites || []);
+        setSmtpConfigured(Boolean(iData.smtpConfigured));
+      }
     } catch (err) {
       setError(err.message || String(err));
     } finally {
@@ -57,6 +75,16 @@ export default function AdminClientManager() {
 
   const shareByFolder = new Map(shares.map((s) => [s.folderId, s]));
 
+  async function copyText(text) {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      window.prompt('Copy invite URL:', text);
+    }
+  }
+
   async function patchClient(id, body) {
     setError('');
     const res = await fetch(`/api/admin/clients/${encodeURIComponent(id)}`, {
@@ -69,6 +97,63 @@ export default function AdminClientManager() {
     if (!res.ok) throw new Error(data.error || 'Update failed');
     await refresh();
     return data;
+  }
+
+  async function handleCreateInvite(e) {
+    e.preventDefault();
+    setCreatingInvite(true);
+    setError('');
+    setLastInviteUrl('');
+    try {
+      const res = await fetch('/api/admin/client-invites', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: inviteForm.email.trim(),
+          locale: inviteForm.locale,
+          note: inviteForm.note.trim(),
+          sendEmail: Boolean(inviteForm.sendEmail && smtpConfigured),
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Invite failed');
+      setLastInviteUrl(data.url || '');
+      setInviteForm({ email: '', locale: inviteForm.locale, note: '', sendEmail: inviteForm.sendEmail });
+      await refresh();
+      if (data.url) await copyText(data.url);
+    } catch (err) {
+      setError(err.message || String(err));
+    } finally {
+      setCreatingInvite(false);
+    }
+  }
+
+  async function inviteAction(id, action) {
+    setError('');
+    try {
+      const res = await fetch(
+        `/api/admin/client-invites/${encodeURIComponent(id)}`,
+        {
+          method: 'PATCH',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action,
+            sendEmail: action === 'resend',
+          }),
+        }
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Action failed');
+      if (data.url) {
+        setLastInviteUrl(data.url);
+        await copyText(data.url);
+      }
+      await refresh();
+    } catch (err) {
+      setError(err.message || String(err));
+    }
   }
 
   async function handleAssign(e) {
@@ -114,6 +199,8 @@ export default function AdminClientManager() {
   const membershipsFor = (email) =>
     memberships.filter((m) => m.clientEmail === email);
 
+  const pendingInvites = invites.filter((i) => i.status === 'pending');
+
   return (
     <section className="admin-section glass-panel">
       <div className="admin-section-head">
@@ -123,11 +210,122 @@ export default function AdminClientManager() {
         </button>
       </div>
       <p className="admin-hint">
-        Klienci zakładają konto sami na <code>/client</code> (signup). Tu: lista,
-        suspend/restore, reset hasła, assign projektu, delete.
+        Signup tylko po <strong>zaproszeniu</strong>. Tworzysz invite → copy link
+        i/lub mail SMTP. Klienci: suspend / password / assign / delete.
       </p>
 
       {error ? <p className="admin-error">{error}</p> : null}
+
+      <div className="admin-subhead" style={{ marginTop: '0.75rem' }}>
+        Invite client
+      </div>
+      <form className="admin-token-form-grid" onSubmit={handleCreateInvite}>
+        <input
+          required
+          type="email"
+          placeholder="client@email.com"
+          value={inviteForm.email}
+          onChange={(e) =>
+            setInviteForm({ ...inviteForm, email: e.target.value })
+          }
+        />
+        <select
+          value={inviteForm.locale}
+          onChange={(e) =>
+            setInviteForm({ ...inviteForm, locale: e.target.value })
+          }
+        >
+          <option value="en">lang=en</option>
+          <option value="pl">lang=pl</option>
+        </select>
+        <input
+          type="text"
+          placeholder="Note (optional)"
+          value={inviteForm.note}
+          onChange={(e) =>
+            setInviteForm({ ...inviteForm, note: e.target.value })
+          }
+        />
+        <label className="admin-hint" style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+          <input
+            type="checkbox"
+            checked={inviteForm.sendEmail}
+            disabled={!smtpConfigured}
+            onChange={(e) =>
+              setInviteForm({ ...inviteForm, sendEmail: e.target.checked })
+            }
+          />
+          Send email
+          {!smtpConfigured ? ' (SMTP not configured)' : ''}
+        </label>
+        <button type="submit" className="btn" disabled={creatingInvite}>
+          {creatingInvite ? 'Creating…' : 'Create invite + copy URL'}
+        </button>
+      </form>
+      {lastInviteUrl ? (
+        <p className="admin-hint" style={{ wordBreak: 'break-all' }}>
+          {copied ? 'Copied: ' : 'URL: '}
+          <code>{lastInviteUrl}</code>
+          <button
+            type="button"
+            className="btn ghost tiny"
+            style={{ marginLeft: '0.5rem' }}
+            onClick={() => copyText(lastInviteUrl)}
+          >
+            Copy
+          </button>
+        </p>
+      ) : null}
+
+      {pendingInvites.length ? (
+        <div className="admin-table-wrap" style={{ marginTop: '0.75rem' }}>
+          <h3 className="admin-subhead">Pending invites</h3>
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>Email</th>
+                <th>Lang</th>
+                <th>Expires</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              {pendingInvites.map((inv) => (
+                <tr key={inv.id}>
+                  <td>{inv.email}</td>
+                  <td>{inv.locale}</td>
+                  <td>{formatDate(inv.expiresAt)}</td>
+                  <td className="admin-actions-cell">
+                    <button
+                      type="button"
+                      className="btn ghost tiny"
+                      onClick={() => inviteAction(inv.id, 'copy')}
+                      title="Rotate token + copy new URL"
+                    >
+                      New URL + copy
+                    </button>
+                    <button
+                      type="button"
+                      className="btn ghost tiny"
+                      disabled={!smtpConfigured}
+                      onClick={() => inviteAction(inv.id, 'resend')}
+                    >
+                      Resend mail
+                    </button>
+                    <button
+                      type="button"
+                      className="btn ghost tiny"
+                      onClick={() => inviteAction(inv.id, 'revoke')}
+                    >
+                      Revoke
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
 
       {assignFor ? (
         <form className="admin-token-form-grid" onSubmit={handleAssign}>
@@ -198,7 +396,8 @@ export default function AdminClientManager() {
       {loading ? (
         <p className="admin-hint">Loading…</p>
       ) : (
-        <div className="admin-table-wrap">
+        <div className="admin-table-wrap" style={{ marginTop: '1rem' }}>
+          <h3 className="admin-subhead">Accounts</h3>
           <table className="admin-table">
             <thead>
               <tr>
@@ -306,7 +505,7 @@ export default function AdminClientManager() {
               {!clients.length ? (
                 <tr>
                   <td colSpan={7} className="admin-hint">
-                    Brak kont — klienci rejestrują się na /client.
+                    Brak kont — wyślij zaproszenie powyżej.
                   </td>
                 </tr>
               ) : null}

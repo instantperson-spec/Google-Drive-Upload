@@ -4,6 +4,8 @@ import {
   createClient,
   normalizeEmail,
   isValidEmail,
+  findInviteByRawToken,
+  consumeInviteByRawToken,
 } from '@/lib/clientStore';
 import {
   CLIENT_COOKIE,
@@ -28,8 +30,7 @@ function makeLinkedTokenSlug(displayName, email) {
 }
 
 /**
- * Public self-signup for project clients (no invite token).
- * Creates hub account + linked retainer upload token for /client/upload.
+ * Invite-only registration. Requires valid one-time invite token.
  */
 export async function POST(request) {
   const limited = rateLimit(request, 'client-register', 8);
@@ -44,13 +45,47 @@ export async function POST(request) {
 
   try {
     const body = await request.json().catch(() => ({}));
+    const inviteRaw = String(body.invite || body.inviteToken || '').trim();
+    if (!inviteRaw) {
+      return NextResponse.json(
+        { error: 'An invitation from the studio is required to create an account.' },
+        { status: 403 }
+      );
+    }
+
+    const found = await findInviteByRawToken(inviteRaw);
+    if (!found || found.status !== 'pending') {
+      const code =
+        found?.status === 'expired' || found?.status === 'used' ? 410 : 403;
+      return NextResponse.json(
+        {
+          error:
+            found?.status === 'expired'
+              ? 'Invite has expired.'
+              : found?.status === 'used'
+                ? 'Invite already used.'
+                : 'Invalid or revoked invite.',
+        },
+        { status: code }
+      );
+    }
+
+    const inviteEmail = normalizeEmail(found.invite.email);
     const email = normalizeEmail(body.email);
     const password = String(body.password || '');
     const displayName = String(body.displayName || body.name || '').trim();
-    const locale = normalizeLocale(body.locale || 'en');
+    const locale = normalizeLocale(
+      body.locale || found.invite.locale || 'en'
+    );
 
     if (!isValidEmail(email)) {
       return NextResponse.json({ error: 'Valid email is required.' }, { status: 400 });
+    }
+    if (email !== inviteEmail) {
+      return NextResponse.json(
+        { error: 'Email must match the invitation.' },
+        { status: 403 }
+      );
     }
     if (displayName.length < 2) {
       return NextResponse.json(
@@ -71,25 +106,25 @@ export async function POST(request) {
       clientName: displayName,
       clientEmail: email,
       type: 'retainer',
-      notes: 'Auto-created on client hub self-signup',
+      notes: 'Auto-created on invited client hub signup',
       prefillName: displayName,
       prefillEmail: email,
       locale,
     });
 
-    let client;
-    try {
-      client = await createClient({
-        email,
-        password,
-        displayName,
-        locale,
-        linkedToken,
-      });
-    } catch (err) {
-      // Best-effort: leave orphan token for admin cleanup if account create fails
-      throw err;
-    }
+    const client = await createClient({
+      email,
+      password,
+      displayName,
+      locale,
+      linkedToken,
+    });
+
+    await consumeInviteByRawToken(inviteRaw);
+    console.info('client invite consumed', {
+      inviteId: found.invite.id,
+      email,
+    });
 
     const response = NextResponse.json(
       { ok: true, client: publicClientSession({ ...client, linkedToken }) },
@@ -103,7 +138,10 @@ export async function POST(request) {
     return response;
   } catch (err) {
     const msg = err.message || 'Registration failed.';
-    const status = /already exists/i.test(msg) ? 409 : 400;
+    let status = 400;
+    if (/already exists/i.test(msg)) status = 409;
+    if (err.code === 403) status = 403;
+    if (err.code === 410) status = 410;
     console.error('client register error:', msg);
     return NextResponse.json({ error: msg }, { status });
   }

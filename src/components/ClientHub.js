@@ -24,6 +24,33 @@ function sourceBadge(source, t) {
   return t('clientHub.badgeOwned');
 }
 
+function parseLangParam(raw) {
+  const v = String(raw || '')
+    .trim()
+    .toLowerCase();
+  if (v === 'pl' || v.startsWith('pl-')) return 'pl';
+  if (v === 'en' || v === 'eng' || v.startsWith('en-')) return 'en';
+  return null;
+}
+
+function clearSensitiveQueryParams() {
+  try {
+    const url = new URL(window.location.href);
+    let changed = false;
+    for (const key of ['invite', 'signup']) {
+      if (url.searchParams.has(key)) {
+        url.searchParams.delete(key);
+        changed = true;
+      }
+    }
+    if (changed) {
+      window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
 function Shell({ children }) {
   return (
     <div className="client-shell">
@@ -38,25 +65,54 @@ function Shell({ children }) {
   );
 }
 
-/** Markup/CSS from mockups/signup.html — EN/PL switch sets account locale. */
-function ClientAuthCard({ locale, onLoggedIn, onLocale }) {
+function ClientAuthCard({
+  locale,
+  onLoggedIn,
+  onLocale,
+  initialMode,
+  inviteToken,
+  inviteEmail,
+  inviteError,
+  inviteLoading,
+}) {
   const t = useT();
-  const [mode, setMode] = useState('signup');
+  const canSignup = Boolean(inviteToken && inviteEmail && !inviteError);
+  const [mode, setMode] = useState(
+    initialMode === 'signup' && canSignup ? 'signup' : 'signin'
+  );
   const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(inviteEmail || '');
   const [password, setPassword] = useState('');
   const [showSignupPw, setShowSignupPw] = useState(false);
   const [showSigninPw, setShowSigninPw] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
+  useEffect(() => {
+    if (inviteEmail) setEmail(inviteEmail);
+  }, [inviteEmail]);
+
+  useEffect(() => {
+    if (initialMode === 'signup' && canSignup) setMode('signup');
+    else if (initialMode === 'login' || !canSignup) setMode('signin');
+  }, [initialMode, canSignup]);
+
   function go(next) {
+    if (next === 'signup' && !canSignup) {
+      setError(inviteError || t('clientHub.inviteRequired'));
+      setMode('signin');
+      return;
+    }
     setMode(next);
     setError('');
   }
 
   async function onSignup(e) {
     e.preventDefault();
+    if (!canSignup) {
+      setError(t('clientHub.inviteRequired'));
+      return;
+    }
     setBusy(true);
     setError('');
     try {
@@ -66,13 +122,15 @@ function ClientAuthCard({ locale, onLoggedIn, onLocale }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           displayName: name.trim(),
-          email: email.trim(),
+          email: (inviteEmail || email).trim(),
           password,
           locale: normalizeLocale(locale),
+          invite: inviteToken,
         }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || t('clientHub.signupError'));
+      clearSensitiveQueryParams();
       onLoggedIn(data.client);
     } catch (err) {
       setError(err.message || t('clientHub.signupError'));
@@ -95,6 +153,7 @@ function ClientAuthCard({ locale, onLoggedIn, onLocale }) {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || t('clientHub.loginError'));
       if (data.client?.locale) onLocale(normalizeLocale(data.client.locale));
+      clearSensitiveQueryParams();
       onLoggedIn(data.client);
     } catch (err) {
       setError(err.message || t('clientHub.loginError'));
@@ -115,7 +174,8 @@ function ClientAuthCard({ locale, onLoggedIn, onLocale }) {
           className="tab-btn"
           role="tab"
           aria-selected={mode === 'signup'}
-          aria-controls="panel-signup"
+          disabled={!canSignup}
+          title={canSignup ? undefined : t('clientHub.inviteRequired')}
           onClick={() => go('signup')}
         >
           {t('clientHub.tabSignup')}
@@ -125,14 +185,23 @@ function ClientAuthCard({ locale, onLoggedIn, onLocale }) {
           className="tab-btn"
           role="tab"
           aria-selected={mode === 'signin'}
-          aria-controls="panel-signin"
           onClick={() => go('signin')}
         >
           {t('clientHub.tabSignin')}
         </button>
       </div>
 
-      {mode === 'signup' ? (
+      {inviteLoading ? <p className="muted">{t('clientHub.loading')}</p> : null}
+      {!inviteLoading && inviteToken && inviteError ? (
+        <p className="error">{inviteError}</p>
+      ) : null}
+      {!inviteLoading && !inviteToken && mode === 'signin' ? (
+        <p className="hint" style={{ marginBottom: '1rem' }}>
+          {t('clientHub.inviteRequiredHint')}
+        </p>
+      ) : null}
+
+      {mode === 'signup' && canSignup ? (
         <div id="panel-signup" role="tabpanel">
           <h1 className="auth-title">{t('clientHub.signupTitle')}</h1>
           <p className="auth-subtitle">{t('clientHub.signupSubtitle')}</p>
@@ -161,17 +230,16 @@ function ClientAuthCard({ locale, onLoggedIn, onLocale }) {
                 {t('clientHub.email')}
                 <span className="req-star">*</span>
               </label>
-              <span className="hint">{t('clientHub.emailHint')}</span>
+              <span className="hint">{t('clientHub.emailLockedHint')}</span>
               <input
                 className="form-input"
                 id="signup-email"
                 name="email"
                 type="email"
                 required
+                readOnly
                 autoComplete="username"
-                placeholder={t('clientHub.emailPlaceholder')}
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                value={inviteEmail || email}
               />
             </div>
             <div className="field">
@@ -268,10 +336,8 @@ function ClientAuthCard({ locale, onLoggedIn, onLocale }) {
             </button>
           </form>
           <p className="auth-footer">
-            {t('clientHub.noAccountYet')}
-            <button type="button" onClick={() => go('signup')}>
-              {t('clientHub.switchToSignUp')}
-            </button>
+            {t('clientHub.noAccountYet')}{' '}
+            <span className="muted">{t('clientHub.inviteRequiredHint')}</span>
           </p>
         </div>
       )}
@@ -366,20 +432,75 @@ export default function ClientHub() {
   const [locale, setLocale] = useState('pl');
   const [checking, setChecking] = useState(true);
   const [client, setClient] = useState(null);
+  const [initialMode, setInitialMode] = useState('signin');
+  const [inviteToken, setInviteToken] = useState('');
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteError, setInviteError] = useState('');
+  const [inviteLoading, setInviteLoading] = useState(false);
+  const [bootDone, setBootDone] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      const params = new URLSearchParams(window.location.search);
+      const lang = parseLangParam(params.get('lang'));
+      if (lang) setLocale(lang);
+
+      const invite = String(params.get('invite') || '').trim();
+      const wantLogin =
+        params.get('login') === '1' ||
+        params.get('login') === 'true' ||
+        params.get('mode') === 'login';
+      const wantSignup =
+        params.get('signup') === '1' ||
+        params.get('signup') === 'true' ||
+        params.get('mode') === 'signup';
+
+      if (invite) {
+        setInviteToken(invite);
+        setInviteLoading(true);
+        try {
+          const res = await fetch(
+            `/api/client/invite?token=${encodeURIComponent(invite)}`
+          );
+          const data = await res.json().catch(() => ({}));
+          if (cancelled) return;
+          if (res.ok && data.ok) {
+            setInviteEmail(data.email || '');
+            setInviteError('');
+            if (data.locale) setLocale(normalizeLocale(data.locale));
+            setInitialMode(wantLogin && !wantSignup ? 'login' : 'signup');
+          } else {
+            setInviteError(data.error || 'Invalid invite.');
+            setInitialMode('login');
+          }
+        } catch {
+          if (!cancelled) {
+            setInviteError('Could not validate invite.');
+            setInitialMode('login');
+          }
+        } finally {
+          if (!cancelled) setInviteLoading(false);
+        }
+      } else {
+        setInitialMode(wantLogin || !wantSignup ? 'login' : 'login');
+      }
+
       try {
         const res = await fetch('/api/client/me', { credentials: 'include' });
         const data = await res.json().catch(() => ({}));
         if (cancelled) return;
         if (data.authenticated && data.client) {
           setClient(data.client);
-          if (data.client.locale) setLocale(normalizeLocale(data.client.locale));
+          if (data.client.locale && !lang) {
+            setLocale(normalizeLocale(data.client.locale));
+          }
         }
       } finally {
-        if (!cancelled) setChecking(false);
+        if (!cancelled) {
+          setChecking(false);
+          setBootDone(true);
+        }
       }
     })();
     return () => {
@@ -395,7 +516,7 @@ export default function ClientHub() {
   return (
     <LocaleProvider locale={locale}>
       <Shell>
-        {checking ? (
+        {checking || !bootDone ? (
           <section className="modern-glass-card">
             <p className="muted">…</p>
           </section>
@@ -411,6 +532,11 @@ export default function ClientHub() {
             locale={locale}
             onLoggedIn={setClient}
             onLocale={setLocale}
+            initialMode={initialMode}
+            inviteToken={inviteToken}
+            inviteEmail={inviteEmail}
+            inviteError={inviteError}
+            inviteLoading={inviteLoading}
           />
         )}
       </Shell>

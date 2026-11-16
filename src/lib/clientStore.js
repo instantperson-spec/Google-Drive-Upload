@@ -33,6 +33,46 @@ function emptyRegistry() {
     updatedAt: new Date().toISOString(),
     clients: [],
     memberships: [],
+    invites: [],
+  };
+}
+
+export const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+function ensureInvitesArray(registry) {
+  if (!Array.isArray(registry.invites)) registry.invites = [];
+}
+
+function hashInviteToken(raw) {
+  return crypto.createHash('sha256').update(String(raw)).digest('hex');
+}
+
+function generateInviteRawToken() {
+  return crypto.randomBytes(32).toString('base64url');
+}
+
+function inviteStatus(inv) {
+  if (!inv) return 'invalid';
+  if (inv.revokedAt) return 'revoked';
+  if (inv.usedAt) return 'used';
+  if (inv.expiresAt && new Date(inv.expiresAt).getTime() < Date.now()) {
+    return 'expired';
+  }
+  return 'pending';
+}
+
+function publicInvite(inv) {
+  return {
+    id: inv.id,
+    email: inv.email,
+    locale: normalizeLocale(inv.locale || DEFAULT_LOCALE),
+    note: inv.note || null,
+    createdAt: inv.createdAt,
+    expiresAt: inv.expiresAt,
+    usedAt: inv.usedAt || null,
+    revokedAt: inv.revokedAt || null,
+    createdBy: inv.createdBy || 'admin',
+    status: inviteStatus(inv),
   };
 }
 
@@ -171,6 +211,7 @@ export async function readClientsRegistry(force = false) {
     const { registry, etag } = await readFileJson(drive, file.id);
     if (!Array.isArray(registry.clients)) registry.clients = [];
     if (!Array.isArray(registry.memberships)) registry.memberships = [];
+    ensureInvitesArray(registry);
     cache.registry = registry;
     cache.fileId = file.id;
     cache.etag = etag;
@@ -424,4 +465,181 @@ export async function unassignProject(membershipId) {
     registry.memberships.splice(idx, 1);
     return { ok: true };
   });
+}
+
+/**
+ * Build public invite URL (raw token only appears here / in email).
+ */
+export function buildClientInviteUrl(origin, rawToken, locale = 'en') {
+  const base = String(origin || '').replace(/\/$/, '');
+  const lang = normalizeLocale(locale);
+  const q = new URLSearchParams({
+    invite: String(rawToken),
+    signup: '1',
+    lang,
+  });
+  return `${base}/client?${q.toString()}`;
+}
+
+export async function listInvites() {
+  const registry = await readClientsRegistry();
+  ensureInvitesArray(registry);
+  return registry.invites.map(publicInvite).sort((a, b) => {
+    const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+    const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+    return tb - ta;
+  });
+}
+
+/**
+ * Create invite. Returns { invite, rawToken } — rawToken only once.
+ */
+export async function createInvite({
+  email,
+  locale = DEFAULT_LOCALE,
+  note = '',
+  createdBy = 'admin',
+}) {
+  const normalized = normalizeEmail(email);
+  if (!isValidEmail(normalized)) throw new Error('Valid email is required.');
+
+  const existing = await getActiveClientByEmail(normalized);
+  if (existing) {
+    throw new Error('An active client account already exists for this email.');
+  }
+
+  const rawToken = generateInviteRawToken();
+  const tokenHash = hashInviteToken(rawToken);
+  const now = Date.now();
+
+  const invite = await withRegistryMutation((registry) => {
+    ensureInvitesArray(registry);
+    // Revoke other pending invites for same email
+    for (const inv of registry.invites) {
+      if (
+        inv.email === normalized &&
+        !inv.usedAt &&
+        !inv.revokedAt &&
+        !(inv.expiresAt && new Date(inv.expiresAt).getTime() < now)
+      ) {
+        inv.revokedAt = new Date().toISOString();
+      }
+    }
+    const row = {
+      id: crypto.randomUUID(),
+      email: normalized,
+      locale: normalizeLocale(locale),
+      tokenHash,
+      createdAt: new Date(now).toISOString(),
+      expiresAt: new Date(now + INVITE_TTL_MS).toISOString(),
+      usedAt: null,
+      revokedAt: null,
+      createdBy,
+      note: String(note || '').trim().slice(0, 200) || null,
+    };
+    registry.invites.push(row);
+    return row;
+  });
+
+  return { invite: publicInvite(invite), rawToken };
+}
+
+export async function revokeInvite(id) {
+  return withRegistryMutation((registry) => {
+    ensureInvitesArray(registry);
+    const inv = registry.invites.find((i) => i.id === id);
+    if (!inv) throw new Error('Invite not found.');
+    if (inv.usedAt) throw new Error('Invite already used.');
+    if (inv.revokedAt) return publicInvite(inv);
+    inv.revokedAt = new Date().toISOString();
+    return publicInvite(inv);
+  });
+}
+
+/**
+ * Look up invite by raw token (does not consume).
+ * @returns {{ invite: object, status: string } | null}
+ */
+export async function findInviteByRawToken(rawToken) {
+  const raw = String(rawToken || '').trim();
+  if (!raw || raw.length < 16) return null;
+  const tokenHash = hashInviteToken(raw);
+  const registry = await readClientsRegistry();
+  ensureInvitesArray(registry);
+  const inv = registry.invites.find((i) => i.tokenHash === tokenHash);
+  if (!inv) return null;
+  return { invite: inv, status: inviteStatus(inv), public: publicInvite(inv) };
+}
+
+/**
+ * Consume invite after successful registration (must still be pending).
+ */
+export async function consumeInviteByRawToken(rawToken) {
+  const raw = String(rawToken || '').trim();
+  const tokenHash = hashInviteToken(raw);
+  return withRegistryMutation((registry) => {
+    ensureInvitesArray(registry);
+    const inv = registry.invites.find((i) => i.tokenHash === tokenHash);
+    if (!inv) {
+      const err = new Error('Invalid or unknown invite.');
+      err.code = 403;
+      throw err;
+    }
+    const status = inviteStatus(inv);
+    if (status === 'revoked') {
+      const err = new Error('Invite was revoked.');
+      err.code = 403;
+      throw err;
+    }
+    if (status === 'expired') {
+      const err = new Error('Invite has expired.');
+      err.code = 410;
+      throw err;
+    }
+    if (status === 'used') {
+      const err = new Error('Invite already used.');
+      err.code = 410;
+      throw err;
+    }
+    inv.usedAt = new Date().toISOString();
+    return publicInvite(inv);
+  });
+}
+
+/** Re-resolve raw token for resend (pending only). */
+export async function getInviteRawLookupMaterial(id) {
+  const registry = await readClientsRegistry();
+  ensureInvitesArray(registry);
+  const inv = registry.invites.find((i) => i.id === id);
+  if (!inv) throw new Error('Invite not found.');
+  const status = inviteStatus(inv);
+  if (status !== 'pending') {
+    throw new Error(`Invite is ${status}; cannot resend.`);
+  }
+  return publicInvite(inv);
+}
+
+/**
+ * Rotate token on resend so old copied links still work until expiry —
+ * plan v1: keep same hash; admin must keep original URL.
+ * For resend mail we need the raw token — store cannot recover it.
+ * So on create we return raw once; for resend mail we rotate to a new token.
+ */
+export async function rotateInviteToken(id) {
+  const rawToken = generateInviteRawToken();
+  const tokenHash = hashInviteToken(rawToken);
+  const invite = await withRegistryMutation((registry) => {
+    ensureInvitesArray(registry);
+    const inv = registry.invites.find((i) => i.id === id);
+    if (!inv) throw new Error('Invite not found.');
+    const status = inviteStatus(inv);
+    if (status !== 'pending') {
+      throw new Error(`Invite is ${status}; cannot rotate.`);
+    }
+    inv.tokenHash = tokenHash;
+    // Extend expiry from now on rotate/resend
+    inv.expiresAt = new Date(Date.now() + INVITE_TTL_MS).toISOString();
+    return inv;
+  });
+  return { invite: publicInvite(invite), rawToken };
 }
