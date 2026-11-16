@@ -10,13 +10,14 @@
 
 ```
 Internet
-  ├── /?token=…          → upload API (auth: UPLOAD token)
-  ├── /share/<id>        → lista / plik / upload-session FromClient (auth: share id)
-  ├── /admin + /api/admin/* → ADMIN_SECRET (HttpOnly cookie)
+  ├── /?token=…                    → upload API (auth: UPLOAD token)
+  ├── /share/<id>                  → lista / plik / FromClient (auth: share id)
+  ├── /share/<id>/notify-client    → mail po Opublikuj (auth: ADMIN_SECRET header)
+  ├── /admin + /api/admin/*        → ADMIN_SECRET (HttpOnly cookie)
   └── Google Drive (OAuth drive.file) · SMTP (whitelist vs prefillEmail) · webhooks
 ```
 
-Lokalnie: Studio Console (Tauri / localhost) — nie jest publicznym API Vercel.
+Lokalnie: Studio Console (Tauri / localhost) — woła `notify-client` z `ADMIN_SECRET` z `.env.local`; nie jest publicznym API.
 
 ---
 
@@ -67,9 +68,10 @@ Lokalnie: Studio Console (Tauri / localhost) — nie jest publicznym API Vercel.
 | Tożsamość name/email tylko w UI (`create-folder` / notify) | Medium | Serwer nie wymusza `prefill*` z tokenu |
 | Notify bez `prefillEmail` → dowolny email | Medium | Głównie legacy / env tokeny |
 | Log mismatch z emailami | Low | PII w `console.warn` |
-| SA fallback + stare `.env.example` | Low | Hygiene (przykład env zsynchronizowany w tym samym przeglądzie) |
+| SA fallback w `getAuthClient` | Low | `.env.example` już OAuth-first |
+| `notify-client` (P2) | OK | Admin secret + tylko `prefillEmail` — bez open relay |
 
-Pełny raport: [`analiza_przegladowa.md`](./analiza_przegladowa.md).
+Re-check po `fca5d29` (rundy + mail): [`analiza_przegladowa.md`](./analiza_przegladowa.md).
 
 ---
 

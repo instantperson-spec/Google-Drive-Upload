@@ -1,138 +1,106 @@
 # Analiza przeglądowa — bezpieczeństwo, martwy kod, plany
 
-> Data: 2026-11-16 · Zakres: `src/`, `studio-pull/`, `scripts/`, `dokumentacja/`, `mockups/`, root  
-> Charakter: przegląd statyczny kodu + dokumentów (bez pentestu dynamicznego)  
-> Kontekst: po remedacji audytu 2026-11-15 (`bezpieczenstwo.md`, archiwum audytów)
+> Data: 2026-11-16 · **Re-check po wdrożeniu `fca5d29`** (Delivery rounds + share mail)  
+> Zakres: `src/`, `studio-pull/`, `scripts/`, `dokumentacja/`, `mockups/`, root  
+> Charakter: przegląd statyczny (bez pentestu dynamicznego)
 
 ---
 
-## Werdykt
+## Werdykt (po `fca5d29`)
 
-Projekt jest **w dobrym stanie bezpieczeństwa względem ostatnich P0/P1**. Nie znaleziono otwartego IDOR token↔folder, wycieku upload tokenu z share ani Console bez Host/Origin/token.  
-Główne problemy dziś to: **zaległości produktowe (P1–P3 roadmap)**, **śmieci dokumentacyjne / env**, **martwe assety i zależność `pdf-parse`**, oraz kilka **średnich** luk polityki (tożsamość uploadu tylko w UI, retainer bez `prefillEmail` w notify).
+Bezpieczeństwo nadal **bez otwartych krytyków** (IDOR / wyciek upload tokenu / Console CSRF).  
+**P1 rundy + P2 mail share są wdrożone** na `main` — największa luka produktowa to teraz **P3 feedback**.  
+Residual security bez zmian: **S-01 / S-02 Medium**, S-03–S-04 Low. Hygiene z tego PR (env, LICENSE, martwe assety/CSS) nadal aktualna.
+
+| Obszar | Stan po re-check |
+|---|---|
+| Security P0/P1 (audyt 15.11) | ✅ trzyma się |
+| P1 Delivery v2 (Opublikuj / rounds) | ✅ `fca5d29` |
+| P2 mail `prefillEmail` przy publikacji | ✅ `/api/share/[id]/notify-client` |
+| P3 feedback Approve / Changes | ⏳ brak |
+| S-01 tożsamość UI-only | ⏳ otwarte |
+| Martwy kod (pdf-parse, SVG, bg, Live CSS, tauri stub) | ✅ posprzątane w tym PR |
 
 ---
 
 ## 1. Bezpieczeństwo
 
-### Co jest dobrze utwardzone
+### Powierzchnia (zaktualizowana)
+
+```
+Internet
+  ├── /?token=…                 → upload API (UPLOAD token)
+  ├── /share/<id>               → lista / plik / FromClient (share id)
+  ├── /share/<id>/notify-client → mail po Opublikuj (ADMIN_SECRET header)
+  ├── /admin + /api/admin/*     → ADMIN_SECRET (cookie / header)
+  └── Drive OAuth · SMTP · webhook
+Lokalnie: Studio Console (:8787) → woła notify-client z ADMIN_SECRET z .env.local
+```
+
+### Utwardzone (OK) — bez regresji po `fca5d29`
 
 | Obszar | Evidencja |
 |---|---|
-| Auth upload API | `verifyUploadToken` + `x-upload-token` na create/upload/check/build/progress/log/notify/revoke |
-| Ownership folderu | `_uploader_session.json` + `assertFolderOwnedByToken` (fail-closed) |
-| Share bez upload tokenu | `GET /api/share/[id]` zwraca tylko id/label/createdAt + pliki |
-| Admin | HttpOnly cookie `sessionId.exp.sig`, TTL 24h, timing-safe, logout revoke (per instance) |
-| Rate limit | Preferencja `x-vercel-forwarded-for` / `x-real-ip` |
-| SMTP | `secure: smtpPort === 465`; escape HTML w notify |
-| OAuth | ścieżka OAuth2 `drive.file`; skrypt `check-oauth-scopes` |
-| Studio Console | Host/Origin allowlista + lokalny token; Tauri fingerprint |
-| Share download | `assertFileInShareFolder` + abort stream |
-| ZIP | domyślnie plik-po-pliku; ZIP ≤40 plików / ≤500 MB |
-| noindex | `robots: { index: false }` w layout |
+| Auth upload + ownership | `verifyUploadToken`, `_uploader_session.json` fail-closed |
+| Share GET bez upload tokenu | nadal tylko id/label/rounds meta + pliki |
+| **notify-client** | `verifyAdminPassword`; **tylko** `prefillEmail` z tokenu share; HTML escape; rate limit 10/min |
+| Admin session | `sessionId.exp.sig` + TTL + revoke |
+| Rate limit trusted IP | bez zmian |
+| Console Host/Origin/token | bez zmian |
+| ZIP / plik-po-pliku | bez zmian |
 
-### Znaleziska (aktualne)
+### Znaleziska residual (nadal otwarte)
 
-| ID | Priorytet | Temat | Opis | Pliki |
-|---|---|---|---|---|
-| S-01 | **Medium** | Tożsamość uploadu tylko w UI | Formularz blokuje name/email (`identityLocked`), ale `POST /api/create-folder` i `notify` przyjmują dowolne wartości z body przy ważnym tokenie. Atakujący z tokenem może podrobić nazwę/email w folderze Drive i mailu admina. | `create-folder/route.js`, `Uploader.js`, `notify/route.js` |
-| S-02 | **Medium** | Notify: retainer bez `prefillEmail` | Jeśli rekord tokenu nie ma `prefillEmail`, summary idzie na dowolny email z requestu (świadoma polityka B2B w audycie). Nowe tokeny wymagają emaila w `createToken` — ryzyko głównie legacy / env-only tokenów. | `notify/route.js` L91–94, `tokenStore.js` |
-| S-03 | **Low** | PII w logu mismatch | `console.warn` loguje requestEmail i registeredEmail przy mismatch. | `notify/route.js` L90 |
-| S-04 | **Low** | Service Account fallback | `getAuthClient` nadal wspiera SA; `.env.example` promuje SA zamiast OAuth. Ryzyko złej konfiguracji / szerszego klucza. | `googleAuth.js`, `.env.example` |
-| S-05 | **Low** | Rate limit / revoke admin per warm instance | Świadome ograniczenie Vercel — nie jest twardą kwotą globalną. | `rateLimit.js`, `adminAuth.js` |
-| S-06 | **Info** | Share id = sekret URL | Entropia OK (`shr_` + 12 B random). Brak OTP / kont (VULN-08 accepted). | `shareOps.mjs` |
-| S-07 | **Info** | Tokeny uploadu = slugi ludzkie | Przewidywalność przy słabych nazwach — model B2B. | `tokenStore.js` `validateTokenSlug` |
-| S-08 | **Info** | Blocklista rozszerzeń, nie magic-bytes | `.exe` itd. po nazwie; poza zakresem świadomie. | `blocklist.js`, `validation.js` |
+| ID | Priorytet | Temat | Status po re-check |
+|---|---|---|---|
+| S-01 | **Medium** | `create-folder` / upload `notify` — name/email z body, nie z `prefill*` | ⏳ bez zmian |
+| S-02 | **Medium** | upload `notify`: brak `prefillEmail` → dowolny email | ⏳; **P2 mail share jest lepszy** (wymaga prefill) |
+| S-03 | **Low** | PII w `console.warn` mismatch | ⏳ |
+| S-04 | **Low** | SA fallback w `getAuthClient` | ⏳ (`.env.example` już OAuth-first) |
+| S-05 | Info | Rate limit / revoke per warm instance | świadome |
+| S-09 | Info | `ADMIN_SECRET` jako klucz M2M Console→Vercel dla maila | OK dla modelu lokalnego; wyciek `.env.local` = możliwość wysyłki share-maili |
 
-### Świadomie poza zakresem (bez zmian)
+### Nowy endpoint — ocena
 
-- OTP klienta (VULN-08)  
-- Redis/KV (progress = Drive + ETag)  
-- Live Monitor (usunięty)  
-- Magic-bytes MIME  
+`POST /api/share/[id]/notify-client` (`fca5d29`): **bezpieczny w założeniach P2** — nie jest open relay (wymaga admin secret + zarejestrowanego `prefillEmail`). Nie wprowadza regresji względem VULN-02.
 
 ---
 
-## 2. Martwy kod i zbędne śmieci
+## 2. Martwy kod / śmieci
 
-| Element | Ocena | Rekomendacja |
-|---|---|---|
-| `pdf-parse` w `devDependencies` | **Martwy** — zero importów | ✅ usunięty w tym przeglądzie |
-| `public/file.svg`, `globe.svg`, `next.svg`, `vercel.svg`, `window.svg` | **Martwe** — default Next | ✅ usunięte |
-| `public/bg.jpg` (~590 KB) | **Prawie martwy** — route w `ui-server`, UI nie używa | ✅ usunięty asset + route |
-| `studio-pull/tauri/` | Tylko README → `tauri-app` | ✅ usunięty stub |
-| Martwy CSS (Live Monitor cards, stary uploader/share) | `.admin-active-*`, `.dropzone-subtext`, `.status-*`, `.share-header`… | ✅ usunięty |
-| Nieużywane eksporty | `isStampedSessionFolderName`, `assertFileInFromClient`, `useLocale`, `SUPPORTED_LOCALES` | ✅ usunięte |
-| `mockups/*.html` + screenshoty | **Świadoma referencja UI** (nie runtime) | Zostawić; nie mylić z produkcją |
-| `dokumentacja/archiwum/**` | Historia — OK | Nie linkować z README jako „żywe” ścieżki |
-| Duplikacja `formatBytes` / `formatDate` / email regex | Techniczny dług (P3 audytu) | Wspólny `lib/` przy okazji |
-| `buildBaselineFromLocal` `@deprecated` | Alias żywy w call sites | OK tymczasowo |
-| Monolity `ui-server.mjs` (~1.1k LOC), `ui/app.js` (~1.1k), `globals.css` (~2.2k) | Dług architektoniczny P3 | Rozbicie po P1 rund |
-| README → MIT / `LICENSE` | Brakowało pliku mimo deklaracji | ✅ dodany `LICENSE` (MIT) |
-| Skrypty w `scripts/` (poza `check-oauth-scopes`) | Narzędzia ops, nie w `package.json` | OK jako CLI ad-hoc |
+Hygiene z tego PR: `pdf-parse`, default SVG, `bg.jpg`, Live Monitor CSS, nieużywane eksporty, stub `tauri/`, `LICENSE`, sync README/`.env.example`/`operacje.md`.
 
-### Złamane / stale linki dokumentacji
-
-| Źródło | Cel | Stan |
-|---|---|---|
-| `README.md` | `dokumentacja/regeneracja_oauth_scope.md` | Brak — żywy: `oauth_drive_file.md` (archiwum: `archiwum/regeneracja_oauth_scope.md`) |
-| `README.md` | `dokumentacja/operacje_tokeny_i_linki.md` | Brak — żywy: `operacje.md` |
-| `README.md` | `dokumentacja/wdrozenie_security_hardening.md` | Tylko w archiwum; branch `security-hardening` **nie istnieje** na remote |
-| `.env.example` | Service Account + `WEBHOOK_URL`, bez OAuth/SMTP | ✅ zsynchronizowany |
-| `operacje.md` „ZIP dziś, plik-po-pliku później” | Sprzeczne z P0 | ✅ poprawione |
-| README „Active now” / ścieżki w `AdminOAuthCheck` + `checkOAuthScopes` | Stale | ✅ poprawione |
-| `scripts/*.mjs` (poza `check-oauth-scopes`) | Ops ad-hoc, nie w `package.json` | Zostawić jako CLI |
+Zostaje (świadomie): `mockups/`, `dokumentacja/archiwum/`, ops `scripts/*`, duplikacja `formatBytes`/`formatDate`, monolity UI (security P3 arch).
 
 ---
 
-## 3. Niedokończone plany wdrożenia
+## 3. Plany wdrożenia (po `fca5d29`)
 
-### Aktywny roadmap (`plany/post-mvp_roadmap_…`)
-
-| Etap | Status w planie | W kodzie |
+| Etap | Plan | Kod |
 |---|---|---|
-| P0 binding + nested path warn | ✅ | ✅ `projectBindings.mjs`, `pathHints.mjs`, Console |
-| P0 pobieranie plik-po-pliku | ✅ | ✅ `SharePage.js` (`showDirectoryPicker`) |
-| P0 OOS dogrywki vs studio | ✅ | ✅ sync / statusy |
-| **P1 Delivery v2 — rundy (Draft N)** | ⏳ **następne** | ❌ brak `rounds` w manifeście / UI „Opublikuj” |
-| **P2 mail z share przy publikacji** | ⏳ | ❌ brak; jest tylko notify po uploadie klienta |
-| **P3 feedback Approve / Changes** | ⏳ | ❌ brak `_team_feedback` / UI |
+| P0 Stabilizacja | ✅ | ✅ |
+| **P1 Delivery v2 rundy** | ✅ | ✅ `publishRound` / `publishAndShare` / portal `vsPrevRound` + filtr od publikacji |
+| **P2 Mail share** | ✅ | ✅ Console → `notify-client` na `prefillEmail` |
+| **P3 Feedback** | ⏳ | ❌ brak Approve / Changes / `_team_feedback` |
+| Security P3 arch dedupe | ⏳ | pending |
 
-### Remediacja security (archiwum planu)
+---
 
-| Todo | Status |
+## 4. Rekomendowana kolejność dalej
+
+1. **S-01** — serwerowa walidacja `prefill*` w `create-folder` (+ spójnie upload `notify`).  
+2. **S-03** — bez emaili w logach mismatch.  
+3. **Produkt P3** — feedback w portalu.  
+4. Security P3 — wspólny moduł Drive / split monolitów.
+
+---
+
+## 5. Dokumenty kanoniczne
+
+| Dokument | Rola |
 |---|---|
-| P0–P2 (share leak, IDOR, CSRF Console, WAV, admin session, ZIP, quota, ETag…) | ✅ completed |
-| **P3 wspólny moduł Drive + rozbicie monolitów** | ⏳ pending |
-
-### Inne „niedomknięte” ze starych planów (archiwum)
-
-- `plan_konsola_admina.md` / Live Monitor / KV — **świadomie zarzucone**; kod `/api/admin/active` żyje jako „In progress” w History (nie jako Live Monitor UI).  
-- `kierunki_rozwoju.md` — historyczny; backlog: `produkt_i_backlog.md`.  
-- README „Branch `security-hardening` ready for merge” — **przestarzałe** (już na `main`).
-
-### Backlog UX (niski, z `produkt_i_backlog.md`)
-
-Notatki projektu, redirect po sukcesie, pauza per plik, alert drobnicy, awaryjny `CHUNK_SIZE`, copy EN — wszystko **niezaimplementowane**, celowo niskie.
-
----
-
-## 4. Rekomendowana kolejność sprzątania
-
-1. ~~**Docs/env hygiene**~~ — zrobione w tym PR (README, `.env.example`, LICENSE, martwe assety).  
-2. **S-01:** serwerowa walidacja name/email vs `getTokenPrefill` w `create-folder` (+ spójnie w notify).  
-3. **S-03:** nie logować emaili przy mismatch.  
-4. **Produkt:** P1 rundy (największy gap roadmapy), potem P2 mail share.  
-5. **P3 arch:** dedup Drive + split `ui-server` / `app.js` (nie blokuje bezpieczeństwa).
-
----
-
-## 5. Mapowanie do dokumentów kanonicznych
-
-| Dokument | Rola po tej analizie |
-|---|---|
-| [`bezpieczenstwo.md`](./bezpieczenstwo.md) | Żywy skrót stanu security — uzupełnić o S-01…S-03 jeśli zostają otwarte |
-| Ten plik | Pełniejszy przegląd 2026-11-16 |
-| [`produkt_i_backlog.md`](./produkt_i_backlog.md) | Backlog produktu |
-| [`plany/post-mvp_roadmap_….plan.md`](./plany/post-mvp_roadmap_05ad683d.plan.md) | Jedyny aktywny plan wdrożenia |
-| [`archiwum/`](./archiwum/) | Historia audytów / planów — nie stan produkcji |
+| [`bezpieczenstwo.md`](./bezpieczenstwo.md) | Żywy skrót security |
+| Ten plik | Pełniejszy przegląd + re-check po rundach |
+| [`produkt_i_backlog.md`](./produkt_i_backlog.md) | Stan produktu (P0–P2 ✅) |
+| [`plany/post-mvp_roadmap_….plan.md`](./plany/post-mvp_roadmap_05ad683d.plan.md) | Aktywny plan → **P3** |
+| [`archiwum/`](./archiwum/) | Historia |
