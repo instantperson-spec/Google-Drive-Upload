@@ -61,6 +61,8 @@ async function findTokenFile(drive) {
     q: `'${mainFolderId}' in parents and name = '${TOKEN_FILE_NAME}' and trashed = false`,
     fields: 'files(id, modifiedTime)',
     pageSize: 1,
+    supportsAllDrives: true,
+    includeItemsFromAllDrives: true,
   });
   return res.data.files?.[0] || null;
 }
@@ -77,9 +79,10 @@ async function readFileJson(drive, fileId) {
   const meta = await drive.files.get({
     fileId,
     fields: 'id',
+    supportsAllDrives: true,
   });
   const res = await drive.files.get(
-    { fileId, alt: 'media' },
+    { fileId, alt: 'media', supportsAllDrives: true },
     { responseType: 'text' }
   );
   return {

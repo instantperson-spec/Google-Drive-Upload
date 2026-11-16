@@ -7,11 +7,24 @@ import { LocaleProvider, useT } from '@/context/LocaleContext';
 import { normalizeLocale } from '@/lib/locales';
 import LocaleSwitch from '@/components/LocaleSwitch';
 
-const SHARE_LOCALE_KEY = 'sharePortal.locale';
+/** Legacy global key — used to permanently override token locale (bug). */
+const LEGACY_SHARE_LOCALE_KEY = 'sharePortal.locale';
 
-function readStoredShareLocale() {
+function sessionLocaleKey(shareId) {
+  return `sharePortal.sessionLocale:${shareId || 'unknown'}`;
+}
+
+function clearLegacyShareLocale() {
   try {
-    const saved = localStorage.getItem(SHARE_LOCALE_KEY);
+    localStorage.removeItem(LEGACY_SHARE_LOCALE_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+function readSessionShareLocale(shareId) {
+  try {
+    const saved = sessionStorage.getItem(sessionLocaleKey(shareId));
     if (saved === 'pl' || saved === 'en') return saved;
   } catch {
     /* ignore */
@@ -19,9 +32,9 @@ function readStoredShareLocale() {
   return null;
 }
 
-function storeShareLocale(locale) {
+function storeSessionShareLocale(shareId, locale) {
   try {
-    localStorage.setItem(SHARE_LOCALE_KEY, normalizeLocale(locale));
+    sessionStorage.setItem(sessionLocaleKey(shareId), normalizeLocale(locale));
   } catch {
     /* ignore */
   }
@@ -212,7 +225,7 @@ function SharePageInner({ shareId, locale, onLocale, onTokenLocale }) {
 
   function handleLocaleChange(next) {
     const normalized = normalizeLocale(next);
-    storeShareLocale(normalized);
+    storeSessionShareLocale(shareId, normalized);
     if (typeof onLocale === 'function') onLocale(normalized);
   }
 
@@ -753,12 +766,23 @@ function SharePageInner({ shareId, locale, onLocale, onTokenLocale }) {
 }
 
 export default function SharePage({ shareId }) {
-  const [locale, setLocale] = useState(() => readStoredShareLocale() || 'en');
+  // Token locale wins. Manual switch is session-only (does not permanently block EN tokens).
+  const [locale, setLocale] = useState(
+    () => readSessionShareLocale(shareId) || 'en'
+  );
 
-  const onTokenLocale = useCallback((tokenLocale) => {
-    if (readStoredShareLocale()) return;
-    setLocale(normalizeLocale(tokenLocale));
+  useEffect(() => {
+    clearLegacyShareLocale();
   }, []);
+
+  const onTokenLocale = useCallback(
+    (tokenLocale) => {
+      const fromToken = normalizeLocale(tokenLocale);
+      const sessionOverride = readSessionShareLocale(shareId);
+      setLocale(sessionOverride || fromToken);
+    },
+    [shareId]
+  );
 
   return (
     <LocaleProvider locale={locale}>

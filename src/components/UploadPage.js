@@ -1,17 +1,30 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { LocaleProvider, useT } from '@/context/LocaleContext';
 import { UploadTokenProvider, useUploadTokenContext } from '@/context/UploadTokenContext';
 import Uploader from '@/components/Uploader';
 import LocaleSwitch from '@/components/LocaleSwitch';
 import { DEFAULT_LOCALE, normalizeLocale } from '@/lib/locales';
 
-const UPLOAD_LOCALE_KEY = 'uploadPortal.locale';
+/** Legacy global key that permanently overrode token.locale — clear on load. */
+const LEGACY_UPLOAD_LOCALE_KEY = 'uploadPortal.locale';
 
-function readStoredUploadLocale() {
+function sessionUploadLocaleKey(token) {
+  return `uploadPortal.sessionLocale:${token || 'unknown'}`;
+}
+
+function clearLegacyUploadLocale() {
   try {
-    const saved = localStorage.getItem(UPLOAD_LOCALE_KEY);
+    localStorage.removeItem(LEGACY_UPLOAD_LOCALE_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+function readSessionUploadLocale(token) {
+  try {
+    const saved = sessionStorage.getItem(sessionUploadLocaleKey(token));
     if (saved === 'pl' || saved === 'en') return saved;
   } catch {
     /* ignore */
@@ -19,9 +32,9 @@ function readStoredUploadLocale() {
   return null;
 }
 
-function storeUploadLocale(locale) {
+function storeSessionUploadLocale(token, locale) {
   try {
-    localStorage.setItem(UPLOAD_LOCALE_KEY, normalizeLocale(locale));
+    sessionStorage.setItem(sessionUploadLocaleKey(token), normalizeLocale(locale));
   } catch {
     /* ignore */
   }
@@ -44,18 +57,39 @@ function UploadPageChrome({ locale, onLocaleChange, children }) {
 }
 
 function UploadPageContent() {
-  const { locale: tokenLocale, tokenStatus } = useUploadTokenContext();
-  const [override, setOverride] = useState(() => readStoredUploadLocale());
+  const { locale: tokenLocale, tokenStatus, accessToken } = useUploadTokenContext();
+  const tokenSlug = accessToken || '';
+
+  useEffect(() => {
+    clearLegacyUploadLocale();
+  }, []);
 
   const tokenEffective =
-    tokenStatus === 'valid' && tokenLocale ? normalizeLocale(tokenLocale) : DEFAULT_LOCALE;
+    tokenStatus === 'valid' && tokenLocale
+      ? normalizeLocale(tokenLocale)
+      : DEFAULT_LOCALE;
+
+  const [override, setOverride] = useState(() =>
+    readSessionUploadLocale(tokenSlug)
+  );
+
+  // When token resolves, prefer token locale unless this tab already switched.
+  useEffect(() => {
+    if (tokenStatus !== 'valid') return;
+    const session = readSessionUploadLocale(tokenSlug);
+    setOverride(session);
+  }, [tokenStatus, tokenLocale, tokenSlug]);
+
   const effectiveLocale = override || tokenEffective;
 
-  const onLocaleChange = useCallback((next) => {
-    const normalized = normalizeLocale(next);
-    storeUploadLocale(normalized);
-    setOverride(normalized);
-  }, []);
+  const onLocaleChange = useCallback(
+    (next) => {
+      const normalized = normalizeLocale(next);
+      storeSessionUploadLocale(tokenSlug, normalized);
+      setOverride(normalized);
+    },
+    [tokenSlug]
+  );
 
   return (
     <LocaleProvider locale={effectiveLocale}>
