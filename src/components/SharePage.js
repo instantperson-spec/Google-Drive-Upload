@@ -67,6 +67,64 @@ function folderOf(relativePath) {
   return parts.slice(0, -1).join('/');
 }
 
+const FROM_CLIENT_PREFIX = 'FromClient/';
+const FROM_CLIENT_UNGROUPED = '__ungrouped__';
+
+/** One portal drop → one batch folder id: `YYYY-MM-DD_HH-mm__xxxxxxxx` */
+function makeFromClientBatchId(date = new Date()) {
+  const pad = (n) => String(n).padStart(2, '0');
+  const stamp = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}_${pad(date.getHours())}-${pad(date.getMinutes())}`;
+  const rand = Math.random().toString(36).slice(2, 10);
+  return `${stamp}__${rand}`;
+}
+
+function fromClientBatchKey(relativePath) {
+  const rel = String(relativePath || '').replace(/\\/g, '/');
+  if (!rel.startsWith(FROM_CLIENT_PREFIX) && rel !== 'FromClient') return null;
+  if (rel === 'FromClient') return FROM_CLIENT_UNGROUPED;
+  const rest = rel.slice(FROM_CLIENT_PREFIX.length);
+  const parts = rest.split('/').filter(Boolean);
+  if (parts.length >= 2) return parts[0];
+  return FROM_CLIENT_UNGROUPED;
+}
+
+function formatBatchLabel(batchId, t) {
+  if (!batchId || batchId === FROM_CLIENT_UNGROUPED) {
+    return t('share.batchUngrouped');
+  }
+  const m = /^(\d{4}-\d{2}-\d{2})_(\d{2})-(\d{2})__/.exec(batchId);
+  if (m) {
+    try {
+      const d = new Date(`${m[1]}T${m[2]}:${m[3]}:00`);
+      if (!Number.isNaN(d.getTime())) {
+        return new Intl.DateTimeFormat(undefined, {
+          dateStyle: 'medium',
+          timeStyle: 'short',
+        }).format(d);
+      }
+    } catch {
+      /* fall through */
+    }
+  }
+  return batchId;
+}
+
+function pathInsideBatch(relativePath, batchId) {
+  const rel = String(relativePath || '').replace(/\\/g, '/');
+  if (!batchId || batchId === FROM_CLIENT_UNGROUPED) {
+    const folder = folderOf(rel);
+    return folder === 'FromClient' ? '' : folder.replace(/^FromClient\/?/, '');
+  }
+  const prefix = `${FROM_CLIENT_PREFIX}${batchId}/`;
+  if (rel.startsWith(prefix)) {
+    const rest = rel.slice(prefix.length);
+    const parts = rest.split('/');
+    if (parts.length < 2) return '';
+    return parts.slice(0, -1).join('/');
+  }
+  return folderOf(rel);
+}
+
 /** Let React paint before the next heavy step. */
 function yieldToUi() {
   return new Promise((resolve) => {
@@ -74,7 +132,7 @@ function yieldToUi() {
   });
 }
 
-async function uploadFileViaShare(shareId, file, onPct) {
+async function uploadFileViaShare(shareId, file, batchId, onPct) {
   const initRes = await fetch(
     `/api/share/${encodeURIComponent(shareId)}/upload-session`,
     {
@@ -84,6 +142,7 @@ async function uploadFileViaShare(shareId, file, onPct) {
         name: file.name,
         mimeType: file.type || 'application/octet-stream',
         size: file.size,
+        batchId,
       }),
     }
   );
@@ -134,6 +193,42 @@ function ProgressPanel({ job }) {
   );
 }
 
+function FileListItems({ items, batchId, t }) {
+  return (
+    <ul className="share-file-list">
+      {items.map((f) => {
+        const name = f.name || String(f.relativePath || '').split('/').pop();
+        const folder = batchId
+          ? pathInsideBatch(f.relativePath, batchId)
+          : folderOf(f.relativePath);
+        return (
+          <li key={f.id} className={`share-file status-${f.status}`}>
+            <div className="share-file-main">
+              <span className="share-file-ext" aria-hidden="true">
+                {fileExt(name)}
+              </span>
+              <div className="share-file-text">
+                <span className="share-file-name" title={f.relativePath}>
+                  {name}
+                </span>
+                {folder ? (
+                  <span className="share-file-folder">📁 {folder}/</span>
+                ) : null}
+              </div>
+            </div>
+            <span className="share-file-meta">
+              <span className={`share-badge share-badge-${f.status}`}>
+                {statusLabel(f.status, t)}
+              </span>
+              <span className="share-file-size">{formatBytes(Number(f.size) || 0)}</span>
+            </span>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
 function FileSection({ title, hint, items, downloadLabel, onDownload, busy, t }) {
   if (!items.length) return null;
   return (
@@ -155,35 +250,73 @@ function FileSection({ title, hint, items, downloadLabel, onDownload, busy, t })
         ) : null}
       </div>
       {hint ? <p className="share-section-hint">{hint}</p> : null}
-      <ul className="share-file-list">
-        {items.map((f) => {
-          const name = f.name || String(f.relativePath || '').split('/').pop();
-          const folder = folderOf(f.relativePath);
-          return (
-            <li key={f.id} className={`share-file status-${f.status}`}>
-              <div className="share-file-main">
-                <span className="share-file-ext" aria-hidden="true">
-                  {fileExt(name)}
-                </span>
-                <div className="share-file-text">
-                  <span className="share-file-name" title={f.relativePath}>
-                    {name}
-                  </span>
-                  {folder ? (
-                    <span className="share-file-folder">📁 {folder}/</span>
-                  ) : null}
-                </div>
-              </div>
-              <span className="share-file-meta">
-                <span className={`share-badge share-badge-${f.status}`}>
-                  {statusLabel(f.status, t)}
-                </span>
-                <span className="share-file-size">{formatBytes(f.size)}</span>
-              </span>
-            </li>
-          );
-        })}
-      </ul>
+      <FileListItems items={items} t={t} />
+    </section>
+  );
+}
+
+function ClientBatchesSection({
+  title,
+  hint,
+  batches,
+  zipBase,
+  busy,
+  t,
+  onDownload,
+}) {
+  if (!batches.length) return null;
+  return (
+    <section className="share-section">
+      <div className="share-section-head">
+        <div className="share-section-title-row">
+          <h2>{title}</h2>
+          <span className="share-section-count">
+            {batches.reduce((n, b) => n + b.items.length, 0)}
+          </span>
+        </div>
+        {batches.length > 1 ? (
+          <button
+            type="button"
+            className="btn btn-secondary share-section-download"
+            disabled={busy}
+            onClick={() =>
+              onDownload(
+                batches.flatMap((b) => b.items),
+                `${zipBase}-uploads.zip`,
+                t('share.downloadClient')
+              )
+            }
+          >
+            {busy ? t('share.busyShort') : t('share.downloadClientAll')}
+          </button>
+        ) : null}
+      </div>
+      {hint ? <p className="share-section-hint">{hint}</p> : null}
+      {batches.map((batch) => (
+        <div key={batch.batchId} className="share-batch">
+          <div className="share-batch-head">
+            <div className="share-batch-title-row">
+              <h3 className="share-batch-title">{batch.label}</h3>
+              <span className="share-section-count">{batch.items.length}</span>
+            </div>
+            <button
+              type="button"
+              className="btn btn-secondary share-section-download"
+              disabled={busy}
+              onClick={() =>
+                onDownload(
+                  batch.items,
+                  `${zipBase}-${batch.batchId === FROM_CLIENT_UNGROUPED ? 'ungrouped' : batch.batchId}.zip`,
+                  t('share.downloadBatch')
+                )
+              }
+            >
+              {busy ? t('share.busyShort') : t('share.downloadBatch')}
+            </button>
+          </div>
+          <FileListItems items={batch.items} batchId={batch.batchId} t={t} />
+        </div>
+      ))}
     </section>
   );
 }
@@ -250,6 +383,25 @@ function SharePageInner({ shareId, locale, onLocale, onTokenLocale }) {
     () => files.filter((f) => f.status === 'fromClient'),
     [files]
   );
+  const fromClientBatches = useMemo(() => {
+    const map = new Map();
+    for (const f of fromClientFiles) {
+      const key = fromClientBatchKey(f.relativePath) || FROM_CLIENT_UNGROUPED;
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push(f);
+    }
+    const list = [...map.entries()].map(([batchId, items]) => ({
+      batchId,
+      label: formatBatchLabel(batchId, t),
+      items,
+    }));
+    list.sort((a, b) => {
+      if (a.batchId === FROM_CLIENT_UNGROUPED) return 1;
+      if (b.batchId === FROM_CLIENT_UNGROUPED) return -1;
+      return b.batchId.localeCompare(a.batchId);
+    });
+    return list;
+  }, [fromClientFiles, t]);
   const lastSentLabel = share?.publishedAt
     ? new Intl.DateTimeFormat(undefined, {
         dateStyle: 'medium',
@@ -435,6 +587,8 @@ function SharePageInner({ shareId, locale, onLocale, onTokenLocale }) {
     const list = [...fileList].filter((f) => f && f.size > 0);
     if (!list.length) return;
 
+    const batchId = makeFromClientBatchId();
+
     setBusy(true);
     setJob({
       phase: 'start',
@@ -459,7 +613,7 @@ function SharePageInner({ shareId, locale, onLocale, onTokenLocale }) {
         });
         await yieldToUi();
 
-        await uploadFileViaShare(shareId, file, (pct) => {
+        await uploadFileViaShare(shareId, file, batchId, (pct) => {
           const overall = Math.round(((i + pct / 100) / list.length) * 100);
           setJob({
             phase: 'upload',
@@ -484,6 +638,7 @@ function SharePageInner({ shareId, locale, onLocale, onTokenLocale }) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               label: share?.label || null,
+              batchId,
               files: list.map((f) => ({
                 name: f.name,
                 size: f.size,
@@ -730,20 +885,14 @@ function SharePageInner({ shareId, locale, onLocale, onTokenLocale }) {
         />
       ) : null}
       {showClient ? (
-        <FileSection
+        <ClientBatchesSection
           t={t}
           title={t('share.clientTitle')}
           hint={t('share.clientHint')}
-          items={fromClientFiles}
+          batches={fromClientBatches}
+          zipBase={zipBase}
           busy={busy}
-          downloadLabel={t('share.downloadClient')}
-          onDownload={() =>
-            downloadSet(
-              fromClientFiles,
-              `${zipBase}-uploads.zip`,
-              t('share.downloadClient')
-            )
-          }
+          onDownload={downloadSet}
         />
       ) : null}
 

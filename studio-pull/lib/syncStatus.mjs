@@ -5,8 +5,10 @@ import fs from 'fs';
 import path from 'path';
 import { walkDriveFolder } from './driveWalk.mjs';
 import { detectNestedSessionPath } from './pathHints.mjs';
-
-const FROM_CLIENT_PREFIX = 'FromClient/';
+import {
+  FROM_CLIENT_PREFIX,
+  summarizeFromClientBatches,
+} from './fromClientBatches.mjs';
 
 /**
  * @param {object} drive
@@ -77,6 +79,7 @@ export async function computeSyncStatus(drive, folderId, binding) {
     lastClientPullAt: binding?.lastClientPullAt || null,
     remoteChangedAt,
     fromClientCount: fromClientFiles.length,
+    fromClientBatches: summarizeFromClientBatches(fromClientFiles),
     missingLocalFromClient,
     nestedWarning,
   };

@@ -1872,6 +1872,38 @@ h1 {
   color: var(--text-secondary);
 }
 
+.share-batch {
+  margin-top: 0.75rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.share-batch:first-of-type {
+  margin-top: 0.35rem;
+}
+
+.share-batch-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.share-batch-title-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.share-batch-title {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
 .share-file-list {
   list-style: none;
   max-height: min(40vh, 320px);

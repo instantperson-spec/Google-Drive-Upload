@@ -81,12 +81,12 @@ https://DOMENA/?token=StudioAlfa
 
 1. Studio Console: **Pobierz** → **Sync** (roboczy).  
 2. **Wyślij zmiany** — zapisuje snapshot delty w `_team_manifest.json` (wewnętrznie), upsert share; klient widzi „od ostatniego odesłania”, bez galerii wersji.  
-3. **Dogrywka klienta** (portal → `FromClient/`) → mail na `NOTIFICATION_EMAIL` (studio). Klient dostaje summary **tylko** gdy token ma `prefillEmail` (jak przy uploadzie).  
+3. **Dogrywka klienta** (portal → `FromClient/<timestamp>__id/`) → mail na `NOTIFICATION_EMAIL` (studio) z id batcha. Klient dostaje summary **tylko** gdy token ma `prefillEmail` (jak przy uploadzie).  
 3. Link `https://DOMENA/share/<id>` (kopiowany).  
 4. Mail do `prefillEmail` tokenu — jeśli w `.env.local` Console jest `ADMIN_SECRET` (= Vercel) i SMTP na Vercel.  
    Endpoint: `POST /api/share/<id>/notify-client` (auth: `x-admin-secret`).  
-5. Klient: portal z filtrem **od publikacji** / KPI; pobieranie plik-po-pliku; dogrywki → `FromClient/`.  
-6. Studio: Out of sync → **Pobierz od klienta**.
+5. Klient: portal z filtrem **od publikacji** / KPI; pobieranie plik-po-pliku; dogrywki w **batchach czasowych** (`FromClient/YYYY-MM-DD_HH-mm__xxxx/` — jedno wrzucenie = jeden batch). Stare płaskie pliki = „Wcześniejsze (bez grupy)”.  
+6. Studio: Out of sync → lista batchy + **Pobierz ten batch** / **Pobierz wszystkie** (lokalnie zachowana struktura `FromClient/<batchId>/…`).
 
 Revoke share w Console → portal niedostępny; upload token bez zmian.
 

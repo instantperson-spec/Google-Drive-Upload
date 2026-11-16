@@ -32,6 +32,10 @@ import {
   setLastClientPull,
 } from './lib/projectBindings.mjs';
 import { computeSyncStatus } from './lib/syncStatus.mjs';
+import {
+  fromClientBatchKey,
+  labelForFromClientBatch,
+} from './lib/fromClientBatches.mjs';
 import { detectNestedSessionPath } from './lib/pathHints.mjs';
 import { walkLocalFolder } from './lib/localWalk.mjs';
 import { planSync } from './lib/syncDelta.mjs';
@@ -194,6 +198,7 @@ async function handleSessions(res) {
               syncStatus: 'unknown',
               reasons: { fromClientPending: false, studioRemoteNewer: false },
               fromClientCount: 0,
+              fromClientBatches: [],
               missingLocalFromClient: 0,
               remoteChangedAt: null,
               nestedWarning: null,
@@ -214,6 +219,7 @@ async function handleSessions(res) {
         studioRemoteNewer: false,
       };
       s.fromClientCount = st.fromClientCount;
+      s.fromClientBatches = st.fromClientBatches || [];
       s.missingLocalFromClient = st.missingLocalFromClient;
       s.remoteChangedAt = st.remoteChangedAt;
       s.nestedWarning = st.nestedWarning || null;
@@ -222,6 +228,7 @@ async function handleSessions(res) {
       s.syncStatus = s.localPath ? 'ok' : 'unknown';
       s.syncReasons = { fromClientPending: false, studioRemoteNewer: false };
       s.fromClientCount = 0;
+      s.fromClientBatches = [];
       s.missingLocalFromClient = 0;
       s.nestedWarning = s.localPath
         ? detectNestedSessionPath(s.localPath, s.bindingLabel || s.name || null)
@@ -727,8 +734,9 @@ async function handleBindingPut(req, res) {
 }
 
 /**
- * Pull only FromClient/ into local project folder.
- * Body: { folderId }
+ * Pull FromClient/ into local project folder (all batches or one batchId).
+ * Body: { folderId, batchId?: string }
+ * batchId `__ungrouped__` = legacy flat files directly under FromClient/.
  */
 async function handlePullFromClient(req, res) {
   if (jobRunning) {
@@ -750,6 +758,9 @@ async function handlePullFromClient(req, res) {
     return;
   }
 
+  const batchIdRaw = body.batchId != null ? String(body.batchId).trim() : '';
+  const batchFilter = batchIdRaw || null;
+
   const binding = getBinding(folderId);
   if (!binding?.localPath) {
     sendJson(res, 400, {
@@ -768,24 +779,40 @@ async function handlePullFromClient(req, res) {
 
   jobRunning = true;
   cancelRequested = false;
-  sendJson(res, 202, { ok: true, folderId, localPath: dest, mode: 'fromClient' });
+  sendJson(res, 202, {
+    ok: true,
+    folderId,
+    localPath: dest,
+    mode: 'fromClient',
+    batchId: batchFilter,
+  });
 
   setImmediate(async () => {
     try {
       const { drive } = createDriveClient();
+      const batchLabel = batchFilter
+        ? labelForFromClientBatch(batchFilter)
+        : 'all batches';
       broadcast({
         type: 'sync_start',
         folderId,
         dest,
         label: binding.label || 'FromClient',
         mode: 'fromClient',
+        batchId: batchFilter,
+        batchLabel,
       });
 
-      broadcast({ type: 'listing', folderId, dest });
+      broadcast({ type: 'listing', folderId, dest, batchId: batchFilter });
       const all = await walkDriveFolder(drive, folderId);
-      const files = all.filter((f) =>
+      let files = all.filter((f) =>
         String(f.relativePath || '').startsWith('FromClient/')
       );
+      if (batchFilter) {
+        files = files.filter(
+          (f) => fromClientBatchKey(f.relativePath) === batchFilter
+        );
+      }
       const totalBytes = files.reduce((s, f) => s + f.size, 0);
       broadcast({
         type: 'listing_done',
@@ -795,6 +822,7 @@ async function handlePullFromClient(req, res) {
         totalBytes,
         totalLabel: formatBytes(totalBytes),
         mode: 'fromClient',
+        batchId: batchFilter,
       });
 
       if (!files.length) {
@@ -810,6 +838,7 @@ async function handlePullFromClient(req, res) {
           dest,
           folderId,
           cancelled: false,
+          batchId: batchFilter,
         });
         return;
       }
@@ -817,7 +846,8 @@ async function handlePullFromClient(req, res) {
       const stats = await downloadFiles(drive, files, dest, {
         failFast: false,
         shouldCancel: () => cancelRequested,
-        onEvent: (event) => broadcast({ ...event, mode: 'fromClient' }),
+        onEvent: (event) =>
+          broadcast({ ...event, mode: 'fromClient', batchId: batchFilter }),
       });
 
       setLastClientPull(folderId);
@@ -832,6 +862,7 @@ async function handlePullFromClient(req, res) {
         dest,
         folderId,
         cancelled: cancelRequested,
+        batchId: batchFilter,
       });
     } catch (err) {
       broadcast({ type: 'fatal', message: err.message || String(err) });

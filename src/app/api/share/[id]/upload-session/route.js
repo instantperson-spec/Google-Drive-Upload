@@ -1,5 +1,10 @@
 import { NextResponse } from 'next/server';
-import { getActiveShare, ensureFromClientFolder } from '@/lib/shareStore';
+import {
+  getActiveShare,
+  ensureFromClientBatchFolder,
+  fromClientBatchKey,
+  FROM_CLIENT_BATCH_ID_RE,
+} from '@/lib/shareStore';
 import { getAuthClient, isSessionFolder } from '@/lib/googleAuth';
 import { validateFileMetadata } from '@/lib/validation';
 import { rateLimit } from '@/lib/rateLimit';
@@ -8,7 +13,7 @@ import { assertShareUploadAllowed } from '@/lib/shareQuota';
 export const runtime = 'nodejs';
 
 /**
- * Resumable upload init for client top-ups — files land only in FromClient/.
+ * Resumable upload init for client top-ups — files land in FromClient/<batchId>/.
  * Auth: active share id in the URL (no upload token).
  */
 export async function POST(request, { params }) {
@@ -27,12 +32,20 @@ export async function POST(request, { params }) {
       return NextResponse.json({ error: 'Invalid share folder.' }, { status: 403 });
     }
 
-    const { name, mimeType, size } = await request.json();
+    const { name, mimeType, size, batchId } = await request.json();
     if (!name || !size) {
       return NextResponse.json({ error: 'Missing file metadata' }, { status: 400 });
     }
 
-    // Flat name only — no path escape out of FromClient
+    const batch = String(batchId || '').trim();
+    if (!FROM_CLIENT_BATCH_ID_RE.test(batch)) {
+      return NextResponse.json(
+        { error: 'Missing or invalid batchId (expected 8–48 safe chars).' },
+        { status: 400 }
+      );
+    }
+
+    // Flat name only — no path escape out of the batch folder
     const baseName = String(name).split(/[/\\]/).pop();
     const validationError = validateFileMetadata(baseName, size);
     if (validationError) {
@@ -44,7 +57,8 @@ export async function POST(request, { params }) {
       return NextResponse.json({ error: quota.error }, { status: 429 });
     }
 
-    const fromClientId = await ensureFromClientFolder(share.folderId);
+    const batchFolderId = await ensureFromClientBatchFolder(share.folderId, batch);
+    const relativePath = `FromClient/${batch}/${baseName}`;
 
     const response = await authClient.request({
       url: 'https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable',
@@ -57,7 +71,7 @@ export async function POST(request, { params }) {
       },
       data: {
         name: baseName,
-        parents: [fromClientId],
+        parents: [batchFolderId],
       },
     });
 
@@ -74,8 +88,10 @@ export async function POST(request, { params }) {
 
     return NextResponse.json({
       uploadUrl,
-      parentFolderId: fromClientId,
-      relativePath: `FromClient/${baseName}`,
+      parentFolderId: batchFolderId,
+      batchId: batch,
+      batchKey: fromClientBatchKey(relativePath),
+      relativePath,
     });
   } catch (error) {
     console.error('share upload-session error:', error.message || error);

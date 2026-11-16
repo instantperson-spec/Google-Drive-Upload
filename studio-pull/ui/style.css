@@ -578,6 +578,31 @@ input#dest:focus,
   border-color: rgba(148, 163, 184, 0.25);
 }
 
+.session-batches {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-top: 0.45rem;
+  padding: 0.45rem 0.55rem;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.session-batch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.session-batch-info {
+  font-size: 0.78rem;
+  color: var(--muted, #a8b0bd);
+  min-width: 0;
+}
+
 .session-last-sent {
   margin-top: 0.4rem;
   font-size: 0.72rem;

@@ -243,7 +243,7 @@
     }
   }
 
-  async function pullFromClient(session) {
+  async function pullFromClient(session, batchId = null) {
     if (running || !session?.folderId) return;
     if (!projectFolderPath(session)) {
       notify(t('notify.needDownloadFirst'), 'warn');
@@ -253,12 +253,19 @@
     updateStartEnabled();
     logEl.textContent = '';
     setProgress(0, 1);
-    notify(t('notify.pullFromClientStart'), 'ok');
+    notify(
+      batchId
+        ? t('notify.pullFromClientBatchStart', { batch: batchId })
+        : t('notify.pullFromClientStart'),
+      'ok'
+    );
     try {
+      const payload = { folderId: session.folderId };
+      if (batchId) payload.batchId = batchId;
       const res = await apiFetch('/api/pull-from-client', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ folderId: session.folderId }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || t('errors.pullFromClientFailed'));
@@ -635,12 +642,51 @@
         }
 
         if (needsClientPull) {
-          const btnClient = mkBtn(t('sessions.pullFromClient'), 'ghost', () =>
-            pullFromClient(s)
+          const batches = Array.isArray(s.fromClientBatches)
+            ? s.fromClientBatches
+            : [];
+          const btnClient = mkBtn(
+            batches.length > 1
+              ? t('sessions.pullFromClientAll')
+              : t('sessions.pullFromClient'),
+            'ghost',
+            () => pullFromClient(s)
           );
           btnClient.title = t('sessions.pullFromClientTitle');
           if (reasons.fromClientPending || s.missingLocalFromClient > 0) {
             btnClient.classList.add('warn-accent');
+          }
+
+          if (batches.length > 0) {
+            const batchWrap = document.createElement('div');
+            batchWrap.className = 'session-batches';
+            for (const batch of batches) {
+              const row = document.createElement('div');
+              row.className = 'session-batch-row';
+              const info = document.createElement('span');
+              info.className = 'session-batch-info';
+              info.textContent = t('sessions.batchRow', {
+                label: batch.label || batch.batchId,
+                count: batch.fileCount || 0,
+                bytes: formatBytes(batch.totalBytes || 0),
+              });
+              row.appendChild(info);
+              const pullBtn = document.createElement('button');
+              pullBtn.type = 'button';
+              pullBtn.className = 'btn ghost tiny';
+              pullBtn.textContent = t('sessions.pullBatch');
+              pullBtn.title = t('sessions.pullBatchTitle', {
+                label: batch.label || batch.batchId,
+              });
+              pullBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                pullFromClient(s, batch.batchId);
+              });
+              row.appendChild(pullBtn);
+              batchWrap.appendChild(row);
+            }
+            sessionBody.appendChild(batchWrap);
           }
         }
 

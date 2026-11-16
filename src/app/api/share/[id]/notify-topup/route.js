@@ -63,6 +63,14 @@ export async function POST(request, { params }) {
       status: f?.status === 'completed' ? 'completed' : 'incomplete',
     }));
 
+    const batchId = String(body.batchId || '').trim().slice(0, 64);
+    const batchLabel = (() => {
+      if (!batchId) return '';
+      const m = /^(\d{4}-\d{2}-\d{2})_(\d{2})-(\d{2})__/.exec(batchId);
+      if (m) return `${m[1]} ${m[2]}:${m[3]} (${batchId})`;
+      return batchId;
+    })();
+
     const projectLabel = String(
       body.label || share.label || 'Project'
     ).slice(0, 120);
@@ -106,7 +114,7 @@ export async function POST(request, { params }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          content: `📎 **Portal top-up (FromClient)**\nProject: \`${projectLabel}\`\nClient: \`${clientName}\`${clientEmail ? ` (${clientEmail})` : ''}\nFiles:\n${filesListText}`,
+          content: `📎 **Portal top-up (FromClient)**\nProject: \`${projectLabel}\`\nClient: \`${clientName}\`${clientEmail ? ` (${clientEmail})` : ''}${batchLabel ? `\nBatch: \`${batchLabel}\`` : ''}\nFiles:\n${filesListText}`,
         }),
       }).catch((err) => console.error('Webhook top-up error:', err));
     }
@@ -144,7 +152,9 @@ export async function POST(request, { params }) {
         .sendMail({
           from,
           to: process.env.NOTIFICATION_EMAIL,
-          subject: `📎 ${projectLabel} — new files from client (portal)`,
+          subject: batchLabel
+            ? `📎 ${projectLabel} — portal batch ${batchLabel}`
+            : `📎 ${projectLabel} — new files from client (portal)`,
           html: `
             <div style="font-family: sans-serif; padding: 20px; color: #333;">
               <h2 style="color: #0056b3;">Client added files via project portal</h2>
@@ -154,7 +164,12 @@ export async function POST(request, { params }) {
                   ? ` (<a href="mailto:${escapeHtml(clientEmail)}">${escapeHtml(clientEmail)}</a>)`
                   : ' — <em>no email on token</em>'
               }</p>
-              <p>Files landed in <code>FromClient/</code> on Drive. Pull them in Studio Console.</p>
+              ${
+                batchLabel
+                  ? `<p><strong>Batch:</strong> <code>${escapeHtml(batchLabel)}</code> → <code>FromClient/${escapeHtml(batchId)}/</code></p>`
+                  : '<p>Files landed in <code>FromClient/</code> on Drive.</p>'
+              }
+              <p>Pull them in Studio Console (per batch or all).</p>
               <h3 style="margin-top: 20px; border-bottom: 1px solid #ddd; padding-bottom: 5px;">Files (${files.length}):</h3>
               <ul style="padding-left: 20px;">${filesListHtml}</ul>
               ${
@@ -164,7 +179,7 @@ export async function POST(request, { params }) {
               }
             </div>
           `,
-          text: `${projectLabel} — portal top-up from ${clientName}\n\n${filesListText}\n${folderLink ? `\n${folderLink}\n` : ''}`,
+          text: `${projectLabel} — portal top-up from ${clientName}${batchLabel ? `\nBatch: ${batchLabel}\nPath: FromClient/${batchId}/` : ''}\n\n${filesListText}\n${folderLink ? `\n${folderLink}\n` : ''}`,
         })
         .then(() => {
           result.studio = true;

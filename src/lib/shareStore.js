@@ -299,12 +299,34 @@ export async function listShareFiles(folderId, opts = {}) {
   };
 }
 
+/** Safe batch folder slug: `2026-11-16_14-20__a1b2c3d4` */
+export const FROM_CLIENT_BATCH_ID_RE = /^[a-zA-Z0-9_-]{8,48}$/;
+
+export const FROM_CLIENT_UNGROUPED = '__ungrouped__';
+
+/**
+ * Batch key under FromClient/: subfolder name, or ungrouped for flat legacy files.
+ * @param {string} relativePath
+ * @returns {string|null} null if not under FromClient/
+ */
+export function fromClientBatchKey(relativePath) {
+  const rel = String(relativePath || '').replace(/\\/g, '/');
+  if (!isFromClientPath(rel)) return null;
+  if (rel === FROM_CLIENT_FOLDER) return FROM_CLIENT_UNGROUPED;
+  const rest = rel.slice(FROM_CLIENT_FOLDER.length + 1);
+  const parts = rest.split('/').filter(Boolean);
+  if (parts.length >= 2) return parts[0];
+  return FROM_CLIENT_UNGROUPED;
+}
+
 async function findFromClientFolder(drive, sessionFolderId) {
   const escaped = FROM_CLIENT_FOLDER.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
   const listed = await drive.files.list({
     q: `'${sessionFolderId}' in parents and name = '${escaped}' and mimeType = '${FOLDER_MIME}' and trashed = false`,
     fields: 'files(id)',
     pageSize: 1,
+    supportsAllDrives: true,
+    includeItemsFromAllDrives: true,
   });
   return listed.data.files?.[0]?.id || null;
 }
@@ -324,6 +346,44 @@ export async function ensureFromClientFolder(sessionFolderId) {
       parents: [sessionFolderId],
     },
     fields: 'id',
+    supportsAllDrives: true,
+  });
+  return created.data.id;
+}
+
+async function findChildFolder(drive, parentId, name) {
+  const escaped = String(name).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+  const listed = await drive.files.list({
+    q: `'${parentId}' in parents and name = '${escaped}' and mimeType = '${FOLDER_MIME}' and trashed = false`,
+    fields: 'files(id)',
+    pageSize: 1,
+    supportsAllDrives: true,
+    includeItemsFromAllDrives: true,
+  });
+  return listed.data.files?.[0]?.id || null;
+}
+
+/**
+ * Find or create FromClient/<batchId>/ under session. Returns batch folder id.
+ */
+export async function ensureFromClientBatchFolder(sessionFolderId, batchId) {
+  const id = String(batchId || '').trim();
+  if (!FROM_CLIENT_BATCH_ID_RE.test(id)) {
+    throw new Error('Invalid batchId.');
+  }
+  const drive = await getDrive();
+  const fromClientId = await ensureFromClientFolder(sessionFolderId);
+  const existing = await findChildFolder(drive, fromClientId, id);
+  if (existing) return existing;
+
+  const created = await drive.files.create({
+    requestBody: {
+      name: id,
+      mimeType: FOLDER_MIME,
+      parents: [fromClientId],
+    },
+    fields: 'id',
+    supportsAllDrives: true,
   });
   return created.data.id;
 }
