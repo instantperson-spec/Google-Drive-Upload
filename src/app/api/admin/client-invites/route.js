@@ -80,6 +80,8 @@ export async function POST(request) {
           inviteUrl: url,
           locale,
           expiresAt: invite.expiresAt,
+          name: body.name || body.displayName || '',
+          project: body.note || invite.note || '',
         });
       } catch (err) {
         console.error('invite mail error:', err.message || err);

@@ -62,6 +62,8 @@ export async function PATCH(request, { params }) {
             inviteUrl: url,
             locale: invite.locale,
             expiresAt: invite.expiresAt,
+            name: body.name || body.displayName || '',
+            project: body.note || invite.note || '',
           });
         } catch (err) {
           console.error('invite resend mail error:', err.message || err);
