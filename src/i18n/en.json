@@ -159,7 +159,7 @@
     "loginSubtitle": "Enter your project hub — no separate token link.",
     "name": "Name / company",
     "nameHint": "Visible in projects and notifications.",
-    "namePlaceholder": "Anna Kowalska",
+    "namePlaceholder": "Jane Smith",
     "email": "Email",
     "emailHint": "Login and notifications about new files.",
     "emailPlaceholder": "name@company.com",
