@@ -5,8 +5,8 @@ import { useUploadToken } from '@/hooks/useUploadToken';
 
 const UploadTokenContext = createContext(null);
 
-export function UploadTokenProvider({ children }) {
-  const value = useUploadToken();
+export function UploadTokenProvider({ children, mode = 'query' }) {
+  const value = useUploadToken({ mode });
   return <UploadTokenContext.Provider value={value}>{children}</UploadTokenContext.Provider>;
 }
 

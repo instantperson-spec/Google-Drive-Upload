@@ -2076,6 +2076,119 @@ h1 {
   text-align: center;
 }
 
+.client-hub-panel {
+  width: min(640px, 100%);
+}
+
+.client-hub-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  margin-top: 1rem;
+}
+
+.client-hub-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.client-hub-label input {
+  padding: 0.65rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--glass-border);
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--text-primary);
+  font-size: 1rem;
+}
+
+.client-hub-error {
+  color: var(--error-color);
+  font-size: 0.9rem;
+}
+
+.client-hub-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.client-hub-toolbar {
+  margin: 1rem 0 0.75rem;
+}
+
+.client-hub-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  margin-top: 0.75rem;
+}
+
+.client-hub-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 0.85rem;
+  border-radius: 10px;
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.03);
+  flex-wrap: wrap;
+}
+
+.client-hub-item-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.client-hub-item-title {
+  font-size: 0.95rem;
+}
+
+.client-hub-item-meta {
+  display: flex;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+
+.client-hub-badge {
+  display: inline-block;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  background: rgba(99, 102, 241, 0.2);
+  color: #c7d2fe;
+  font-size: 0.72rem;
+}
+
+.client-hub-back {
+  margin: 0 0 0.35rem;
+  font-size: 0.85rem;
+}
+
+.client-hub-back a {
+  color: var(--text-secondary);
+}
+
+.admin-subhead {
+  margin: 0 0 0.5rem;
+  font-size: 0.95rem;
+}
+
+.admin-actions-cell {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  justify-content: flex-end;
+}
+
 @media (max-width: 560px) {
   .share-stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));

@@ -79,6 +79,26 @@ export async function getActiveShare(shareId) {
   return share;
 }
 
+/** Active share for a Drive session folder, if any. */
+export async function getActiveShareByFolderId(folderId) {
+  const id = String(folderId || '').trim();
+  if (!id) return null;
+  const registry = await readSharesRegistry();
+  return (
+    registry.shares.find((s) => s && !s.revoked && s.folderId === id) || null
+  );
+}
+
+/** Active shares linked to an upload token slug. */
+export async function listActiveSharesByToken(tokenSlug) {
+  const token = String(tokenSlug || '').trim();
+  if (!token) return [];
+  const registry = await readSharesRegistry();
+  return registry.shares.filter(
+    (s) => s && !s.revoked && String(s.token || '') === token
+  );
+}
+
 async function findManifest(drive, folderId) {
   const res = await drive.files.list({
     q: `'${folderId}' in parents and name = '${MANIFEST_NAME}' and trashed = false`,

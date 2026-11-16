@@ -239,6 +239,12 @@ export async function getSession(sessionId) {
   return registry.sessions[sessionId] ?? null;
 }
 
+/** All non-pruned progress sessions (for client hub owned list). */
+export async function listProgressSessions() {
+  const registry = await readRegistry();
+  return Object.values(registry.sessions || {});
+}
+
 /**
  * Active uploads (heartbeat < staleMs) + recently completed (2 min).
  * @returns {Promise<object[]>}

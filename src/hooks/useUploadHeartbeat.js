@@ -49,6 +49,7 @@ export function useUploadHeartbeat({
 
       await fetch('/api/upload-progress', {
         method: 'POST',
+        credentials: 'include',
         headers: apiHeaders(),
         body: JSON.stringify({
           sessionId,

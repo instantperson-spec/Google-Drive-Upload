@@ -16,11 +16,15 @@ import { readStoredUploadSession } from '@/hooks/useUploadSession';
 
 const API_TIMEOUT_MS = 60_000;
 
-async function fetchWithTimeout(url, options, timeoutMs = API_TIMEOUT_MS) {
+async function fetchWithTimeout(url, options = {}, timeoutMs = API_TIMEOUT_MS) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    return await fetch(url, { ...options, signal: controller.signal });
+    return await fetch(url, {
+      credentials: 'include',
+      ...options,
+      signal: controller.signal,
+    });
   } catch (err) {
     if (err?.name === 'AbortError') {
       throw new Error('Request timed out — check your connection and retry.');

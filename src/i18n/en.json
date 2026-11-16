@@ -145,5 +145,30 @@
     "mailTopupListTitle": "Successfully uploaded files ({count}):",
     "mailTopupNone": "None.",
     "mailTopupFooter": "This is an automated message. Please do not reply to this email."
+  },
+  "clientHub": {
+    "loginTitle": "Client login",
+    "loginSubtitle": "Sign in to see your projects and start a new upload.",
+    "email": "Email",
+    "password": "Password",
+    "signIn": "Sign in",
+    "signingIn": "Signing in…",
+    "loginError": "Could not sign in.",
+    "hubTitle": "Your projects",
+    "hubHello": "Hello {name}",
+    "logout": "Sign out",
+    "newUpload": "New upload",
+    "openProject": "Open project",
+    "noShareYet": "Waiting for studio",
+    "empty": "No projects yet. Start a new upload or ask the studio to assign one.",
+    "badgeOwned": "Your upload",
+    "badgeAssigned": "Assigned",
+    "badgeBoth": "Yours + assigned",
+    "loading": "Loading…",
+    "needLogin": "Please sign in to continue.",
+    "backToHub": "Back to projects",
+    "uploadTitle": "New project upload",
+    "uploadSubtitle": "Files go to the studio under your account.",
+    "hubLoginRequired": "Sign in required for hub upload."
   }
 }

@@ -9,12 +9,34 @@
 
 | Link | Do czego | Auth |
 |---|---|---|
-| `https://DOMENA/?token=Nazwa` | Pierwszy upload materiałów od klienta | Token uploadu |
-| `https://DOMENA/share/<id>` | Portal: rundy, pobieranie, dogrywki (`FromClient/`) | ID share (bez `?token=`) |
+| `https://DOMENA/?token=Nazwa` | Pierwszy upload (clip-only / jednorazowy) | Token uploadu |
+| `https://DOMENA/share/<id>` | Portal jednego projektu: rundy, pobieranie, dogrywki | ID share (bez `?token=`) |
+| `https://DOMENA/client` | Hub klienta projektowego: lista projektów + nowy upload | Email + hasło |
 
 Share tworzy **Studio Console** (**Opublikuj** albo „Wyślij link”) — nie panel `/admin`. Upload token **nie** otwiera pobierania.
 
 Produkcja (domyślna): `https://drive-uploader-three.vercel.app`
+
+---
+
+## Dwa typy klientów
+
+| Typ | Kiedy | Wejście |
+|---|---|---|
+| **Clip-only** | Pojedyncze klipy / jednorazowy drop | `/?token=…` i ewentualnie `/share/…` jak dziś |
+| **Project client** | Stała współpraca, wiele projektów | Konto w `/admin` → Client hub → login `/client` |
+
+### Hub klienta (`/client`)
+
+1. **`/admin` → Client hub accounts → + New client account`** — email, hasło tymczasowe, display name, **linked upload token** (retainer — wymagany do „Nowy upload” z hubu).
+2. Wyślij klientowi: URL `https://DOMENA/client` + email/hasło (nie link `/?token=`).
+3. Po loginie: lista projektów **owned** (share z linked tokenem / ostatnie uploady) oraz **assigned** (admin → Assign).
+4. **Otwórz projekt** → istniejący portal `/share/<id>` (clip-only share URL bez zmian).
+5. **Nowy upload** → `/client/upload` (cookie sesji; token slug **nie** trafia do przeglądarki).
+6. **Przypisz projekt:** w admin wybierz konto → Assign → sesja z Drive (folder). Opcjonalnie usuń assignment na liście Assignments.
+7. Reset hasła / Revoke / Delete — w tym samym panelu admina.
+
+Plik rejestru: `_uploader_clients.json` na Drive (konta + memberships). Sesja: cookie `client_hub_session` (HMAC; `CLIENT_SESSION_SECRET` albo fallback `ADMIN_SECRET`).
 
 ---
 

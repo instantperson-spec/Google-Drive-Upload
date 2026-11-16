@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import AdminTokenManager from '@/components/AdminTokenManager';
+import AdminClientManager from '@/components/AdminClientManager';
 import AdminOAuthCheck from '@/components/AdminOAuthCheck';
 
 function formatDate(iso) {
@@ -481,6 +482,7 @@ export default function AdminDashboard() {
       </section>
 
       <AdminTokenManager onStatsChange={setTokenStats} />
+      <AdminClientManager />
       <AdminOAuthCheck />
     </div>
   );

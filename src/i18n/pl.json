@@ -145,5 +145,30 @@
     "mailTopupListTitle": "Pomyślnie przesłane pliki ({count}):",
     "mailTopupNone": "Brak.",
     "mailTopupFooter": "To automatyczna wiadomość. Prosimy na nią nie odpowiadać."
+  },
+  "clientHub": {
+    "loginTitle": "Logowanie klienta",
+    "loginSubtitle": "Zaloguj się, aby zobaczyć projekty i rozpocząć nowy upload.",
+    "email": "Email",
+    "password": "Hasło",
+    "signIn": "Zaloguj",
+    "signingIn": "Logowanie…",
+    "loginError": "Nie udało się zalogować.",
+    "hubTitle": "Twoje projekty",
+    "hubHello": "Cześć {name}",
+    "logout": "Wyloguj",
+    "newUpload": "Nowy upload",
+    "openProject": "Otwórz projekt",
+    "noShareYet": "Czeka na studio",
+    "empty": "Brak projektów. Zacznij nowy upload albo poproś studio o przypisanie.",
+    "badgeOwned": "Twój upload",
+    "badgeAssigned": "Przypisany",
+    "badgeBoth": "Twój + przypisany",
+    "loading": "Ładowanie…",
+    "needLogin": "Zaloguj się, aby kontynuować.",
+    "backToHub": "Wróć do projektów",
+    "uploadTitle": "Nowy upload projektu",
+    "uploadSubtitle": "Pliki trafią do studia na Twoim koncie.",
+    "hubLoginRequired": "Wymagane logowanie do hubu."
   }
 }
