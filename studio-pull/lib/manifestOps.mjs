@@ -137,9 +137,9 @@ export function snapshotFromDriveFiles(files) {
 
 export function roundsMeta(manifest) {
   const rounds = Array.isArray(manifest?.rounds) ? manifest.rounds : [];
-  return rounds.map((r) => ({
+  return rounds.map((r, i) => ({
     id: r.id,
-    label: r.label || 'Draft',
+    label: r.label || `#${i + 1}`,
     publishedAt: r.publishedAt || null,
   }));
 }
@@ -158,7 +158,8 @@ export async function publishRound(drive, folderId, { label = null } = {}) {
   }
 
   const nextNum = (manifest.rounds?.length || 0) + 1;
-  const roundLabel = String(label || '').trim() || `Draft ${nextNum}`;
+  // Internal snapshot id only — UI shows "last sent" time, not Draft/Final labels.
+  const roundLabel = String(label || '').trim() || `#${nextNum}`;
   const round = {
     id: `rnd_${crypto.randomBytes(8).toString('hex')}`,
     label: roundLabel,

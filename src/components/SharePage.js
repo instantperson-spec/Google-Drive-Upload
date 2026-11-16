@@ -197,6 +197,7 @@ function SharePageInner({ shareId, locale, onLocale, onTokenLocale }) {
         ...(data.share || {}),
         roundLabel: data.share?.roundLabel || data.round?.label || null,
         roundId: data.share?.roundId || data.round?.id || null,
+        publishedAt: data.round?.publishedAt || null,
       });
       setFiles(data.files || []);
       if (data.locale && typeof onTokenLocale === 'function') {
@@ -238,7 +239,13 @@ function SharePageInner({ shareId, locale, onLocale, onTokenLocale }) {
       ),
     [files]
   );
-  const hasRounds = Boolean(share?.roundId || share?.roundLabel);
+  const hasStudioUpdates = Boolean(share?.roundId || share?.publishedAt);
+  const lastSentLabel = share?.publishedAt
+    ? new Intl.DateTimeFormat(undefined, {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+      }).format(new Date(share.publishedAt))
+    : null;
 
   async function downloadSet(list, zipName, actionLabel) {
     if (!list.length) {
@@ -515,7 +522,7 @@ function SharePageInner({ shareId, locale, onLocale, onTokenLocale }) {
       .slice(0, 80) || 'project';
 
   const showAllHero = filter === 'all';
-  const showSince = filter === 'since';
+  const showSince = filter === 'since' && hasStudioUpdates;
   const showStudio = filter === 'all' || filter === 'studio';
   const showOriginal = filter === 'all' || filter === 'original';
   const showClient = filter === 'all' || filter === 'client';
@@ -542,11 +549,11 @@ function SharePageInner({ shareId, locale, onLocale, onTokenLocale }) {
                   <span className="share-active-dot" aria-hidden="true" />
                   {t('share.active')}
                 </span>
-                {hasRounds && (
+                {lastSentLabel ? (
                   <span className="share-round-pill">
-                    {share.roundLabel || t('share.draft')}
+                    {t('share.lastSent', { when: lastSentLabel })}
                   </span>
-                )}
+                ) : null}
               </div>
               <h1 className="share-portal-title">{t('share.portalTitle')}</h1>
             </div>
@@ -571,7 +578,7 @@ function SharePageInner({ shareId, locale, onLocale, onTokenLocale }) {
           <strong>{files.length}</strong>
           <span>{t('share.filterAll')}</span>
         </button>
-        {hasRounds && (
+        {hasStudioUpdates && (
           <button
             type="button"
             className={`share-stat${filter === 'since' ? ' is-active' : ''}`}
@@ -669,8 +676,8 @@ function SharePageInner({ shareId, locale, onLocale, onTokenLocale }) {
           t={t}
           title={t('share.sinceTitle')}
           hint={
-            share?.roundLabel
-              ? t('share.sinceHint', { round: share.roundLabel })
+            lastSentLabel
+              ? t('share.sinceHint', { when: lastSentLabel })
               : t('share.sinceHintDefault')
           }
           items={sincePublishFiles}
@@ -679,7 +686,7 @@ function SharePageInner({ shareId, locale, onLocale, onTokenLocale }) {
           onDownload={() =>
             downloadSet(
               sincePublishFiles,
-              `${zipBase}-since-publish.zip`,
+              `${zipBase}-studio-updates.zip`,
               t('share.downloadSince')
             )
           }

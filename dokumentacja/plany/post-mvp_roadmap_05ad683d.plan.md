@@ -71,9 +71,9 @@ Cel: klient wie, **co jest nowe od ostatniego linku**.
 
 **Model**
 - Sync może być roboczy (nie dla klienta).
-- **Opublikuj** w Console tworzy rundę: snapshot path→size (+ etykieta Draft 1 / 2 / …).
-- Share wskazuje **najnowszą opublikowaną rundę** (lub konkretną rundę w URL).
-- Na portalu: „Od ostatniej publikacji” = diff vs poprzednia runda; „Całość od Twojego uploadu” = jak dziś vs baseline klienta.
+- **Wyślij zmiany** w Console tworzy snapshot delty (wewnętrzny); UI: „Ostatnio wysłane: data” — bez chipów Draft/Final.
+- Share wskazuje **najnowsze odesłanie**; portal filtr „aktualizacje studia” = diff vs poprzednie odesłanie.
+- Oryginały / dodane później / od studia — jak dotychczas (bez wersjonowania projektu).
 
 **Dane**
 - `_team_manifest.json`: `rounds: [{ id, label, publishedAt, snapshot }]`.

@@ -57,10 +57,10 @@ export async function POST(request, { params }) {
     }
 
     const body = await request.json().catch(() => ({}));
-    const roundLabel =
-      String(body.roundLabel || share.roundLabel || '').trim() || 'Draft';
     const projectLabel =
       String(body.label || share.label || 'Project').slice(0, 120);
+    const sentAtRaw =
+      body.publishedAt || body.sentAt || share.updatedAt || share.createdAt || null;
 
     if (!share.token) {
       return NextResponse.json(
@@ -89,6 +89,17 @@ export async function POST(request, { params }) {
     }
 
     const locale = normalizeLocale(tokenRecord?.locale || DEFAULT_LOCALE);
+    let sentAtLabel = '';
+    if (sentAtRaw) {
+      try {
+        sentAtLabel = new Intl.DateTimeFormat(locale === 'pl' ? 'pl-PL' : 'en-GB', {
+          dateStyle: 'medium',
+          timeStyle: 'short',
+        }).format(new Date(sentAtRaw));
+      } catch {
+        sentAtLabel = String(sentAtRaw);
+      }
+    }
     const origin = (
       process.env.PUBLIC_UPLOAD_URL ||
       process.env.NEXT_PUBLIC_UPLOAD_URL ||
@@ -108,11 +119,10 @@ export async function POST(request, { params }) {
     });
 
     const safeProject = escapeHtml(projectLabel);
-    const safeRound = escapeHtml(roundLabel);
+    const safeSent = escapeHtml(sentAtLabel || '—');
     const safeUrl = escapeHtml(shareUrl);
     const subject = t(locale, 'share.mailPublishSubject', {
       project: projectLabel,
-      round: roundLabel,
     });
 
     await transporter.sendMail({
@@ -123,7 +133,7 @@ export async function POST(request, { params }) {
         <div style="font-family: sans-serif; padding: 20px; color: #333;">
           <h2 style="color: #4f46e5;">${escapeHtml(t(locale, 'share.mailPublishHeading'))}</h2>
           <p>${escapeHtml(t(locale, 'share.mailPublishProject'))} <strong>${safeProject}</strong></p>
-          <p>${escapeHtml(t(locale, 'share.mailPublishRound'))} <strong>${safeRound}</strong></p>
+          <p>${escapeHtml(t(locale, 'share.mailPublishRound'))} <strong>${safeSent}</strong></p>
           <p>${escapeHtml(t(locale, 'share.mailPublishBody'))}</p>
           <p style="margin: 24px 0;">
             <a href="${safeUrl}"
@@ -141,7 +151,7 @@ export async function POST(request, { params }) {
       ok: true,
       to,
       shareId: share.id,
-      roundLabel,
+      sentAt: sentAtRaw,
       locale,
       url: shareUrl,
     });

@@ -378,16 +378,15 @@
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error || t('errors.publishFailed'));
     const url = data.share?.url;
-    const roundLabel = data.round?.label || t('sessions.draft');
     if (url) {
       try {
         await navigator.clipboard.writeText(url);
-        notify(t('notify.publishedCopied', { round: roundLabel, url }), 'ok');
+        notify(t('notify.sentCopied', { url }), 'ok');
       } catch {
-        notify(t('notify.publishedCopy', { round: roundLabel, url }), 'warn');
+        notify(t('notify.sentCopy', { url }), 'warn');
       }
     } else {
-      notify(t('notify.published', { round: roundLabel }), 'ok');
+      notify(t('notify.sentOk'), 'ok');
     }
     if (data.mail?.sent) {
       notify(
@@ -615,20 +614,24 @@
           syncPath && (s.fromClientCount > 0 || s.missingLocalFromClient > 0);
         const activeShare = sharesByFolder.get(s.folderId);
 
-        if (activeShare?.rounds?.length) {
-          const roundsEl = document.createElement('div');
-          roundsEl.className = 'session-rounds';
-          for (const r of activeShare.rounds) {
-            const chip = document.createElement('span');
-            chip.className =
-              r.id === activeShare.roundId ? 'round-chip is-current' : 'round-chip';
-            chip.textContent = r.label || t('sessions.draft');
-            chip.title = r.publishedAt
-              ? t('sessions.publishedAt', { when: formatDateTime(r.publishedAt) })
-              : '';
-            roundsEl.appendChild(chip);
+        if (activeShare) {
+          const lastRound =
+            (activeShare.rounds || []).find((r) => r.id === activeShare.roundId) ||
+            (activeShare.rounds || [])[(activeShare.rounds || []).length - 1] ||
+            null;
+          const when =
+            lastRound?.publishedAt ||
+            activeShare.updatedAt ||
+            activeShare.createdAt ||
+            null;
+          if (when) {
+            const lastEl = document.createElement('div');
+            lastEl.className = 'session-last-sent';
+            lastEl.textContent = t('sessions.lastSent', {
+              when: formatDateTime(when),
+            });
+            sessionBody.appendChild(lastEl);
           }
-          sessionBody.appendChild(roundsEl);
         }
 
         if (needsClientPull) {

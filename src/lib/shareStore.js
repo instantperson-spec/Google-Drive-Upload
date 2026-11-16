@@ -234,7 +234,7 @@ export async function listShareFiles(folderId, opts = {}) {
     currentRound = rounds[i]
       ? {
           id: rounds[i].id,
-          label: rounds[i].label || `Draft ${i + 1}`,
+          label: rounds[i].label || `#${i + 1}`,
           publishedAt: rounds[i].publishedAt || null,
         }
       : null;

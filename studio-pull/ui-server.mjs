@@ -930,7 +930,8 @@ async function notifyClientShareMail(share, round) {
       },
       body: JSON.stringify({
         roundId: round?.id || share.roundId || null,
-        roundLabel: round?.label || share.roundLabel || null,
+        publishedAt: round?.publishedAt || null,
+        label: share.label || null,
       }),
     });
     const data = await res.json().catch(() => ({}));
