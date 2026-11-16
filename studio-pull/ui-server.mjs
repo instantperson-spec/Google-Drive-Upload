@@ -105,16 +105,6 @@ function serveStatic(req, res) {
   let urlPath = new URL(req.url, `http://${HOST}`).pathname;
   if (urlPath === '/') urlPath = '/index.html';
 
-  // Same backdrop as Vercel uploader/admin
-  if (urlPath === '/bg.jpg') {
-    const bgPath = path.join(__dirname, '..', 'public', 'bg.jpg');
-    if (fs.existsSync(bgPath)) {
-      res.writeHead(200, { 'Content-Type': 'image/jpeg', 'Cache-Control': 'public, max-age=86400' });
-      fs.createReadStream(bgPath).pipe(res);
-      return;
-    }
-  }
-
   const safe = path.normalize(urlPath).replace(/^(\.\.[/\\])+/, '');
   const filePath = path.join(UI_DIR, safe);
   if (!filePath.startsWith(UI_DIR)) {

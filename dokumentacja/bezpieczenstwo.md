@@ -1,7 +1,7 @@
 # Bezpieczeństwo — stan aktualny
 
-> Skrót na 2026-11-15 (jedyny żywy dokument stanu).  
-> Historia: [`archiwum/audyt-bezpieczenstwa.md`](./archiwum/audyt-bezpieczenstwa.md), [`archiwum/audyt-powdrozeniowy.md`](./archiwum/audyt-powdrozeniowy.md), VULN IX: [`archiwum/analiza_bezpieczenstwa.md`](./archiwum/analiza_bezpieczenstwa.md).  
+> Skrót na 2026-11-16 (jedyny żywy dokument stanu).  
+> Historia: [`archiwum/audyt-bezpieczenstwa.md`](./archiwum/audyt-bezpieczenstwa.md), [`archiwum/analiza_przegladowa_2026-11-16.md`](./archiwum/analiza_przegladowa_2026-11-16.md), VULN IX: [`archiwum/analiza_bezpieczenstwa.md`](./archiwum/analiza_bezpieczenstwa.md).  
 > Plan remediacji (done): [`archiwum/plany/security_audit_remediation.plan.md`](./archiwum/plany/security_audit_remediation.plan.md).
 
 ---
@@ -10,13 +10,14 @@
 
 ```
 Internet
-  ├── /?token=…          → upload API (auth: UPLOAD token)
-  ├── /share/<id>        → lista / plik / upload-session FromClient (auth: share id)
-  ├── /admin + /api/admin/* → ADMIN_SECRET (HttpOnly cookie)
+  ├── /?token=…                    → upload API (auth: UPLOAD token)
+  ├── /share/<id>                  → lista / plik / FromClient (auth: share id)
+  ├── /share/<id>/notify-client    → mail po Opublikuj (auth: ADMIN_SECRET header)
+  ├── /admin + /api/admin/*        → ADMIN_SECRET (HttpOnly cookie)
   └── Google Drive (OAuth drive.file) · SMTP (whitelist vs prefillEmail) · webhooks
 ```
 
-Lokalnie: Studio Console (Tauri / localhost) — nie jest publicznym API Vercel.
+Lokalnie: Studio Console (Tauri / localhost) — woła `notify-client` z `ADMIN_SECRET` z `.env.local`; nie jest publicznym API.
 
 ---
 
@@ -57,6 +58,20 @@ Lokalnie: Studio Console (Tauri / localhost) — nie jest publicznym API Vercel.
 - Share id = sekret URL.  
 - Stare foldery bez `_uploader_session.json` → nowa sesja uploadu.  
 - Live Monitor usunięty (nieskuteczny multi-instance).
+
+---
+
+## Residual (przegląd 2026-11-16)
+
+| Temat | Priorytet | Notatka |
+|---|---|---|
+| Tożsamość name/email tylko w UI (`create-folder` / notify) | Medium | Serwer nie wymusza `prefill*` z tokenu |
+| Notify bez `prefillEmail` → dowolny email | Medium | Głównie legacy / env tokeny |
+| Log mismatch z emailami | Low | PII w `console.warn` |
+| SA fallback w `getAuthClient` | Low | `.env.example` już OAuth-first |
+| `notify-client` (P2) | OK | Admin secret + tylko `prefillEmail` — bez open relay |
+
+Re-check po `fca5d29` (rundy + mail): [`archiwum/analiza_przegladowa_2026-11-16.md`](./archiwum/analiza_przegladowa_2026-11-16.md).
 
 ---
 

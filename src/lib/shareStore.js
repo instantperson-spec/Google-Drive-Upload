@@ -320,31 +320,6 @@ export async function ensureFromClientFolder(sessionFolderId) {
   return created.data.id;
 }
 
-/** True if fileId is under sessionFolderId/FromClient/. */
-export async function assertFileInFromClient(fileId, sessionFolderId) {
-  const drive = await getDrive();
-  const fromClientId = await findFromClientFolder(drive, sessionFolderId);
-  if (!fromClientId) return false;
-  let current = fileId;
-  const seen = new Set();
-  for (let depth = 0; depth < 32; depth += 1) {
-    if (seen.has(current)) return false;
-    seen.add(current);
-    const res = await drive.files.get({
-      fileId: current,
-      fields: 'id, parents, trashed',
-    });
-    const f = res.data;
-    if (f.trashed) return false;
-    if (f.id === fromClientId) return true;
-    const parents = f.parents || [];
-    if (parents.includes(fromClientId)) return true;
-    if (!parents.length) return false;
-    current = parents[0];
-  }
-  return false;
-}
-
 /**
  * Ensure fileId belongs under share folderId (path walk check via parents chain to session).
  */

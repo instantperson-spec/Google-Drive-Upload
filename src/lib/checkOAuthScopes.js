@@ -113,7 +113,7 @@ function buildSummary(hasDriveFull, hasDriveFile, driveTests, mainFolderId) {
   if (hasDriveFull) {
     return {
       level: 'error',
-      message: 'Action required: regenerate refresh token with drive.file only (see dokumentacja/regeneracja_oauth_scope.md).',
+      message: 'Action required: regenerate refresh token with drive.file only (see dokumentacja/oauth_drive_file.md).',
     };
   }
   if (hasDriveFile && criticalOk && !optionalFailed) {

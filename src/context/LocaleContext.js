@@ -49,10 +49,6 @@ export function LocaleProvider({ locale, children }) {
   return <LocaleContext.Provider value={value}>{children}</LocaleContext.Provider>;
 }
 
-export function useLocale() {
-  return useContext(LocaleContext);
-}
-
 export function useT() {
   return useContext(LocaleContext).t;
 }

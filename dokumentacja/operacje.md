@@ -1,7 +1,7 @@
 # Operacje: tokeny, linki uploadu i share
 
 > Status: produkcyjny workflow · źródło prawdy tokenów: `_uploader_tokens.json` na Drive (`/admin` → Client tokens)  
-> Aktualizacja: 2026-11-15
+> Aktualizacja: 2026-11-16
 
 ---
 
@@ -10,9 +10,9 @@
 | Link | Do czego | Auth |
 |---|---|---|
 | `https://DOMENA/?token=Nazwa` | Pierwszy upload materiałów od klienta | Token uploadu |
-| `https://DOMENA/share/<id>` | Portal: lista, pobieranie, dogrywki (`FromClient/`) | ID share (bez `?token=`) |
+| `https://DOMENA/share/<id>` | Portal: rundy, pobieranie, dogrywki (`FromClient/`) | ID share (bez `?token=`) |
 
-Share tworzy **Studio Console** po Sync (nie panel `/admin`). Upload token **nie** otwiera pobierania — tylko share.
+Share tworzy **Studio Console** (**Opublikuj** albo „Wyślij link”) — nie panel `/admin`. Upload token **nie** otwiera pobierania.
 
 Produkcja (domyślna): `https://drive-uploader-three.vercel.app`
 
@@ -37,8 +37,8 @@ https://DOMENA/?token=NAZWA_TOKENA
 
 ### UX uploadu (klient)
 
-- **Nazwa projektu** jest wymagana (min. 2 znaki) — etykieta „wymagane”; placeholder: `nowy projekt` / `new project`.
-- Przy długiej liście plików przycisk Start zostaje widoczny (sticky); lista się przewija.
+- **Nazwa projektu** jest wymagana (min. 2 znaki).
+- Przy długiej liście plików przycisk Start zostaje widoczny (sticky).
 - Po sukcesie: opcjonalnie **Otwórz w Google Drive** (folder sesji).
 
 ---
@@ -49,17 +49,12 @@ https://DOMENA/?token=NAZWA_TOKENA
 
 **`/admin` → Client tokens → + New token`** → **Copy link**.
 
-Zasady nazwy: bez spacji; litery, cyfry, `-`, `_`; bez NIP / pełnej nazwy firmy w tokenie.
+Zasady nazwy: bez spacji; litery, cyfry, `-`, `_`; bez NIP / pełnej nazwy firmy w tokenie.  
+**Wymagany `prefillEmail`** — używany do whitelist `/api/notify` oraz maila po **Opublikuj**.
 
 ### 2. Bootstrap env (tylko raz / awaryjnie)
 
 `UPLOAD_TOKENS` = fallback, gdy Drive store niedostępny. Po `_uploader_tokens.json` **admin jest źródłem prawdy**.
-
-```env
-UPLOAD_TOKENS="StudioAlfa,RetainerBeta"
-```
-
-Fail-closed: pusty env **i** brak registry → API odrzuca requesty.
 
 ### 3. Wyślij link uploadu
 
@@ -74,8 +69,6 @@ https://DOMENA/?token=StudioAlfa
 2. Wpisz nazwę projektu (wymagane).
 3. Tożsamość: jeśli link ma zapisane dane — widać je od razu; inaczej wpisz imię i email.
 4. Przeciągnij pliki / folder → Rozpocznij upload.
-
-Przy przerwaniu: ten sam link + te same pliki → wznowienie.
 ```
 
 ### 4. Po projekcie jednorazowym
@@ -84,17 +77,19 @@ Przy przerwaniu: ten sam link + te same pliki → wznowienie.
 
 ---
 
-## Share (portal klienta)
+## Delivery: Sync → Opublikuj → share → mail
 
-1. Studio Console: Pobierz → Sync → utwórz / skopiuj share.  
-2. Wyślij `https://DOMENA/share/<id>`.  
-3. Klient widzi nagłówek **Portal projektu** / **Project portal**, nazwę projektu, KPI (Wszystkie / Twoje / Od studia / Dogrywki), pobieranie, dogrywki do `FromClient/`.  
-4. Język portalu: przeglądarka `pl*` → PL, inaczej EN.  
-5. Studio: Out of sync → **Pobierz od klienta**.
+1. Studio Console: **Pobierz** → **Sync** (roboczy).  
+2. **Opublikuj** (Draft N) albo **Opublikuj Final** — zapisuje rundę w `_team_manifest.json`, upsert share z `roundId`.  
+3. Link `https://DOMENA/share/<id>` (kopiowany).  
+4. Mail do `prefillEmail` tokenu — jeśli w `.env.local` Console jest `ADMIN_SECRET` (= Vercel) i SMTP na Vercel.  
+   Endpoint: `POST /api/share/<id>/notify-client` (auth: `x-admin-secret`).  
+5. Klient: portal z filtrem **od publikacji** / KPI; pobieranie plik-po-pliku; dogrywki → `FromClient/`.  
+6. Studio: Out of sync → **Pobierz od klienta**.
 
 Revoke share w Console → portal niedostępny; upload token bez zmian.
 
-Pobieranie dziś: ZIP w przeglądarce (pasek % / N z M). Plan na później: plik-po-pliku do wybranego folderu — [`plany/post-mvp_roadmap_…`](./plany/post-mvp_roadmap_05ad683d.plan.md).
+Pobieranie: domyślnie **plik-po-pliku** (`showDirectoryPicker`, Chrome/Edge). ZIP tylko fallback (≤40 plików / ≤500 MB) albo brak File System Access.
 
 ---
 
@@ -102,9 +97,11 @@ Pobieranie dziś: ZIP w przeglądarce (pasek % / N z M). Plan na później: plik
 
 - **+ New token** / **Copy link** / **Revoke** / **Restore**
 - Plik: `_uploader_tokens.json` na Drive
-- `prefillEmail` → whitelist w `/api/notify`
-- History: **In progress** (gdy jest heartbeat) vs **Completed** (stan Drive)
+- `prefillEmail` → whitelist `/api/notify` + mail po Opublikuj
+- History: **In progress** (heartbeat / Drive+ETag) vs **Completed**
 - **Refresh all** — bez Live Monitor
+
+Studio Console lokalnie: Sync, Opublikuj, share, tokeny — wymaga `.env.local` z Google OAuth + opcjonalnie `ADMIN_SECRET` / `PUBLIC_UPLOAD_URL`.
 
 ---
 
@@ -117,7 +114,10 @@ Tak. Dla wrażliwych projektów: token jednorazowy + Revoke.
 Nie — tylko `/admin` → New token.
 
 **Czy `?token=` daje pobieranie od studia?**  
-Nie — tylko upload. Pobieranie = `/share/<id>`.
+Nie — tylko upload. Pobieranie = `/share/<id>` po Opublikuj.
+
+**Mail po Opublikuj nie poszedł?**  
+Sprawdź: `ADMIN_SECRET` w `.env.local` Console = Vercel; SMTP na Vercel; token ma `prefillEmail`.
 
 **Co po revoke tokena?**  
 „Upload link no longer valid”.
@@ -126,9 +126,10 @@ Nie — tylko upload. Pobieranie = `/share/<id>`.
 
 ## Checklist przed wysyłką
 
-- [ ] Token aktywny w `/admin` (test incognito)
+- [ ] Token aktywny w `/admin` (test incognito) + `prefillEmail`
 - [ ] Testowy mały upload OK + mail admina
-- [ ] (Portal) share z Console, `/share/…` otwiera listę
+- [ ] Console: Sync → Opublikuj → `/share/…` otwiera listę / rundę
+- [ ] (opcjonalnie) mail klienta po Opublikuj
 - [ ] `PUBLIC_UPLOAD_URL` = produkcyjna domena
 - [ ] OAuth: `npm run check-oauth-scopes` lub `/admin` → OAuth scope test → Pass  
   → [`oauth_drive_file.md`](./oauth_drive_file.md)

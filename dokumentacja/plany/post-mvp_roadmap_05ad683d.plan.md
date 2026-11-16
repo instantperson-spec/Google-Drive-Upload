@@ -27,7 +27,7 @@ isProject: false
 
 ## Punkt wyjścia
 
-Działa: upload → pull → Sync → share → pobieranie / dogrywki (`FromClient/`) + Out of sync w Console. Braki: rundy publikacji, twardy binding, ciężki ZIP, ręczny mail, brak approve/komentarzy.
+Działa: upload → pull → Sync → **Opublikuj (rundy)** → share (+ mail `prefillEmail`) → pobieranie plik-po-pliku / dogrywki + Out of sync + twardy binding. Brak: **P3 feedback** (Approve / Changes requested).
 
 ## Kolejność (wartość → koszt)
 
