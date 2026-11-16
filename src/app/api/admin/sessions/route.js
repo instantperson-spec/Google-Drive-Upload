@@ -4,35 +4,10 @@ import { isAdminAuthenticated, unauthorizedAdminResponse } from '@/lib/adminAuth
 import { getAuthClient } from '@/lib/googleAuth';
 import { formatBytes } from '@/lib/formatBytes';
 import { parseSessionFolderName } from '@/lib/sessionFolderName';
+import { listSessionFilesRecursive } from '@/lib/listSessionFiles';
 
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 100;
-
-const SKIP_NAMES = new Set([
-  '_uploader_tokens.json',
-  '_uploader_progress.json',
-  '_uploader_shares.json',
-  '_uploader_session.json',
-  '_team_manifest.json',
-  '_manifest.json',
-  '_crash_log.txt',
-]);
-
-async function listAllFilesInFolder(drive, folderId) {
-  let files = [];
-  let pageToken = null;
-  do {
-    const res = await drive.files.list({
-      q: `'${folderId}' in parents and trashed = false`,
-      fields: 'nextPageToken, files(id, name, size, modifiedTime, mimeType)',
-      pageSize: 1000,
-      pageToken,
-    });
-    files = files.concat(res.data.files || []);
-    pageToken = res.data.nextPageToken;
-  } while (pageToken);
-  return files;
-}
 
 export async function GET(request) {
   if (!(await isAdminAuthenticated(request))) {
@@ -63,17 +38,11 @@ export async function GET(request) {
 
     const folders = foldersRes.data.files || [];
 
+    // Recursive walk — after build-structure media lives in subfolders, not session root.
     const sessions = await Promise.all(
       folders.map(async (folder) => {
-        const allItems = await listAllFilesInFolder(drive, folder.id);
-        const regularFiles = allItems.filter(
-          f => f.mimeType !== 'application/vnd.google-apps.folder' && !SKIP_NAMES.has(f.name)
-        );
+        const regularFiles = await listSessionFilesRecursive(authClient, folder.id);
         const totalSize = regularFiles.reduce((sum, f) => sum + (Number(f.size) || 0), 0);
-        const latestFileTime = regularFiles.reduce((max, f) => {
-          const t = f.modifiedTime || '';
-          return t > max ? t : max;
-        }, '');
         const { projectName, uploaderName, uploaderEmail } = parseSessionFolderName(folder.name);
 
         return {
@@ -86,7 +55,7 @@ export async function GET(request) {
           totalSize,
           totalSizeFormatted: formatBytes(totalSize),
           createdTime: folder.createdTime,
-          modifiedTime: latestFileTime || folder.modifiedTime,
+          modifiedTime: folder.modifiedTime,
           driveLink: `https://drive.google.com/drive/folders/${folder.id}`,
         };
       })
