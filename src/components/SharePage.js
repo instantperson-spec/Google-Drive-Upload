@@ -475,6 +475,27 @@ function SharePageInner({ shareId, locale, onLocale, onTokenLocale }) {
         });
       }
 
+      // Notify studio (always) + client summary if token has email — same idea as /api/notify
+      try {
+        await fetch(
+          `/api/share/${encodeURIComponent(shareId)}/notify-topup`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              label: share?.label || null,
+              files: list.map((f) => ({
+                name: f.name,
+                size: f.size,
+                status: 'completed',
+              })),
+            }),
+          }
+        );
+      } catch {
+        /* non-blocking — files are already on Drive */
+      }
+
       setJob({
         phase: 'done',
         title: t('share.uploadDoneTitle'),

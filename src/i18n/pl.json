@@ -134,6 +134,13 @@
     "mailPublishRound": "Wysłano:",
     "mailPublishBody": "Pobierz tylko to, co studio dodało lub zmieniło — w portalu projektu (bez logowania):",
     "mailPublishCta": "Otwórz portal projektu",
-    "mailPublishLink": "Link:"
+    "mailPublishLink": "Link:",
+    "mailTopupSubject": "Podsumowanie: {count} plików dodanych — {project}",
+    "mailTopupHeading": "Upload zakończony",
+    "mailTopupHello": "Cześć {name},",
+    "mailTopupBody": "Dziękujemy. Oto podsumowanie plików, które właśnie dodałeś przez portal projektu:",
+    "mailTopupListTitle": "Pomyślnie przesłane pliki ({count}):",
+    "mailTopupNone": "Brak.",
+    "mailTopupFooter": "To automatyczna wiadomość. Prosimy na nią nie odpowiadać."
   }
 }

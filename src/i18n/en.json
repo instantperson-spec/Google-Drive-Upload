@@ -134,6 +134,13 @@
     "mailPublishRound": "Sent:",
     "mailPublishBody": "Download only what the studio added or changed in the project portal (no login):",
     "mailPublishCta": "Open project portal",
-    "mailPublishLink": "Link:"
+    "mailPublishLink": "Link:",
+    "mailTopupSubject": "Upload summary: {count} files added — {project}",
+    "mailTopupHeading": "Upload complete",
+    "mailTopupHello": "Hello {name},",
+    "mailTopupBody": "Thank you. Here is the summary of the files you just added through the project portal:",
+    "mailTopupListTitle": "Successfully uploaded files ({count}):",
+    "mailTopupNone": "None.",
+    "mailTopupFooter": "This is an automated message. Please do not reply to this email."
   }
 }
