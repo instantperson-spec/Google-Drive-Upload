@@ -22,7 +22,8 @@
   },
   "tabs": {
     "projects": "Projekty",
-    "tokens": "Tokeny"
+    "tokens": "Tokeny",
+    "invites": "Zaproszenia"
   },
   "sessions": {
     "title": "Sesje na Drive",
@@ -125,7 +126,7 @@
   "tokensPanel": {
     "title": "Tokeny klienta",
     "refresh": "Odśwież",
-    "hintHtml": "Tokeny są w <code>_uploader_tokens.json</code> na Google Drive. Imię i email klienta są zablokowane na formularzu uploadu — klient wpisuje tylko nazwę projektu.",
+    "hintHtml": "Shareable linki <code>/?token=</code> (Drive <code>_uploader_tokens.json</code>). Konta hubu z hasłem → zakładka <strong>Zaproszenia</strong>.",
     "token": "Token (slug URL)",
     "clientName": "Nazwa klienta",
     "clientEmail": "Email klienta",
@@ -170,6 +171,35 @@
     "statusActive": "aktywny",
     "statusExpired": "wygasły",
     "statusRevoked": "cofnięty"
+  },
+  "invitesPanel": {
+    "title": "Zaproszenia hubu",
+    "refresh": "Odśwież",
+    "hintHtml": "Tworzy <strong>konto z hasłem</strong> na <code>/client</code> — to nie jest link <code>/?token=</code>. Wymaga <code>ADMIN_SECRET</code> w <code>.env.local</code> (proxy do Vercel).",
+    "email": "Email",
+    "lang": "Język",
+    "langEn": "English",
+    "langPl": "Polski",
+    "note": "Notatka (opcjonalnie)",
+    "notePlaceholder": "Notatka wewnętrzna…",
+    "sendEmail": "Wyślij mail (SMTP na Vercel)",
+    "create": "Utwórz invite + skopiuj URL",
+    "loading": "Ładowanie…",
+    "empty": "Brak oczekujących zaproszeń.",
+    "error": "Nie udało się wczytać zaproszeń",
+    "createFailed": "Tworzenie zaproszenia nieudane",
+    "pendingTitle": "Oczekujące zaproszenia",
+    "pendingCount": "{count} oczekujących",
+    "colEmail": "Email",
+    "colLang": "Język",
+    "colExpires": "Wygasa",
+    "newUrl": "Nowy URL",
+    "resend": "Wyślij ponownie",
+    "revoke": "Cofnij",
+    "copied": "Skopiowano URL zaproszenia",
+    "copyPrompt": "Skopiuj URL zaproszenia:",
+    "urlLabel": "URL zaproszenia",
+    "smtpOff": "SMTP nie skonfigurowane na Vercel — skopiuj URL."
   },
   "notify": {
     "offerShare": "Wyślij link klientowi (kopiuj)",

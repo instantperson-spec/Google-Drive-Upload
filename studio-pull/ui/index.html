@@ -56,6 +56,7 @@
     <nav class="tabs" role="tablist">
       <button type="button" class="tab active" data-tab="pull" data-i18n="tabs.projects">Projects</button>
       <button type="button" class="tab" data-tab="tokens" data-i18n="tabs.tokens">Tokens</button>
+      <button type="button" class="tab" data-tab="invites" data-i18n="tabs.invites">Invites</button>
     </nav>
 
     <div id="panel-pull" class="panel">
@@ -163,6 +164,40 @@
         <p id="token-form-error" class="error hidden"></p>
 
         <div id="tokens" class="tokens" data-i18n="tokensPanel.loading">Loading…</div>
+      </section>
+    </div>
+
+    <div id="panel-invites" class="panel hidden">
+      <section class="card">
+        <div class="row">
+          <div class="section-title-row">
+            <h2 data-i18n="invitesPanel.title">Hub invites</h2>
+            <span id="invites-pending-count" class="section-count hidden"></span>
+          </div>
+          <button type="button" id="btn-invites-refresh" class="btn secondary" data-i18n="invitesPanel.refresh">Refresh</button>
+        </div>
+        <p class="hint" data-i18n-html="invitesPanel.hintHtml">Invite creates a password account on /client — not a /?token= upload link.</p>
+
+        <form id="invite-form" class="token-form">
+          <label><span data-i18n="invitesPanel.email">Email</span> <input name="email" type="email" required placeholder="client@email.com" /></label>
+          <label><span data-i18n="invitesPanel.lang">Language</span>
+            <select name="locale">
+              <option value="en" data-i18n="invitesPanel.langEn">English</option>
+              <option value="pl" data-i18n="invitesPanel.langPl">Polski</option>
+            </select>
+          </label>
+          <label class="span-2"><span data-i18n="invitesPanel.note">Note (optional)</span> <input name="note" data-i18n-placeholder="invitesPanel.notePlaceholder" placeholder="Internal note…" /></label>
+          <label class="span-2 session-check">
+            <input type="checkbox" name="sendEmail" checked />
+            <span data-i18n="invitesPanel.sendEmail">Send email (SMTP on Vercel)</span>
+          </label>
+          <button type="submit" class="btn primary" data-i18n="invitesPanel.create">Create invite + copy URL</button>
+        </form>
+        <p id="invite-form-error" class="error hidden"></p>
+        <p id="invite-url" class="hint hidden" style="word-break:break-all"></p>
+
+        <h3 class="section-title-row" style="margin-top:1rem" data-i18n="invitesPanel.pendingTitle">Pending invites</h3>
+        <div id="invites" class="tokens" data-i18n="invitesPanel.loading">Loading…</div>
       </section>
     </div>
   </main>

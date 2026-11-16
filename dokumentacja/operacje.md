@@ -38,7 +38,7 @@ Produkcja (domyślna): `https://drive-uploader-three.vercel.app`
 
 ### Hub klienta (`/client`) — tylko po zaproszeniu
 
-1. **`/admin` → Client hub → Invite client`**: email + `lang` + opcjonalnie **Send email** (SMTP).  
+1. **Invite** z **`/admin` → Client hub** albo **Studio Console → Invites** (proxy do Vercel, wymaga `ADMIN_SECRET` w `.env.local`): email + `lang` + opcjonalnie **Send email** (SMTP).  
    Dostajesz URL (kopiowany) np.  
    `https://DOMENA/client?invite=<token>&signup=1&lang=pl`
 2. Klient otwiera link → zakładka signup, język z `lang`, email **zablokowany** na adres z invite.

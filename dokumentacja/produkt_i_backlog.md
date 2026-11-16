@@ -70,7 +70,8 @@ Plan upload (archiwum): [`archiwum/plany/upload_ui_nebula_centered.plan.md`](./a
 
 | | `/admin` (Vercel) | Studio Console (lokalnie) |
 |---|---|---|
-| Tokeny uploadu | ✅ CRUD | lokalne tokeny / narzędzia |
+| Tokeny uploadu (`/?token=`) | ✅ CRUD (bez hub-bound) | ✅ lokalne tokeny (bez hub-bound) |
+| Zaproszenia hubu (`/client`) | ✅ Invite + konta | ✅ zakładka Invites (proxy → Vercel) |
 | Historia sesji Drive | ✅ In progress / Completed | pull / przegląd lokalny |
 | Live Monitor (per-plik) | ❌ usunięty | — |
 | Progress N/M (heartbeat) | ✅ w History → In progress | — |

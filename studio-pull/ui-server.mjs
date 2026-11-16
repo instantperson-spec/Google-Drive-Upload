@@ -1045,6 +1045,59 @@ async function handleTokenPatch(id, req, res) {
   sendJson(res, 200, { token });
 }
 
+function vercelAdminOrigin() {
+  const env = loadEnvFile();
+  return (
+    env.PUBLIC_UPLOAD_URL ||
+    'https://drive-uploader-three.vercel.app'
+  ).replace(/\/$/, '');
+}
+
+/**
+ * Proxy hub invite admin APIs to Vercel (same store/SMTP as /admin).
+ * Requires ADMIN_SECRET in .env.local.
+ */
+async function proxyClientInvites(req, res, { id = null } = {}) {
+  const env = loadEnvFile();
+  const secret = env.ADMIN_SECRET || '';
+  if (!secret) {
+    sendJson(res, 503, {
+      error:
+        'ADMIN_SECRET missing in .env.local — required to create hub invites via Vercel.',
+    });
+    return;
+  }
+
+  const origin = vercelAdminOrigin();
+  const path = id
+    ? `/api/admin/client-invites/${encodeURIComponent(id)}`
+    : '/api/admin/client-invites';
+  const url = `${origin}${path}`;
+
+  let bodyText;
+  if (req.method === 'POST' || req.method === 'PATCH') {
+    const body = await readBody(req);
+    bodyText = JSON.stringify(body || {});
+  }
+
+  try {
+    const upstream = await fetch(url, {
+      method: req.method,
+      headers: {
+        'Content-Type': 'application/json',
+        'x-admin-secret': secret,
+      },
+      body: bodyText,
+    });
+    const data = await upstream.json().catch(() => ({}));
+    sendJson(res, upstream.status, data);
+  } catch (err) {
+    sendJson(res, 502, {
+      error: err.message || 'Failed to reach Vercel invite API.',
+    });
+  }
+}
+
 const server = http.createServer(async (req, res) => {
   try {
     const url = new URL(req.url, `http://${HOST}:${PORT}`);
@@ -1170,6 +1223,21 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'DELETE' && tokenMatch) {
       await deleteTokenLocal(decodeURIComponent(tokenMatch[1]));
       sendJson(res, 200, { success: true });
+      return;
+    }
+
+    if (
+      (req.method === 'GET' || req.method === 'POST') &&
+      pathname === '/api/client-invites'
+    ) {
+      await proxyClientInvites(req, res);
+      return;
+    }
+    const inviteMatch = pathname.match(/^\/api\/client-invites\/([^/]+)$/);
+    if (req.method === 'PATCH' && inviteMatch) {
+      await proxyClientInvites(req, res, {
+        id: decodeURIComponent(inviteMatch[1]),
+      });
       return;
     }
 

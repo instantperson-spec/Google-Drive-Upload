@@ -6,6 +6,7 @@ import crypto from 'crypto';
 import { createDriveClient } from './auth.mjs';
 
 const TOKEN_FILE_NAME = '_uploader_tokens.json';
+const CLIENTS_FILE_NAME = '_uploader_clients.json';
 const TOKEN_SLUG_RE = /^[a-zA-Z0-9_-]{2,64}$/;
 
 function normalizeLocale(value) {
@@ -129,15 +130,59 @@ export function buildUploadUrl(token, env = {}) {
   return `${publicOrigin(env)}/?token=${encodeURIComponent(token)}`;
 }
 
+function isHubBoundToken(t, linkedSlugs) {
+  if (t?.hubBound) return true;
+  if (
+    typeof t?.notes === 'string' &&
+    /auto-created on invited client hub signup/i.test(t.notes)
+  ) {
+    return true;
+  }
+  if (linkedSlugs?.has(String(t?.token || ''))) return true;
+  return false;
+}
+
+async function loadLinkedTokenSlugs(drive, mainFolderId) {
+  try {
+    const res = await drive.files.list({
+      q: `'${mainFolderId}' in parents and name = '${CLIENTS_FILE_NAME}' and trashed = false`,
+      fields: 'files(id)',
+      pageSize: 1,
+    });
+    const file = res.data.files?.[0];
+    if (!file) return new Set();
+    const media = await drive.files.get(
+      { fileId: file.id, alt: 'media' },
+      { responseType: 'text' }
+    );
+    const registry = JSON.parse(media.data);
+    const set = new Set();
+    for (const c of registry.clients || []) {
+      const slug = c.linkedToken ? String(c.linkedToken).trim() : '';
+      if (slug) set.add(slug);
+    }
+    return set;
+  } catch {
+    return new Set();
+  }
+}
+
 export async function listTokensLocal() {
   const { drive, mainFolderId, env } = createDriveClient();
-  const { registry } = await readRegistry(drive, mainFolderId);
-  return registry.tokens.map((t) => ({
-    ...t,
-    status: statusOf(t),
-    locale: normalizeLocale(t.locale),
-    uploadUrl: buildUploadUrl(t.token, env),
-  }));
+  const [{ registry }, linkedSlugs] = await Promise.all([
+    readRegistry(drive, mainFolderId),
+    loadLinkedTokenSlugs(drive, mainFolderId),
+  ]);
+  // Hub-bound bindings belong under Client hub Accounts on Vercel — not here.
+  return registry.tokens
+    .filter((t) => !isHubBoundToken(t, linkedSlugs))
+    .map((t) => ({
+      ...t,
+      hubBound: false,
+      status: statusOf(t),
+      locale: normalizeLocale(t.locale),
+      uploadUrl: buildUploadUrl(t.token, env),
+    }));
 }
 
 export async function createTokenLocal(input) {

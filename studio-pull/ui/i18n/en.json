@@ -22,7 +22,8 @@
   },
   "tabs": {
     "projects": "Projects",
-    "tokens": "Tokens"
+    "tokens": "Tokens",
+    "invites": "Invites"
   },
   "sessions": {
     "title": "Sessions on Drive",
@@ -125,7 +126,7 @@
   "tokensPanel": {
     "title": "Client tokens",
     "refresh": "Refresh",
-    "hintHtml": "Tokens are stored in <code>_uploader_tokens.json</code> on Google Drive. Client name + email are locked on the upload form — client only enters project name.",
+    "hintHtml": "Shareable <code>/?token=</code> links (Drive <code>_uploader_tokens.json</code>). Hub password accounts → <strong>Invites</strong> tab.",
     "token": "Token (URL slug)",
     "clientName": "Client name",
     "clientEmail": "Client email",
@@ -170,6 +171,35 @@
     "statusActive": "active",
     "statusExpired": "expired",
     "statusRevoked": "revoked"
+  },
+  "invitesPanel": {
+    "title": "Hub invites",
+    "refresh": "Refresh",
+    "hintHtml": "Creates a <strong>password account</strong> on <code>/client</code> — not a <code>/?token=</code> upload link. Requires <code>ADMIN_SECRET</code> in <code>.env.local</code> (proxied to Vercel).",
+    "email": "Email",
+    "lang": "Language",
+    "langEn": "English",
+    "langPl": "Polski",
+    "note": "Note (optional)",
+    "notePlaceholder": "Internal note…",
+    "sendEmail": "Send email (SMTP on Vercel)",
+    "create": "Create invite + copy URL",
+    "loading": "Loading…",
+    "empty": "No pending invites.",
+    "error": "Failed to load invites",
+    "createFailed": "Create invite failed",
+    "pendingTitle": "Pending invites",
+    "pendingCount": "{count} pending",
+    "colEmail": "Email",
+    "colLang": "Lang",
+    "colExpires": "Expires",
+    "newUrl": "New URL",
+    "resend": "Resend",
+    "revoke": "Revoke",
+    "copied": "Copied invite URL",
+    "copyPrompt": "Copy invite URL:",
+    "urlLabel": "Invite URL",
+    "smtpOff": "SMTP not configured on Vercel — copy the URL instead."
   },
   "notify": {
     "offerShare": "Send client link (copy)",

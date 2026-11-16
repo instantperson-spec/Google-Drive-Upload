@@ -220,7 +220,126 @@
     });
     $('panel-pull').classList.toggle('hidden', name !== 'pull');
     $('panel-tokens').classList.toggle('hidden', name !== 'tokens');
+    $('panel-invites').classList.toggle('hidden', name !== 'invites');
     if (name === 'tokens') loadTokens();
+    if (name === 'invites') loadInvites();
+  }
+
+  async function copyInviteUrl(url) {
+    if (!url) return;
+    try {
+      await navigator.clipboard.writeText(url);
+      notify(t('invitesPanel.copied'), 'ok');
+    } catch {
+      window.prompt(t('invitesPanel.copyPrompt'), url);
+    }
+  }
+
+  async function inviteAction(id, action) {
+    const res = await apiFetch(`/api/client-invites/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action,
+        sendEmail: action === 'resend',
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || t('invitesPanel.error'));
+    if (data.url) await copyInviteUrl(data.url);
+    await loadInvites();
+  }
+
+  async function loadInvites() {
+    const el = $('invites');
+    const countEl = $('invites-pending-count');
+    const urlEl = $('invite-url');
+    el.textContent = t('invitesPanel.loading');
+    try {
+      const res = await apiFetch('/api/client-invites');
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || t('invitesPanel.error'));
+
+      const pending = (data.invites || []).filter((i) => i.status === 'pending');
+      if (countEl) {
+        if (pending.length) {
+          countEl.textContent = t('invitesPanel.pendingCount', {
+            count: pending.length,
+          });
+          countEl.classList.remove('hidden');
+        } else {
+          countEl.classList.add('hidden');
+        }
+      }
+
+      const sendCb = document.querySelector('#invite-form [name="sendEmail"]');
+      if (sendCb) {
+        sendCb.disabled = !data.smtpConfigured;
+        if (!data.smtpConfigured) sendCb.checked = false;
+      }
+
+      if (!pending.length) {
+        el.textContent = t('invitesPanel.empty');
+        return;
+      }
+
+      el.innerHTML = '';
+      const wrap = document.createElement('div');
+      wrap.className = 'token-table-wrap';
+      const table = document.createElement('table');
+      table.className = 'token-table';
+      const thead = document.createElement('thead');
+      const hr = document.createElement('tr');
+      for (const key of ['colEmail', 'colLang', 'colExpires', '']) {
+        const th = document.createElement('th');
+        th.textContent = key ? t(`invitesPanel.${key}`) : '';
+        hr.appendChild(th);
+      }
+      thead.appendChild(hr);
+      table.appendChild(thead);
+      const tbody = document.createElement('tbody');
+
+      for (const inv of pending) {
+        const tr = document.createElement('tr');
+        const cells = [0, 1, 2, 3].map(() => document.createElement('td'));
+        cells[0].textContent = inv.email;
+        cells[1].textContent = (inv.locale || 'en').toUpperCase();
+        cells[2].textContent = formatDateTime(inv.expiresAt);
+        cells[2].className = 'token-cell-date';
+        cells[3].className = 'token-actions';
+
+        const mk = (label, action, primary = false) => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = primary ? 'btn tiny primary' : 'btn tiny secondary';
+          btn.textContent = label;
+          btn.addEventListener('click', async () => {
+            try {
+              await inviteAction(inv.id, action);
+            } catch (err) {
+              notify(err.message || String(err), 'err');
+            }
+          });
+          return btn;
+        };
+
+        cells[3].appendChild(mk(t('invitesPanel.newUrl'), 'copy', true));
+        const resendBtn = mk(t('invitesPanel.resend'), 'resend');
+        if (!data.smtpConfigured) resendBtn.disabled = true;
+        cells[3].appendChild(resendBtn);
+        cells[3].appendChild(mk(t('invitesPanel.revoke'), 'revoke'));
+
+        cells.forEach((c) => tr.appendChild(c));
+        tbody.appendChild(tr);
+      }
+
+      table.appendChild(tbody);
+      wrap.appendChild(table);
+      el.appendChild(wrap);
+      if (urlEl && !urlEl.dataset.keep) urlEl.classList.add('hidden');
+    } catch (err) {
+      el.textContent = err.message || String(err);
+    }
   }
 
   document.querySelectorAll('.tab').forEach((tab) => {
@@ -1458,6 +1577,49 @@
   destEl.addEventListener('input', onDestTyped);
   destEl.addEventListener('change', onDestCommitted);
   $('btn-tokens-refresh').addEventListener('click', loadTokens);
+  $('btn-invites-refresh').addEventListener('click', loadInvites);
+
+  const inviteForm = $('invite-form');
+  const inviteFormError = $('invite-form-error');
+  inviteForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    inviteFormError.classList.add('hidden');
+    const fd = new FormData(inviteForm);
+    try {
+      const res = await apiFetch('/api/client-invites', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: String(fd.get('email') || '').trim(),
+          locale: fd.get('locale') || 'en',
+          note: String(fd.get('note') || '').trim(),
+          sendEmail: fd.get('sendEmail') === 'on',
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || t('invitesPanel.createFailed'));
+      if (data.url) {
+        await copyInviteUrl(data.url);
+        const urlEl = $('invite-url');
+        urlEl.textContent = `${t('invitesPanel.urlLabel')}: ${data.url}`;
+        urlEl.classList.remove('hidden');
+        urlEl.dataset.keep = '1';
+      }
+      if (data.mail && data.mail.ok === false && !data.mail.skipped) {
+        notify(
+          data.mail.error || t('invitesPanel.smtpOff'),
+          'err'
+        );
+      }
+      inviteForm.reset();
+      const localeSel = inviteForm.querySelector('[name="locale"]');
+      if (localeSel) localeSel.value = fd.get('locale') || 'en';
+      await loadInvites();
+    } catch (err) {
+      inviteFormError.textContent = err.message || String(err);
+      inviteFormError.classList.remove('hidden');
+    }
+  });
 
   document.addEventListener('click', (e) => {
     if (!e.target.closest('.session-menu')) {
@@ -1479,6 +1641,7 @@
   window.addEventListener('studio-locale', () => {
     loadSessions();
     loadTokens();
+    if (!$('panel-invites').classList.contains('hidden')) loadInvites();
     updateStartEnabled();
   });
 
