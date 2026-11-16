@@ -65,7 +65,7 @@ MAX_FILE_SIZE_GB="250"
 ```bash
 npm run check-oauth-scopes
 ```
-Checks whether your refresh token has the recommended `drive.file` scope only (not full `drive`). Or use **OAuth scope test** in `/admin`. See [`dokumentacja/regeneracja_oauth_scope.md`](dokumentacja/regeneracja_oauth_scope.md) (includes **Publish app** step to avoid 7-day token expiry).
+Checks whether your refresh token has the recommended `drive.file` scope only (not full `drive`). Or use **OAuth scope test** in `/admin`. See [`dokumentacja/oauth_drive_file.md`](dokumentacja/oauth_drive_file.md) (includes **Publish app** step to avoid 7-day token expiry).
 
 ### 4. Local Development
 ```bash
@@ -75,7 +75,7 @@ npm run dev
 Open [http://localhost:3000/?token=YourToken](http://localhost:3000/?token=YourToken) with your browser (replace `YourToken` with a value from `UPLOAD_TOKENS`).
 
 ### 5. Client Links
-Each client receives a dedicated URL: `https://your-domain/?token=ClientToken`. See [`dokumentacja/operacje_tokeny_i_linki.md`](dokumentacja/operacje_tokeny_i_linki.md) for the full operational guide.
+Each client receives a dedicated URL: `https://your-domain/?token=ClientToken`. See [`dokumentacja/operacje.md`](dokumentacja/operacje.md) for the full operational guide.
 
 ### 6. Admin Console
 Set `ADMIN_SECRET` in your environment, then open `/admin` to monitor uploads:
@@ -96,9 +96,9 @@ npm run studio-pull -- --list
 
 ## 🌐 Deployment
 
-Branch `security-hardening` is ready for merge → deploy on **Vercel**. Full checklist: [`dokumentacja/wdrozenie_security_hardening.md`](dokumentacja/wdrozenie_security_hardening.md).
+Deploy on **Vercel** from `main`. Security posture: [`dokumentacja/bezpieczenstwo.md`](dokumentacja/bezpieczenstwo.md). Historical hardening checklist: [`dokumentacja/archiwum/wdrozenie_security_hardening.md`](dokumentacja/archiwum/wdrozenie_security_hardening.md).
 
-Copy all environment variables to Vercel **Settings → Environment Variables**. Publish the OAuth app in Google Cloud before production (see regeneracja doc).
+Copy all environment variables to Vercel **Settings → Environment Variables**. Publish the OAuth app in Google Cloud before production (see [`dokumentacja/oauth_drive_file.md`](dokumentacja/oauth_drive_file.md)).
 
 ## 🤝 Contributing
 Contributions, issues, and feature requests are welcome! Feel free to check the issues page or fork the repository if you have an idea for an improvement.

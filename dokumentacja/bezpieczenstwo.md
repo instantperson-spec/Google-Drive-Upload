@@ -60,6 +60,19 @@ Lokalnie: Studio Console (Tauri / localhost) — nie jest publicznym API Vercel.
 
 ---
 
+## Residual (przegląd 2026-11-16)
+
+| Temat | Priorytet | Notatka |
+|---|---|---|
+| Tożsamość name/email tylko w UI (`create-folder` / notify) | Medium | Serwer nie wymusza `prefill*` z tokenu |
+| Notify bez `prefillEmail` → dowolny email | Medium | Głównie legacy / env tokeny |
+| Log mismatch z emailami | Low | PII w `console.warn` |
+| SA fallback + stare `.env.example` | Low | Hygiene (przykład env zsynchronizowany w tym samym przeglądzie) |
+
+Pełny raport: [`analiza_przegladowa.md`](./analiza_przegladowa.md).
+
+---
+
 ## Backlog (niski)
 
 - Wspólny moduł Drive + rozbicie monolitów UI (P3)  

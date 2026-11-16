@@ -10,6 +10,7 @@
 | [`operacje.md`](./operacje.md) | Runbook: tokeny, share, checklista |
 | [`oauth_drive_file.md`](./oauth_drive_file.md) | Regeneracja refresh tokena `drive.file` |
 | [`bezpieczenstwo.md`](./bezpieczenstwo.md) | **Jedyny żywy skrót** bezpieczeństwa |
+| [`analiza_przegladowa.md`](./analiza_przegladowa.md) | Przegląd 2026-11-16: security residual, martwy kod, plany |
 | [`produkt_i_backlog.md`](./produkt_i_backlog.md) | Co działa + backlog produktu |
 | [`plany/post-mvp_roadmap_05ad683d.plan.md`](./plany/post-mvp_roadmap_05ad683d.plan.md) | Roadmap: **P1 rundy** → mail → feedback |
 | [`../mockups/`](../mockups/) | Referencja UI: upload, portal, admin, [studio-console](../mockups/studio-console.html) |
