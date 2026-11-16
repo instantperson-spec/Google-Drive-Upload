@@ -24,10 +24,13 @@ function sourceBadge(source, t) {
   return t('clientHub.badgeOwned');
 }
 
-function ClientLogin({ onLoggedIn, locale, onLocale }) {
+function ClientAuthCard({ onLoggedIn, locale, onLocale }) {
   const t = useT();
+  const [mode, setMode] = useState('signup');
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [signupLocale, setSignupLocale] = useState(locale || 'en');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
@@ -36,6 +39,24 @@ function ClientLogin({ onLoggedIn, locale, onLocale }) {
     setBusy(true);
     setError('');
     try {
+      if (mode === 'signup') {
+        const res = await fetch('/api/client/register', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            displayName: name,
+            email,
+            password,
+            locale: signupLocale,
+          }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || t('clientHub.signupError'));
+        onLoggedIn(data.client);
+        return;
+      }
+
       const res = await fetch('/api/client/login', {
         method: 'POST',
         credentials: 'include',
@@ -53,15 +74,60 @@ function ClientLogin({ onLoggedIn, locale, onLocale }) {
   }
 
   return (
-    <div className="glass-panel client-hub-panel">
+    <div className="glass-panel client-hub-panel client-hub-auth-card">
       <div className="upload-page-head">
-        <div>
-          <h1>{t('clientHub.loginTitle')}</h1>
-          <p className="subtitle">{t('clientHub.loginSubtitle')}</p>
+        <div className="client-hub-tabs" role="tablist">
+          <button
+            type="button"
+            role="tab"
+            className={`client-hub-tab${mode === 'signup' ? ' is-active' : ''}`}
+            aria-selected={mode === 'signup'}
+            onClick={() => {
+              setMode('signup');
+              setError('');
+            }}
+          >
+            {t('clientHub.tabSignup')}
+          </button>
+          <button
+            type="button"
+            role="tab"
+            className={`client-hub-tab${mode === 'signin' ? ' is-active' : ''}`}
+            aria-selected={mode === 'signin'}
+            onClick={() => {
+              setMode('signin');
+              setError('');
+            }}
+          >
+            {t('clientHub.tabSignin')}
+          </button>
         </div>
         <LocaleSwitch locale={locale} onChange={onLocale} />
       </div>
+
+      <h1 className="client-hub-auth-title">
+        {mode === 'signup' ? t('clientHub.signupTitle') : t('clientHub.loginTitle')}
+      </h1>
+      <p className="subtitle">
+        {mode === 'signup'
+          ? t('clientHub.signupSubtitle')
+          : t('clientHub.loginSubtitle')}
+      </p>
+
       <form className="client-hub-form" onSubmit={onSubmit}>
+        {mode === 'signup' ? (
+          <label className="client-hub-label">
+            {t('clientHub.name')}
+            <input
+              type="text"
+              autoComplete="name"
+              required
+              minLength={2}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </label>
+        ) : null}
         <label className="client-hub-label">
           {t('clientHub.email')}
           <input
@@ -76,15 +142,43 @@ function ClientLogin({ onLoggedIn, locale, onLocale }) {
           {t('clientHub.password')}
           <input
             type="password"
-            autoComplete="current-password"
+            autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
             required
+            minLength={mode === 'signup' ? 8 : 1}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
         </label>
+        {mode === 'signup' ? (
+          <fieldset className="client-hub-locale">
+            <legend>{t('clientHub.locale')}</legend>
+            <label>
+              <input
+                type="radio"
+                name="signup-locale"
+                checked={signupLocale === 'pl'}
+                onChange={() => setSignupLocale('pl')}
+              />
+              PL
+            </label>
+            <label>
+              <input
+                type="radio"
+                name="signup-locale"
+                checked={signupLocale === 'en'}
+                onChange={() => setSignupLocale('en')}
+              />
+              EN
+            </label>
+          </fieldset>
+        ) : null}
         {error ? <p className="client-hub-error">{error}</p> : null}
         <button type="submit" className="btn" disabled={busy}>
-          {busy ? t('clientHub.signingIn') : t('clientHub.signIn')}
+          {busy
+            ? t('clientHub.busy')
+            : mode === 'signup'
+              ? t('clientHub.signUp')
+              : t('clientHub.signIn')}
         </button>
       </form>
     </div>
@@ -140,11 +234,6 @@ function ClientHubHome({ client, onLogout, locale, onLocale }) {
           className="btn"
           onClick={() => router.push('/client/upload')}
           disabled={!client?.hasLinkedToken}
-          title={
-            client?.hasLinkedToken
-              ? undefined
-              : 'Ask the studio to link an upload token to your account'
-          }
         >
           {t('clientHub.newUpload')}
         </button>
@@ -231,7 +320,7 @@ export default function ClientHub() {
           onLocale={setLocale}
         />
       ) : (
-        <ClientLogin
+        <ClientAuthCard
           onLoggedIn={(c) => {
             setClient(c);
             if (c?.locale) setLocale(normalizeLocale(c.locale));

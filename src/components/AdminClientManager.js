@@ -14,34 +14,22 @@ export default function AdminClientManager() {
   const [memberships, setMemberships] = useState([]);
   const [sessions, setSessions] = useState([]);
   const [shares, setShares] = useState([]);
-  const [tokens, setTokens] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [showForm, setShowForm] = useState(false);
-  const [creating, setCreating] = useState(false);
   const [assignFor, setAssignFor] = useState(null);
   const [assignFolderId, setAssignFolderId] = useState('');
   const [assignLabel, setAssignLabel] = useState('');
   const [passwordFor, setPasswordFor] = useState(null);
   const [newPassword, setNewPassword] = useState('');
 
-  const [form, setForm] = useState({
-    email: '',
-    password: '',
-    displayName: '',
-    linkedToken: '',
-    locale: 'en',
-  });
-
   const refresh = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
-      const [cRes, sRes, shRes, tRes] = await Promise.all([
+      const [cRes, sRes, shRes] = await Promise.all([
         fetch('/api/admin/clients', { credentials: 'include' }),
         fetch('/api/admin/sessions?limit=80', { credentials: 'include' }),
         fetch('/api/admin/shares', { credentials: 'include' }),
-        fetch('/api/admin/tokens', { credentials: 'include' }),
       ]);
       const cData = await cRes.json().catch(() => ({}));
       if (!cRes.ok) throw new Error(cData.error || 'Failed to load clients');
@@ -56,10 +44,6 @@ export default function AdminClientManager() {
         const shData = await shRes.json();
         setShares(shData.shares || []);
       }
-      if (tRes.ok) {
-        const tData = await tRes.json();
-        setTokens((tData.tokens || []).filter((t) => t.status === 'active'));
-      }
     } catch (err) {
       setError(err.message || String(err));
     } finally {
@@ -71,44 +55,7 @@ export default function AdminClientManager() {
     refresh();
   }, [refresh]);
 
-  const shareByFolder = new Map(
-    shares.map((s) => [s.folderId, s])
-  );
-
-  async function handleCreate(e) {
-    e.preventDefault();
-    setCreating(true);
-    setError('');
-    try {
-      const res = await fetch('/api/admin/clients', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: form.email.trim(),
-          password: form.password,
-          displayName: form.displayName.trim(),
-          linkedToken: form.linkedToken.trim() || null,
-          locale: form.locale,
-        }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || 'Create failed');
-      setForm({
-        email: '',
-        password: '',
-        displayName: '',
-        linkedToken: '',
-        locale: 'en',
-      });
-      setShowForm(false);
-      await refresh();
-    } catch (err) {
-      setError(err.message || String(err));
-    } finally {
-      setCreating(false);
-    }
-  }
+  const shareByFolder = new Map(shares.map((s) => [s.folderId, s]));
 
   async function patchClient(id, body) {
     setError('');
@@ -127,7 +74,6 @@ export default function AdminClientManager() {
   async function handleAssign(e) {
     e.preventDefault();
     if (!assignFor || !assignFolderId) return;
-    setError('');
     try {
       const share = shareByFolder.get(assignFolderId);
       const session = sessions.find((s) => s.folderId === assignFolderId);
@@ -172,68 +118,16 @@ export default function AdminClientManager() {
     <section className="admin-section glass-panel">
       <div className="admin-section-head">
         <h2>Client hub accounts</h2>
-        <button
-          type="button"
-          className="btn tiny"
-          onClick={() => setShowForm((v) => !v)}
-        >
-          {showForm ? 'Cancel' : '+ New client account'}
+        <button type="button" className="btn tiny ghost" onClick={() => refresh()}>
+          Refresh
         </button>
       </div>
       <p className="admin-hint">
-        Email + password hub at <code>/client</code>. Link a retainer upload token
-        so they can start new uploads. Assign Drive sessions for projects they did
-        not create.
+        Klienci zakładają konto sami na <code>/client</code> (signup). Tu: lista,
+        suspend/restore, reset hasła, assign projektu, delete.
       </p>
 
       {error ? <p className="admin-error">{error}</p> : null}
-
-      {showForm ? (
-        <form className="admin-token-form-grid" onSubmit={handleCreate}>
-          <input
-            required
-            type="email"
-            placeholder="client@email.com"
-            value={form.email}
-            onChange={(e) => setForm({ ...form, email: e.target.value })}
-          />
-          <input
-            required
-            type="password"
-            minLength={8}
-            placeholder="Temporary password (min 8)"
-            value={form.password}
-            onChange={(e) => setForm({ ...form, password: e.target.value })}
-          />
-          <input
-            type="text"
-            placeholder="Display name"
-            value={form.displayName}
-            onChange={(e) => setForm({ ...form, displayName: e.target.value })}
-          />
-          <select
-            value={form.linkedToken}
-            onChange={(e) => setForm({ ...form, linkedToken: e.target.value })}
-          >
-            <option value="">Linked upload token (optional)</option>
-            {tokens.map((t) => (
-              <option key={t.id} value={t.token}>
-                {t.token} — {t.clientName}
-              </option>
-            ))}
-          </select>
-          <select
-            value={form.locale}
-            onChange={(e) => setForm({ ...form, locale: e.target.value })}
-          >
-            <option value="en">EN</option>
-            <option value="pl">PL</option>
-          </select>
-          <button type="submit" className="btn" disabled={creating}>
-            {creating ? 'Creating…' : 'Create account'}
-          </button>
-        </form>
-      ) : null}
 
       {assignFor ? (
         <form className="admin-token-form-grid" onSubmit={handleAssign}>
@@ -334,7 +228,7 @@ export default function AdminClientManager() {
                           : 'admin-token-badge-revoked'
                       }`}
                     >
-                      {c.status}
+                      {c.status === 'active' ? 'active' : 'suspended'}
                     </span>
                   </td>
                   <td>{formatDate(c.createdAt)}</td>
@@ -366,7 +260,7 @@ export default function AdminClientManager() {
                           )
                         }
                       >
-                        Revoke
+                        Suspend
                       </button>
                     ) : (
                       <button
@@ -412,7 +306,7 @@ export default function AdminClientManager() {
               {!clients.length ? (
                 <tr>
                   <td colSpan={7} className="admin-hint">
-                    No client hub accounts yet.
+                    Brak kont — klienci rejestrują się na /client.
                   </td>
                 </tr>
               ) : null}

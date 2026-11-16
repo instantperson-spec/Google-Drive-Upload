@@ -26,17 +26,15 @@ Produkcja (domyślna): `https://drive-uploader-three.vercel.app`
 | **Clip-only** | Pojedyncze klipy / jednorazowy drop | `/?token=…` i ewentualnie `/share/…` jak dziś |
 | **Project client** | Stała współpraca, wiele projektów | Konto w `/admin` → Client hub → login `/client` |
 
-### Hub klienta (`/client`)
+### Hub klienta (`/client`) — self-signup
 
-1. **`/admin` → Client hub accounts → + New client account`** — email, hasło tymczasowe, display name, **linked upload token** (retainer — wymagany do „Nowy upload” z hubu).
-2. Wyślij klientowi: URL `https://DOMENA/client` + email/hasło (nie link `/?token=`).
-3. Po loginie: lista projektów **owned** (share z linked tokenem / ostatnie uploady) oraz **assigned** (admin → Assign).
-4. **Otwórz projekt** → istniejący portal `/share/<id>` (clip-only share URL bez zmian).
-5. **Nowy upload** → `/client/upload` (cookie sesji; token slug **nie** trafia do przeglądarki).
-6. **Przypisz projekt:** w admin wybierz konto → Assign → sesja z Drive (folder). Opcjonalnie usuń assignment na liście Assignments.
-7. Reset hasła / Revoke / Delete — w tym samym panelu admina.
+1. Klient otwiera `https://DOMENA/client` → **Załóż konto** (imię, email, hasło, język). Bez tokenu zaproszenia.
+2. Przy rejestracji system tworzy konto + linked retainer token (do „Nowy upload” z hubu; slug nie jest pokazywany klientowi).
+3. Po loginie: lista projektów **owned** (share / uploady z linked tokenem) oraz **assigned** (admin → Assign).
+4. **Otwórz projekt** → `/share/<id>`; **Nowy upload** → `/client/upload`.
+5. **`/admin` → Client hub accounts:** lista kont, **Suspend / Restore**, reset hasła, **Assign** folderu, **Delete**. Admin **nie** zakłada kont — to robi klient.
 
-Plik rejestru: `_uploader_clients.json` na Drive (konta + memberships). Sesja: cookie `client_hub_session` (HMAC; `CLIENT_SESSION_SECRET` albo fallback `ADMIN_SECRET`).
+Plik rejestru: `_uploader_clients.json` na Drive. Sesja: cookie `client_hub_session` (`CLIENT_SESSION_SECRET` || `ADMIN_SECRET`). Mockup UI: [`mockups/signup.html`](../mockups/signup.html) (centered card · aurora).
 
 ---
 

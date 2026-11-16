@@ -2080,6 +2080,59 @@ h1 {
   width: min(640px, 100%);
 }
 
+.client-hub-auth-card {
+  width: min(440px, 100%);
+}
+
+.client-hub-tabs {
+  display: inline-flex;
+  width: 100%;
+  max-width: 280px;
+  padding: 0.25rem;
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--glass-border);
+  gap: 0.15rem;
+}
+
+.client-hub-tab {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 0.55rem 0.65rem;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.client-hub-tab.is-active {
+  background: var(--accent-color);
+  color: #fff;
+  box-shadow: 0 10px 22px -10px rgba(99, 102, 241, 0.55);
+}
+
+.client-hub-auth-title {
+  margin: 0.85rem 0 0.25rem;
+  font-size: 1.45rem;
+}
+
+.client-hub-locale {
+  border: 0;
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.client-hub-locale legend {
+  padding: 0;
+  margin-bottom: 0.25rem;
+  width: 100%;
+}
+
 .client-hub-form {
   display: flex;
   flex-direction: column;

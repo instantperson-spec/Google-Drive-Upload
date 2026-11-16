@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Konto klienta — Signup / Login · Centered · Aurora</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    :root {
+      --font-sans: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, Helvetica, Arial, sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--font-sans);
+      color: #f1f5f9;
+      min-height: 100vh;
+      background: radial-gradient(circle at 50% 0%, #0d1224 0%, #06080e 100%);
+      display: flex;
+      flex-direction: column;
+      line-height: 1.5;
+    }
+    .aurora-container {
+      position: fixed; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; opacity: 0.85;
+    }
+    .aurora-blob {
+      position: absolute; border-radius: 50%; filter: blur(90px); mix-blend-mode: screen;
+      animation: floatAurora 18s ease-in-out infinite alternate;
+    }
+    .aurora-blob-1 {
+      width: 560px; height: 560px;
+      background: radial-gradient(circle, rgba(99, 102, 241, 0.42) 0%, transparent 70%);
+      top: -120px; left: 10%;
+    }
+    .aurora-blob-2 {
+      width: 660px; height: 660px;
+      background: radial-gradient(circle, rgba(168, 85, 247, 0.34) 0%, transparent 70%);
+      top: 15%; right: 6%; animation-duration: 22s; animation-delay: -5s;
+    }
+    .aurora-blob-3 {
+      width: 500px; height: 500px;
+      background: radial-gradient(circle, rgba(6, 182, 212, 0.25) 0%, transparent 70%);
+      bottom: -110px; left: 28%; animation-duration: 20s; animation-delay: -10s;
+    }
+    @keyframes floatAurora {
+      0% { transform: translate(0, 0) scale(1); }
+      50% { transform: translate(60px, 40px) scale(1.15); }
+      100% { transform: translate(-40px, 70px) scale(0.95); }
+    }
+    .noise-overlay {
+      position: fixed; inset: 0; opacity: 0.025; pointer-events: none; z-index: 1;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+    .modern-glass-card {
+      background: rgba(15, 20, 32, 0.76);
+      backdrop-filter: blur(26px) saturate(190%);
+      -webkit-backdrop-filter: blur(26px) saturate(190%);
+      border: 1px solid rgba(255, 255, 255, 0.11);
+      box-shadow:
+        0 24px 64px -12px rgba(0, 0, 0, 0.65),
+        0 0 0 1px rgba(255, 255, 255, 0.04),
+        inset 0 1px 0 0 rgba(255, 255, 255, 0.14);
+      border-radius: 26px;
+      position: relative;
+      overflow: hidden;
+    }
+    .modern-glass-card::before {
+      content: '';
+      position: absolute; top: 0; left: 8%; right: 8%; height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), rgba(99,102,241,0.6), rgba(255,255,255,0.4), transparent);
+      pointer-events: none;
+    }
+    .field { display: flex; flex-direction: column; gap: 0.35rem; margin-bottom: 1.05rem; }
+    .field-label { font-size: 0.875rem; font-weight: 600; color: #e2e8f0; }
+    .req-star { color: #fbbf24; margin-left: 0.2rem; }
+    .hint { font-size: 0.78rem; color: #94a3b8; }
+    .form-input {
+      font: inherit; font-size: 1rem; min-height: 48px; width: 100%;
+      padding: 0.72rem 0.95rem; border-radius: 14px;
+      border: 1.5px solid rgba(148, 163, 184, 0.28);
+      background: rgba(8, 12, 22, 0.72); color: #f8fafc;
+    }
+    .form-input:focus {
+      outline: none; border-color: #818cf8;
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.22);
+    }
+    .primary-cta {
+      width: 100%; min-height: 48px; margin-top: 0.35rem;
+      border: 0; border-radius: 14px; cursor: pointer;
+      font-weight: 700; font-size: 0.95rem; color: white;
+      background: linear-gradient(135deg, #6366f1, #7c3aed);
+      box-shadow: 0 12px 28px -10px rgba(99, 102, 241, 0.55);
+    }
+    .primary-cta:hover { filter: brightness(1.06); }
+    .primary-cta:disabled { opacity: 0.6; cursor: not-allowed; }
+    .tab-btn {
+      flex: 1; padding: 0.65rem 0.75rem; border-radius: 12px;
+      font-size: 0.875rem; font-weight: 700; border: 0; cursor: pointer;
+      background: transparent; color: #94a3b8; transition: 0.15s ease;
+    }
+    .tab-btn[aria-selected="true"] {
+      background: #4f46e5; color: white;
+      box-shadow: 0 10px 24px -8px rgba(79, 70, 229, 0.55);
+    }
+    .locale-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+    .locale-opt {
+      display: flex; align-items: center; gap: 0.5rem;
+      padding: 0.65rem 0.75rem; border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.03);
+      cursor: pointer; font-size: 0.85rem;
+    }
+    .locale-opt:has(input:checked) {
+      border-color: rgba(129, 140, 248, 0.55); background: rgba(99, 102, 241, 0.12);
+    }
+    .error { color: #fb7185; font-size: 0.85rem; margin-bottom: 0.75rem; }
+    .pw-row { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+    .pw-toggle {
+      border: 0; background: transparent; color: #a5b4fc;
+      font-size: 0.75rem; font-weight: 600; cursor: pointer;
+    }
+    [hidden] { display: none !important; }
+  </style>
+</head>
+<body>
+  <div class="aurora-container" aria-hidden="true">
+    <div class="aurora-blob aurora-blob-1"></div>
+    <div class="aurora-blob aurora-blob-2"></div>
+    <div class="aurora-blob aurora-blob-3"></div>
+  </div>
+  <div class="noise-overlay" aria-hidden="true"></div>
+
+  <header class="relative z-20 sticky top-0 px-4 py-2.5 border-b border-white/10 bg-black/60 backdrop-blur-xl">
+    <div class="max-w-5xl mx-auto flex flex-wrap items-center justify-between gap-2 text-xs">
+      <nav class="flex flex-wrap items-center bg-white/5 p-1 rounded-xl border border-white/10 gap-0.5" aria-label="Mockups">
+        <a href="index.html" class="px-2.5 py-1 rounded-lg text-slate-400 hover:text-white">Upload</a>
+        <a href="share.html" class="px-2.5 py-1 rounded-lg text-slate-400 hover:text-white">Portal</a>
+        <a href="admin.html" class="px-2.5 py-1 rounded-lg text-slate-400 hover:text-white">Admin</a>
+        <a href="studio-console.html" class="px-2.5 py-1 rounded-lg text-slate-400 hover:text-white">Studio</a>
+        <span class="px-2.5 py-1 rounded-lg text-white font-semibold bg-indigo-600" aria-current="page">Konto klienta</span>
+      </nav>
+      <div class="flex items-center gap-2 text-slate-400">
+        <span class="px-2 py-1 rounded-lg bg-white/10 text-white">Centered card</span>
+        <span class="px-2 py-1 rounded-lg bg-white/10 text-white">Aurora</span>
+        <span class="px-2 py-1 rounded-lg bg-white/5">Self-signup · bez tokenu</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="relative z-10 flex-1 flex items-center justify-center px-4 py-10">
+    <section class="modern-glass-card w-full max-w-md p-6 sm:p-8" aria-label="Rejestracja i logowanie">
+      <div class="inline-flex w-full p-1 mb-6 rounded-2xl bg-black/35 border border-white/10" role="tablist">
+        <button type="button" class="tab-btn" id="tab-signup" role="tab" aria-selected="true" aria-controls="panel-signup">Załóż konto</button>
+        <button type="button" class="tab-btn" id="tab-signin" role="tab" aria-selected="false" aria-controls="panel-signin">Zaloguj się</button>
+      </div>
+
+      <div id="panel-signup" role="tabpanel" aria-labelledby="tab-signup">
+        <h1 class="text-2xl font-extrabold tracking-tight text-white">Utwórz konto klienta</h1>
+        <p class="text-sm text-slate-400 mt-1 mb-5">Samodzielna rejestracja — potem lista projektów, download od studia i nowe uploady.</p>
+        <form id="signup-form" novalidate>
+          <div class="field">
+            <label class="field-label" for="signup-name">Imię / firma<span class="req-star">*</span></label>
+            <span class="hint">Widoczne w projektach i powiadomieniach.</span>
+            <input class="form-input" id="signup-name" name="name" type="text" required minlength="2" autocomplete="name" placeholder="Anna Kowalska">
+          </div>
+          <div class="field">
+            <label class="field-label" for="signup-email">E-mail<span class="req-star">*</span></label>
+            <span class="hint">Login oraz powiadomienia o nowych plikach.</span>
+            <input class="form-input" id="signup-email" name="email" type="email" required autocomplete="username" placeholder="imie@firma.pl">
+          </div>
+          <div class="field">
+            <div class="pw-row">
+              <label class="field-label" for="signup-password">Hasło<span class="req-star">*</span></label>
+              <button type="button" class="pw-toggle" data-target="signup-password">Pokaż</button>
+            </div>
+            <span class="hint">Minimum 8 znaków.</span>
+            <input class="form-input" id="signup-password" name="password" type="password" required minlength="8" autocomplete="new-password" placeholder="••••••••">
+          </div>
+          <fieldset class="field">
+            <legend class="field-label">Język portalu</legend>
+            <div class="locale-grid">
+              <label class="locale-opt"><input type="radio" name="locale" value="pl" checked> Polski</label>
+              <label class="locale-opt"><input type="radio" name="locale" value="en"> English</label>
+            </div>
+          </fieldset>
+          <p id="signup-error" class="error" hidden></p>
+          <button class="primary-cta" type="submit">Utwórz konto →</button>
+        </form>
+        <p class="mt-5 text-center text-xs text-slate-400">
+          Masz już konto?
+          <button type="button" class="text-indigo-300 font-semibold underline underline-offset-4 ml-1" data-goto="signin">Zaloguj się</button>
+        </p>
+      </div>
+
+      <div id="panel-signin" role="tabpanel" aria-labelledby="tab-signin" hidden>
+        <h1 class="text-2xl font-extrabold tracking-tight text-white">Logowanie</h1>
+        <p class="text-sm text-slate-400 mt-1 mb-5">Wejdź do hubu projektów — bez osobnego linku z tokenem.</p>
+        <form id="signin-form" novalidate>
+          <div class="field">
+            <label class="field-label" for="signin-email">E-mail<span class="req-star">*</span></label>
+            <input class="form-input" id="signin-email" name="email" type="email" required autocomplete="username" placeholder="imie@firma.pl">
+          </div>
+          <div class="field">
+            <div class="pw-row">
+              <label class="field-label" for="signin-password">Hasło<span class="req-star">*</span></label>
+              <button type="button" class="pw-toggle" data-target="signin-password">Pokaż</button>
+            </div>
+            <input class="form-input" id="signin-password" name="password" type="password" required autocomplete="current-password" placeholder="••••••••">
+          </div>
+          <p id="signin-error" class="error" hidden></p>
+          <button class="primary-cta" type="submit">Zaloguj do hubu →</button>
+        </form>
+        <p class="mt-5 text-center text-xs text-slate-400">
+          Pierwszy raz?
+          <button type="button" class="text-indigo-300 font-semibold underline underline-offset-4 ml-1" data-goto="signup">Załóż konto</button>
+        </p>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const tabSignup = document.getElementById('tab-signup');
+    const tabSignin = document.getElementById('tab-signin');
+    const panelSignup = document.getElementById('panel-signup');
+    const panelSignin = document.getElementById('panel-signin');
+
+    function showMode(mode) {
+      const signup = mode === 'signup';
+      tabSignup.setAttribute('aria-selected', String(signup));
+      tabSignin.setAttribute('aria-selected', String(!signup));
+      panelSignup.hidden = !signup;
+      panelSignin.hidden = signup;
+    }
+
+    tabSignup.addEventListener('click', () => showMode('signup'));
+    tabSignin.addEventListener('click', () => showMode('signin'));
+    document.querySelectorAll('[data-goto]').forEach((btn) => {
+      btn.addEventListener('click', () => showMode(btn.getAttribute('data-goto')));
+    });
+
+    document.querySelectorAll('.pw-toggle').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const input = document.getElementById(btn.getAttribute('data-target'));
+        if (!input) return;
+        const show = input.type === 'password';
+        input.type = show ? 'text' : 'password';
+        btn.textContent = show ? 'Ukryj' : 'Pokaż';
+      });
+    });
+
+    document.getElementById('signup-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const err = document.getElementById('signup-error');
+      const name = document.getElementById('signup-name').value.trim();
+      const email = document.getElementById('signup-email').value.trim();
+      const password = document.getElementById('signup-password').value;
+      if (name.length < 2 || !email.includes('@') || password.length < 8) {
+        err.hidden = false;
+        err.textContent = 'Uzupełnij poprawnie imię, e-mail i hasło (min. 8 znaków).';
+        return;
+      }
+      err.hidden = true;
+      alert('Mockup: konto utworzone → hub (produkcja: POST /api/client/register).');
+    });
+
+    document.getElementById('signin-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const err = document.getElementById('signin-error');
+      const email = document.getElementById('signin-email').value.trim();
+      const password = document.getElementById('signin-password').value;
+      if (!email.includes('@') || !password) {
+        err.hidden = false;
+        err.textContent = 'Podaj e-mail i hasło.';
+        return;
+      }
+      err.hidden = true;
+      alert('Mockup: zalogowano → /client (produkcja: POST /api/client/login).');
+    });
+  </script>
+</body>
+</html>
