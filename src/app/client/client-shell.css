@@ -125,6 +125,12 @@
   pointer-events: none;
 }
 
+.client-shell .auth-top {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0.85rem;
+}
+
 .client-shell .auth-tabs {
   display: inline-flex;
   width: 100%;

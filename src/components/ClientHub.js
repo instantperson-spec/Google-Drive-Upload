@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { LocaleProvider, useT } from '@/context/LocaleContext';
-import { DEFAULT_LOCALE, normalizeLocale } from '@/lib/locales';
+import LocaleSwitch from '@/components/LocaleSwitch';
+import { normalizeLocale } from '@/lib/locales';
 
 function formatWhen(iso) {
   if (!iso) return '';
@@ -37,14 +38,13 @@ function Shell({ children }) {
   );
 }
 
-/** Markup/CSS from mockups/signup.html — only API wiring differs. */
-function ClientAuthCard({ onLoggedIn, onLocale }) {
+/** Markup/CSS from mockups/signup.html — EN/PL switch sets account locale. */
+function ClientAuthCard({ locale, onLoggedIn, onLocale }) {
   const t = useT();
   const [mode, setMode] = useState('signup');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [signupLocale, setSignupLocale] = useState('pl');
   const [showSignupPw, setShowSignupPw] = useState(false);
   const [showSigninPw, setShowSigninPw] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -68,12 +68,11 @@ function ClientAuthCard({ onLoggedIn, onLocale }) {
           displayName: name.trim(),
           email: email.trim(),
           password,
-          locale: signupLocale,
+          locale: normalizeLocale(locale),
         }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || t('clientHub.signupError'));
-      onLocale(normalizeLocale(signupLocale));
       onLoggedIn(data.client);
     } catch (err) {
       setError(err.message || t('clientHub.signupError'));
@@ -106,6 +105,10 @@ function ClientAuthCard({ onLoggedIn, onLocale }) {
 
   return (
     <section className="modern-glass-card" aria-label={t('clientHub.authAria')}>
+      <div className="auth-top">
+        <LocaleSwitch locale={locale} onChange={onLocale} />
+      </div>
+
       <div className="auth-tabs" role="tablist">
         <button
           type="button"
@@ -199,31 +202,6 @@ function ClientAuthCard({ onLoggedIn, onLocale }) {
                 onChange={(e) => setPassword(e.target.value)}
               />
             </div>
-            <fieldset className="field">
-              <legend className="field-label">{t('clientHub.locale')}</legend>
-              <div className="locale-grid">
-                <label className="locale-opt">
-                  <input
-                    type="radio"
-                    name="locale"
-                    value="pl"
-                    checked={signupLocale === 'pl'}
-                    onChange={() => setSignupLocale('pl')}
-                  />
-                  {t('clientHub.localePl')}
-                </label>
-                <label className="locale-opt">
-                  <input
-                    type="radio"
-                    name="locale"
-                    value="en"
-                    checked={signupLocale === 'en'}
-                    onChange={() => setSignupLocale('en')}
-                  />
-                  {t('clientHub.localeEn')}
-                </label>
-              </div>
-            </fieldset>
             {error ? <p className="error">{error}</p> : null}
             <button className="primary-cta" type="submit" disabled={busy}>
               {busy ? t('clientHub.busy') : t('clientHub.signUpCta')}
@@ -301,7 +279,7 @@ function ClientAuthCard({ onLoggedIn, onLocale }) {
   );
 }
 
-function ClientHubHome({ client, onLogout }) {
+function ClientHubHome({ client, onLogout, locale, onLocale }) {
   const t = useT();
   const router = useRouter();
   const [projects, setProjects] = useState([]);
@@ -339,6 +317,7 @@ function ClientHubHome({ client, onLogout }) {
           </p>
         </div>
         <div className="hub-actions">
+          <LocaleSwitch locale={locale} onChange={onLocale} />
           <button type="button" className="ghost-btn" onClick={onLogout}>
             {t('clientHub.logout')}
           </button>
@@ -421,9 +400,15 @@ export default function ClientHub() {
             <p className="muted">…</p>
           </section>
         ) : client ? (
-          <ClientHubHome client={client} onLogout={handleLogout} />
+          <ClientHubHome
+            client={client}
+            onLogout={handleLogout}
+            locale={locale}
+            onLocale={setLocale}
+          />
         ) : (
           <ClientAuthCard
+            locale={locale}
             onLoggedIn={setClient}
             onLocale={setLocale}
           />
