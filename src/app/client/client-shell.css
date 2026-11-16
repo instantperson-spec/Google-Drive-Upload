@@ -1,0 +1,373 @@
+/* Ported from mockups/signup.html — client auth shell (aurora + centered glass card) */
+
+.client-shell {
+  --font-sans: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, Helvetica, Arial, sans-serif;
+  font-family: var(--font-sans);
+  color: #f1f5f9;
+  min-height: 100vh;
+  width: 100%;
+  background: radial-gradient(circle at 50% 0%, #0d1224 0%, #06080e 100%);
+  display: flex;
+  flex-direction: column;
+  line-height: 1.5;
+  position: relative;
+}
+
+.client-shell .aurora-container {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.85;
+}
+
+.client-shell .aurora-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(90px);
+  mix-blend-mode: screen;
+  animation: clientFloatAurora 18s ease-in-out infinite alternate;
+}
+
+.client-shell .aurora-blob-1 {
+  width: 560px;
+  height: 560px;
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.42) 0%, transparent 70%);
+  top: -120px;
+  left: 10%;
+}
+
+.client-shell .aurora-blob-2 {
+  width: 660px;
+  height: 660px;
+  background: radial-gradient(circle, rgba(168, 85, 247, 0.34) 0%, transparent 70%);
+  top: 15%;
+  right: 6%;
+  animation-duration: 22s;
+  animation-delay: -5s;
+}
+
+.client-shell .aurora-blob-3 {
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(6, 182, 212, 0.25) 0%, transparent 70%);
+  bottom: -110px;
+  left: 28%;
+  animation-duration: 20s;
+  animation-delay: -10s;
+}
+
+@keyframes clientFloatAurora {
+  0% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(60px, 40px) scale(1.15); }
+  100% { transform: translate(-40px, 70px) scale(0.95); }
+}
+
+.client-shell .noise-overlay {
+  position: fixed;
+  inset: 0;
+  opacity: 0.025;
+  pointer-events: none;
+  z-index: 1;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.client-shell-main {
+  position: relative;
+  z-index: 10;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2.5rem 1rem;
+}
+
+.client-shell .modern-glass-card {
+  background: rgba(15, 20, 32, 0.76);
+  backdrop-filter: blur(26px) saturate(190%);
+  -webkit-backdrop-filter: blur(26px) saturate(190%);
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  box-shadow:
+    0 24px 64px -12px rgba(0, 0, 0, 0.65),
+    0 0 0 1px rgba(255, 255, 255, 0.04),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.14);
+  border-radius: 26px;
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  max-width: 28rem;
+  padding: 1.5rem;
+  text-align: left;
+}
+
+@media (min-width: 640px) {
+  .client-shell .modern-glass-card {
+    padding: 2rem;
+  }
+}
+
+.client-shell .modern-glass-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 8%;
+  right: 8%;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.4),
+    rgba(99, 102, 241, 0.6),
+    rgba(255, 255, 255, 0.4),
+    transparent
+  );
+  pointer-events: none;
+}
+
+.client-shell .auth-tabs {
+  display: inline-flex;
+  width: 100%;
+  padding: 0.25rem;
+  margin-bottom: 1.5rem;
+  border-radius: 1rem;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.client-shell .tab-btn {
+  flex: 1;
+  padding: 0.65rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.875rem;
+  font-weight: 700;
+  border: 0;
+  cursor: pointer;
+  background: transparent;
+  color: #94a3b8;
+  transition: 0.15s ease;
+}
+
+.client-shell .tab-btn[aria-selected="true"] {
+  background: #4f46e5;
+  color: white;
+  box-shadow: 0 10px 24px -8px rgba(79, 70, 229, 0.55);
+}
+
+.client-shell .auth-title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  color: #fff;
+  margin: 0;
+}
+
+.client-shell .auth-subtitle {
+  font-size: 0.875rem;
+  color: #94a3b8;
+  margin: 0.25rem 0 1.25rem;
+}
+
+.client-shell .field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 1.05rem;
+}
+
+.client-shell .field-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.client-shell .req-star {
+  color: #fbbf24;
+  margin-left: 0.2rem;
+}
+
+.client-shell .hint {
+  font-size: 0.78rem;
+  color: #94a3b8;
+}
+
+.client-shell .form-input {
+  font: inherit;
+  font-size: 1rem;
+  min-height: 48px;
+  width: 100%;
+  padding: 0.72rem 0.95rem;
+  border-radius: 14px;
+  border: 1.5px solid rgba(148, 163, 184, 0.28);
+  background: rgba(8, 12, 22, 0.72);
+  color: #f8fafc;
+}
+
+.client-shell .form-input:focus {
+  outline: none;
+  border-color: #818cf8;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.22);
+}
+
+.client-shell .primary-cta {
+  width: 100%;
+  min-height: 48px;
+  margin-top: 0.35rem;
+  border: 0;
+  border-radius: 14px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: white;
+  background: linear-gradient(135deg, #6366f1, #7c3aed);
+  box-shadow: 0 12px 28px -10px rgba(99, 102, 241, 0.55);
+}
+
+.client-shell .primary-cta:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+
+.client-shell .primary-cta:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.client-shell .locale-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.client-shell .locale-opt {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: #e2e8f0;
+}
+
+.client-shell .locale-opt:has(input:checked) {
+  border-color: rgba(129, 140, 248, 0.55);
+  background: rgba(99, 102, 241, 0.12);
+}
+
+.client-shell .error {
+  color: #fb7185;
+  font-size: 0.85rem;
+  margin-bottom: 0.75rem;
+}
+
+.client-shell .pw-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.client-shell .pw-toggle {
+  border: 0;
+  background: transparent;
+  color: #a5b4fc;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.client-shell .auth-footer {
+  margin-top: 1.25rem;
+  text-align: center;
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.client-shell .auth-footer button {
+  margin-left: 0.25rem;
+  border: 0;
+  background: transparent;
+  color: #a5b4fc;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  cursor: pointer;
+}
+
+.client-shell .hub-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.client-shell .hub-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.client-shell .ghost-btn {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  color: #e2e8f0;
+  border-radius: 12px;
+  padding: 0.55rem 0.85rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.client-shell .hub-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  margin: 0.75rem 0 0;
+  padding: 0;
+}
+
+.client-shell .hub-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 0.85rem;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  flex-wrap: wrap;
+}
+
+.client-shell .hub-item a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0.45rem 0.85rem;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: #e2e8f0;
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.client-shell .hub-badge {
+  display: inline-block;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  background: rgba(99, 102, 241, 0.2);
+  color: #c7d2fe;
+  font-size: 0.72rem;
+  margin-right: 0.4rem;
+}
+
+.client-shell .muted {
+  color: #94a3b8;
+  font-size: 0.875rem;
+}

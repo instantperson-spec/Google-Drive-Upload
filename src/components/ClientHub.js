@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { LocaleProvider, useT } from '@/context/LocaleContext';
-import LocaleSwitch from '@/components/LocaleSwitch';
 import { DEFAULT_LOCALE, normalizeLocale } from '@/lib/locales';
 
 function formatWhen(iso) {
@@ -24,47 +23,79 @@ function sourceBadge(source, t) {
   return t('clientHub.badgeOwned');
 }
 
-function ClientAuthCard({ onLoggedIn, locale, onLocale }) {
+function Shell({ children }) {
+  return (
+    <div className="client-shell">
+      <div className="aurora-container" aria-hidden="true">
+        <div className="aurora-blob aurora-blob-1" />
+        <div className="aurora-blob aurora-blob-2" />
+        <div className="aurora-blob aurora-blob-3" />
+      </div>
+      <div className="noise-overlay" aria-hidden="true" />
+      <main className="client-shell-main">{children}</main>
+    </div>
+  );
+}
+
+/** Markup/CSS from mockups/signup.html — only API wiring differs. */
+function ClientAuthCard({ onLoggedIn, onLocale }) {
   const t = useT();
   const [mode, setMode] = useState('signup');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [signupLocale, setSignupLocale] = useState(locale || 'en');
+  const [signupLocale, setSignupLocale] = useState('pl');
+  const [showSignupPw, setShowSignupPw] = useState(false);
+  const [showSigninPw, setShowSigninPw] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
-  async function onSubmit(e) {
+  function go(next) {
+    setMode(next);
+    setError('');
+  }
+
+  async function onSignup(e) {
     e.preventDefault();
     setBusy(true);
     setError('');
     try {
-      if (mode === 'signup') {
-        const res = await fetch('/api/client/register', {
-          method: 'POST',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            displayName: name,
-            email,
-            password,
-            locale: signupLocale,
-          }),
-        });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data.error || t('clientHub.signupError'));
-        onLoggedIn(data.client);
-        return;
-      }
+      const res = await fetch('/api/client/register', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          displayName: name.trim(),
+          email: email.trim(),
+          password,
+          locale: signupLocale,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || t('clientHub.signupError'));
+      onLocale(normalizeLocale(signupLocale));
+      onLoggedIn(data.client);
+    } catch (err) {
+      setError(err.message || t('clientHub.signupError'));
+    } finally {
+      setBusy(false);
+    }
+  }
 
+  async function onSignin(e) {
+    e.preventDefault();
+    setBusy(true);
+    setError('');
+    try {
       const res = await fetch('/api/client/login', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email: email.trim(), password }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || t('clientHub.loginError'));
+      if (data.client?.locale) onLocale(normalizeLocale(data.client.locale));
       onLoggedIn(data.client);
     } catch (err) {
       setError(err.message || t('clientHub.loginError'));
@@ -74,118 +105,203 @@ function ClientAuthCard({ onLoggedIn, locale, onLocale }) {
   }
 
   return (
-    <div className="glass-panel client-hub-panel client-hub-auth-card">
-      <div className="upload-page-head">
-        <div className="client-hub-tabs" role="tablist">
-          <button
-            type="button"
-            role="tab"
-            className={`client-hub-tab${mode === 'signup' ? ' is-active' : ''}`}
-            aria-selected={mode === 'signup'}
-            onClick={() => {
-              setMode('signup');
-              setError('');
-            }}
-          >
-            {t('clientHub.tabSignup')}
-          </button>
-          <button
-            type="button"
-            role="tab"
-            className={`client-hub-tab${mode === 'signin' ? ' is-active' : ''}`}
-            aria-selected={mode === 'signin'}
-            onClick={() => {
-              setMode('signin');
-              setError('');
-            }}
-          >
-            {t('clientHub.tabSignin')}
-          </button>
-        </div>
-        <LocaleSwitch locale={locale} onChange={onLocale} />
+    <section className="modern-glass-card" aria-label={t('clientHub.authAria')}>
+      <div className="auth-tabs" role="tablist">
+        <button
+          type="button"
+          className="tab-btn"
+          role="tab"
+          aria-selected={mode === 'signup'}
+          aria-controls="panel-signup"
+          onClick={() => go('signup')}
+        >
+          {t('clientHub.tabSignup')}
+        </button>
+        <button
+          type="button"
+          className="tab-btn"
+          role="tab"
+          aria-selected={mode === 'signin'}
+          aria-controls="panel-signin"
+          onClick={() => go('signin')}
+        >
+          {t('clientHub.tabSignin')}
+        </button>
       </div>
 
-      <h1 className="client-hub-auth-title">
-        {mode === 'signup' ? t('clientHub.signupTitle') : t('clientHub.loginTitle')}
-      </h1>
-      <p className="subtitle">
-        {mode === 'signup'
-          ? t('clientHub.signupSubtitle')
-          : t('clientHub.loginSubtitle')}
-      </p>
-
-      <form className="client-hub-form" onSubmit={onSubmit}>
-        {mode === 'signup' ? (
-          <label className="client-hub-label">
-            {t('clientHub.name')}
-            <input
-              type="text"
-              autoComplete="name"
-              required
-              minLength={2}
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-          </label>
-        ) : null}
-        <label className="client-hub-label">
-          {t('clientHub.email')}
-          <input
-            type="email"
-            autoComplete="username"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-        </label>
-        <label className="client-hub-label">
-          {t('clientHub.password')}
-          <input
-            type="password"
-            autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
-            required
-            minLength={mode === 'signup' ? 8 : 1}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-        </label>
-        {mode === 'signup' ? (
-          <fieldset className="client-hub-locale">
-            <legend>{t('clientHub.locale')}</legend>
-            <label>
+      {mode === 'signup' ? (
+        <div id="panel-signup" role="tabpanel">
+          <h1 className="auth-title">{t('clientHub.signupTitle')}</h1>
+          <p className="auth-subtitle">{t('clientHub.signupSubtitle')}</p>
+          <form onSubmit={onSignup} noValidate>
+            <div className="field">
+              <label className="field-label" htmlFor="signup-name">
+                {t('clientHub.name')}
+                <span className="req-star">*</span>
+              </label>
+              <span className="hint">{t('clientHub.nameHint')}</span>
               <input
-                type="radio"
-                name="signup-locale"
-                checked={signupLocale === 'pl'}
-                onChange={() => setSignupLocale('pl')}
+                className="form-input"
+                id="signup-name"
+                name="name"
+                type="text"
+                required
+                minLength={2}
+                autoComplete="name"
+                placeholder={t('clientHub.namePlaceholder')}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
               />
-              PL
-            </label>
-            <label>
+            </div>
+            <div className="field">
+              <label className="field-label" htmlFor="signup-email">
+                {t('clientHub.email')}
+                <span className="req-star">*</span>
+              </label>
+              <span className="hint">{t('clientHub.emailHint')}</span>
               <input
-                type="radio"
-                name="signup-locale"
-                checked={signupLocale === 'en'}
-                onChange={() => setSignupLocale('en')}
+                className="form-input"
+                id="signup-email"
+                name="email"
+                type="email"
+                required
+                autoComplete="username"
+                placeholder={t('clientHub.emailPlaceholder')}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
               />
-              EN
-            </label>
-          </fieldset>
-        ) : null}
-        {error ? <p className="client-hub-error">{error}</p> : null}
-        <button type="submit" className="btn" disabled={busy}>
-          {busy
-            ? t('clientHub.busy')
-            : mode === 'signup'
-              ? t('clientHub.signUp')
-              : t('clientHub.signIn')}
-        </button>
-      </form>
-    </div>
+            </div>
+            <div className="field">
+              <div className="pw-row">
+                <label className="field-label" htmlFor="signup-password">
+                  {t('clientHub.password')}
+                  <span className="req-star">*</span>
+                </label>
+                <button
+                  type="button"
+                  className="pw-toggle"
+                  onClick={() => setShowSignupPw((v) => !v)}
+                >
+                  {showSignupPw ? t('clientHub.hidePassword') : t('clientHub.showPassword')}
+                </button>
+              </div>
+              <span className="hint">{t('clientHub.passwordHint')}</span>
+              <input
+                className="form-input"
+                id="signup-password"
+                name="password"
+                type={showSignupPw ? 'text' : 'password'}
+                required
+                minLength={8}
+                autoComplete="new-password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+            <fieldset className="field">
+              <legend className="field-label">{t('clientHub.locale')}</legend>
+              <div className="locale-grid">
+                <label className="locale-opt">
+                  <input
+                    type="radio"
+                    name="locale"
+                    value="pl"
+                    checked={signupLocale === 'pl'}
+                    onChange={() => setSignupLocale('pl')}
+                  />
+                  {t('clientHub.localePl')}
+                </label>
+                <label className="locale-opt">
+                  <input
+                    type="radio"
+                    name="locale"
+                    value="en"
+                    checked={signupLocale === 'en'}
+                    onChange={() => setSignupLocale('en')}
+                  />
+                  {t('clientHub.localeEn')}
+                </label>
+              </div>
+            </fieldset>
+            {error ? <p className="error">{error}</p> : null}
+            <button className="primary-cta" type="submit" disabled={busy}>
+              {busy ? t('clientHub.busy') : t('clientHub.signUpCta')}
+            </button>
+          </form>
+          <p className="auth-footer">
+            {t('clientHub.alreadyHaveAccount')}
+            <button type="button" onClick={() => go('signin')}>
+              {t('clientHub.switchToSignIn')}
+            </button>
+          </p>
+        </div>
+      ) : (
+        <div id="panel-signin" role="tabpanel">
+          <h1 className="auth-title">{t('clientHub.loginTitle')}</h1>
+          <p className="auth-subtitle">{t('clientHub.loginSubtitle')}</p>
+          <form onSubmit={onSignin} noValidate>
+            <div className="field">
+              <label className="field-label" htmlFor="signin-email">
+                {t('clientHub.email')}
+                <span className="req-star">*</span>
+              </label>
+              <input
+                className="form-input"
+                id="signin-email"
+                name="email"
+                type="email"
+                required
+                autoComplete="username"
+                placeholder={t('clientHub.emailPlaceholder')}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+            <div className="field">
+              <div className="pw-row">
+                <label className="field-label" htmlFor="signin-password">
+                  {t('clientHub.password')}
+                  <span className="req-star">*</span>
+                </label>
+                <button
+                  type="button"
+                  className="pw-toggle"
+                  onClick={() => setShowSigninPw((v) => !v)}
+                >
+                  {showSigninPw ? t('clientHub.hidePassword') : t('clientHub.showPassword')}
+                </button>
+              </div>
+              <input
+                className="form-input"
+                id="signin-password"
+                name="password"
+                type={showSigninPw ? 'text' : 'password'}
+                required
+                autoComplete="current-password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+            {error ? <p className="error">{error}</p> : null}
+            <button className="primary-cta" type="submit" disabled={busy}>
+              {busy ? t('clientHub.busy') : t('clientHub.signInCta')}
+            </button>
+          </form>
+          <p className="auth-footer">
+            {t('clientHub.noAccountYet')}
+            <button type="button" onClick={() => go('signup')}>
+              {t('clientHub.switchToSignUp')}
+            </button>
+          </p>
+        </div>
+      )}
+    </section>
   );
 }
 
-function ClientHubHome({ client, onLogout, locale, onLocale }) {
+function ClientHubHome({ client, onLogout }) {
   const t = useT();
   const router = useRouter();
   const [projects, setProjects] = useState([]);
@@ -214,64 +330,61 @@ function ClientHubHome({ client, onLogout, locale, onLocale }) {
   const name = client?.displayName || client?.email || '';
 
   return (
-    <div className="glass-panel client-hub-panel">
-      <div className="upload-page-head">
+    <section className="modern-glass-card" style={{ maxWidth: '40rem' }}>
+      <div className="hub-head">
         <div>
-          <h1>{t('clientHub.hubTitle')}</h1>
-          <p className="subtitle">{t('clientHub.hubHello', { name })}</p>
+          <h1 className="auth-title">{t('clientHub.hubTitle')}</h1>
+          <p className="auth-subtitle" style={{ marginBottom: 0 }}>
+            {t('clientHub.hubHello', { name })}
+          </p>
         </div>
-        <div className="client-hub-actions">
-          <LocaleSwitch locale={locale} onChange={onLocale} />
-          <button type="button" className="btn btn-secondary" onClick={onLogout}>
+        <div className="hub-actions">
+          <button type="button" className="ghost-btn" onClick={onLogout}>
             {t('clientHub.logout')}
           </button>
         </div>
       </div>
 
-      <div className="client-hub-toolbar">
-        <button
-          type="button"
-          className="btn"
-          onClick={() => router.push('/client/upload')}
-          disabled={!client?.hasLinkedToken}
-        >
-          {t('clientHub.newUpload')}
-        </button>
-      </div>
+      <button
+        type="button"
+        className="primary-cta"
+        style={{ marginBottom: '0.75rem' }}
+        onClick={() => router.push('/client/upload')}
+        disabled={!client?.hasLinkedToken}
+      >
+        {t('clientHub.newUpload')}
+      </button>
 
-      {loading ? <p className="share-muted">{t('clientHub.loading')}</p> : null}
-      {error ? <p className="client-hub-error">{error}</p> : null}
-
+      {loading ? <p className="muted">{t('clientHub.loading')}</p> : null}
+      {error ? <p className="error">{error}</p> : null}
       {!loading && !projects.length ? (
-        <p className="share-muted">{t('clientHub.empty')}</p>
+        <p className="muted">{t('clientHub.empty')}</p>
       ) : null}
 
-      <ul className="client-hub-list">
+      <ul className="hub-list">
         {projects.map((p) => (
-          <li key={p.folderId} className="client-hub-item">
-            <div className="client-hub-item-main">
-              <strong className="client-hub-item-title">{p.label}</strong>
-              <span className="client-hub-item-meta">
-                <span className="client-hub-badge">{sourceBadge(p.source, t)}</span>
-                {p.updatedAt ? <span>{formatWhen(p.updatedAt)}</span> : null}
-              </span>
+          <li key={p.folderId} className="hub-item">
+            <div>
+              <strong>{p.label}</strong>
+              <div className="muted" style={{ marginTop: '0.25rem' }}>
+                <span className="hub-badge">{sourceBadge(p.source, t)}</span>
+                {p.updatedAt ? formatWhen(p.updatedAt) : null}
+              </div>
             </div>
             {p.openUrl ? (
-              <a className="btn btn-secondary" href={p.openUrl}>
-                {t('clientHub.openProject')}
-              </a>
+              <a href={p.openUrl}>{t('clientHub.openProject')}</a>
             ) : (
-              <span className="share-muted">{t('clientHub.noShareYet')}</span>
+              <span className="muted">{t('clientHub.noShareYet')}</span>
             )}
           </li>
         ))}
       </ul>
-    </div>
+    </section>
   );
 }
 
 export default function ClientHub() {
-  const [locale, setLocale] = useState(DEFAULT_LOCALE);
+  const [locale, setLocale] = useState('pl');
   const [checking, setChecking] = useState(true);
   const [client, setClient] = useState(null);
 
@@ -300,35 +413,22 @@ export default function ClientHub() {
     setClient(null);
   }
 
-  if (checking) {
-    return (
-      <LocaleProvider locale={locale}>
-        <div className="glass-panel client-hub-panel">
-          <p className="share-muted">…</p>
-        </div>
-      </LocaleProvider>
-    );
-  }
-
   return (
     <LocaleProvider locale={locale}>
-      {client ? (
-        <ClientHubHome
-          client={client}
-          onLogout={handleLogout}
-          locale={locale}
-          onLocale={setLocale}
-        />
-      ) : (
-        <ClientAuthCard
-          onLoggedIn={(c) => {
-            setClient(c);
-            if (c?.locale) setLocale(normalizeLocale(c.locale));
-          }}
-          locale={locale}
-          onLocale={setLocale}
-        />
-      )}
+      <Shell>
+        {checking ? (
+          <section className="modern-glass-card">
+            <p className="muted">…</p>
+          </section>
+        ) : client ? (
+          <ClientHubHome client={client} onLogout={handleLogout} />
+        ) : (
+          <ClientAuthCard
+            onLoggedIn={setClient}
+            onLocale={setLocale}
+          />
+        )}
+      </Shell>
     </LocaleProvider>
   );
 }
