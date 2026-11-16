@@ -181,9 +181,9 @@ export default function AdminTokenManager({ onStatsChange }) {
       </div>
 
       <p className="admin-empty-inline" style={{ marginTop: 0 }}>
-        Tokens are stored in <code className="admin-code">_uploader_tokens.json</code> on Google Drive.
-        Revoke takes effect immediately. <strong>Hub-bound</strong> rows are
-        session-only (no Copy link / no <code className="admin-code">/?token=</code>).
+        Shareable upload links (<code className="admin-code">/?token=</code>). Stored in{' '}
+        <code className="admin-code">_uploader_tokens.json</code>. Konta hubu z hasłem
+        — w <strong>Client hub → Accounts</strong> (nie tu).
       </p>
 
       {error && <p className="admin-error admin-error-banner">{error}</p>}

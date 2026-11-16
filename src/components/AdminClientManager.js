@@ -499,7 +499,7 @@ export default function AdminClientManager() {
                 <tr>
                   <th>Email</th>
                   <th>Name</th>
-                  <th>Token</th>
+                  <th>Upload</th>
                   <th>Assigned</th>
                   <th>Status</th>
                   <th>Created</th>
@@ -520,12 +520,14 @@ export default function AdminClientManager() {
                       {c.linkedToken ? (
                         <span
                           className="admin-hubbound-badge"
-                          title="Upload only via /client session — not a /?token= link"
+                          title="Po zalogowaniu na /client może uploadować; bez shareable /?token="
                         >
-                          Linked · hub-bound
+                          Via hub login
                         </span>
                       ) : (
-                        '—'
+                        <span className="admin-empty-inline" style={{ margin: 0 }}>
+                          Brak
+                        </span>
                       )}
                     </td>
                     <td>{membershipsFor(c.email).length}</td>

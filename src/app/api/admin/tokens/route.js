@@ -34,8 +34,12 @@ export async function GET(request) {
       listTokens(),
       listLinkedTokenSlugs().catch(() => new Set()),
     ]);
+    // Hub-bound bindings belong under Client hub → Accounts, not this list.
+    const shareable = tokens
+      .map((t) => enrichToken(t, origin, linkedSlugs))
+      .filter((t) => !t.hubBound);
     return NextResponse.json({
-      tokens: tokens.map((t) => enrichToken(t, origin, linkedSlugs)),
+      tokens: shareable,
       fetchedAt: new Date().toISOString(),
     });
   } catch (error) {

@@ -21,9 +21,9 @@ Share tworzy **Studio Console** (**Opublikuj** albo „Wyślij link”) — nie 
 |---|---|---|---|
 | **Hasło hubu** | Tak (sesja `client_hub_session`) | Tak — przez sesję | Tylko klientowi (invite) |
 | **Token clip/retainer** (`/?token=`) | **Nie** | Tak | Tak — Copy link w `/admin` |
-| **Hub-bound** (auto przy signup) | **Nie** | Tylko po loginie hubu | **Nie** — brak Copy link; `/?token=` → 401 |
+| **Hub-bound** (auto przy signup) | **Nie** | Tylko po loginie hubu | **Nie** — `/?token=` → 401; **nie widać** na liście Client tokens |
 
-Hub-bound to wewnętrzne powiązanie konta z uprawnieniem uploadu (flaga `hubBound` / linkedToken). **Nie jest drugim loginem** i nie wolno go wysyłać jako link.
+Hub-bound to wewnętrzne powiązanie konta (w **Client hub → Accounts**: „Via hub login”). **Nie jest drugim loginem** i nie pojawia się jako shareable token w adminie.
 
 Produkcja (domyślna): `https://drive-uploader-three.vercel.app`
 
