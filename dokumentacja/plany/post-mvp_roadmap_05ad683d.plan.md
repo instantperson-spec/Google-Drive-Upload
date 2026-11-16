@@ -109,6 +109,8 @@ Cel: klient oznacza pliki, studio widzi status.
 - Console: lista „do poprawy” przy sesji + badge.
 - Bez kont / logowania — nadal sam share link.
 
+**Rozszerzenie (osobny projekt):** P3 = faza **R0** planu Frame.io-lite (preview MP4, komentarze TC) — [`frameio_review_module.plan.md`](./frameio_review_module.plan.md).
+
 ---
 
 ## Świadomie poza planem
