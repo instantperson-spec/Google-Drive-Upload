@@ -57,6 +57,8 @@ Lokalnie: Studio Console (Tauri / localhost) — Host/Origin/token; `ADMIN_SECRE
 | S-07 | Medium | `CLIENT_SESSION_SECRET` fallback = `ADMIN_SECRET` |
 | S-08 | Medium | Register invite nieatomowy (`createToken` / client / consume) |
 | S-09 | Medium | Brak max długości hasła (scrypt DoS) |
+| S-15 | Medium | `validate-token` echo `{ token }` — wyciek `linkedToken` przy sesji hub |
+| S-16 | Medium | Console pull: `path.join(destRoot, relativePath)` bez confinement (`..`) |
 | S-03 | Low | PII w `console.warn` mismatch |
 | S-04 | Low | SA fallback w `getAuthClient` |
 | S-10 | Info | Rate-limit / quota / revoke / lockout per warm instance |

@@ -56,11 +56,13 @@ Lokalnie: Studio Console :8787 (Host/Origin/token) → proxy admin / notify-clie
 |---|---|---|---|
 | **S-01** | `create-folder` / progress / notify — **name/email z body**, nie wymuszone z `prefill*` tokenu | `create-folder/route.js`, `notify/route.js` | Serwer: jeśli token ma `prefillEmail`/`prefillName` → nadpisz body |
 | **S-02** | `notify`: brak `prefillEmail` → **dowolny email** uploadera (open relay dla legacy/env tokenów) | `notify/route.js` L91–94 | Fail-closed: bez prefill → bez maila do uploadera |
-| **S-06** *(nowe)* | Hub projekty: match po **`uploaderEmail`** z progress → w połączeniu z S-01 atakujący z własnym tokenem może **wpiąć folder / share** na listę ofiary (email spoof) | `clientProjects.js` L86–88 | Usunąć `emailMatch` albo wymagać zgodności z prefill + ownership; preferować tylko `linkedToken` + memberships |
+| **S-06** | Hub projekty: match po **`uploaderEmail`** z progress → w połączeniu z S-01 atakujący z własnym tokenem może **wpiąć folder / share** na listę ofiary (email spoof) | `clientProjects.js` L86–88 | Usunąć `emailMatch` albo wymagać zgodności z prefill + ownership; preferować tylko `linkedToken` + memberships |
 | **S-07** | `CLIENT_SESSION_SECRET \|\| ADMIN_SECRET` — to samo tajemnica = hasło admina **i** HMAC sesji klienta | `clientAuth.js` | Osobny `CLIENT_SESSION_SECRET` obowiązkowy w prod; nie reuse hasła UI |
 | **S-08** | Rejestracja invite: `createToken` → `createClient` → `consumeInvite` **nieatomowe** (osierocone tokeny / race) | `client/register/route.js` | Jedna mutacja / kompensacja; consume przed lub w tej samej transakcji logicznej co client |
 | **S-09** | Brak **max długości hasła** → potencjalny DoS przez `scryptSync` na dużym input | `register`, `clientStore.hashPassword` | Cap np. 128–256 znaków przed scrypt |
 | **S-10** | Share upload quota + rate limit + login lockout + revoke sesji — **per warm instance** (efektywnie fail-soft) | `shareQuota.js`, `rateLimit.js`, `clientAuth` / `adminAuth` | Świadome; dokumentować; krytyczne limity → Drive/ETag lub edge KV gdy potrzeba |
+| **S-15** | `POST /api/validate-token` zwraca `{ token }` — przy samej sesji hub (cookie, bez headera) **wycieka `linkedToken` do przeglądarki**, wbrew modelowi session-only (header `x-upload-token` i tak odrzuca hubBound) | `validate-token/route.js`; `auth.js` cookie path | Nie zwracać slug; hub → tylko `{ valid, prefill, locale }` jak `upload-context` |
+| **S-16** | Studio Console: `path.join(destRoot, file.relativePath)` **bez** `path.resolve` + `startsWith(destRoot)` — nazwa pliku/`..` z Drive może wyjść poza katalog sesji | `studio-pull/lib/download.mjs` L66; `syncStatus.mjs` L44 | Sanityzacja relativePath; reject `..` / absolute; assert resolved path under root |
 
 ### Low / Info
 
@@ -73,6 +75,8 @@ Lokalnie: Studio Console :8787 (Host/Origin/token) → proxy admin / notify-clie
 | S-12 | `upload-session` przyjmuje `name` ze ścieżką (`a/b/c`) | Rodzic = folderId (OK); spłaszczyć basename jak w share upload |
 | S-13 | `progressStore.saveRegistry` połyka błąd zapisu | Silent fail heartbeat — monitoring |
 | S-14 | Hashe haseł klientów w `_uploader_clients.json` na Drive | Akceptowalne (scrypt); koncentracja w god-store — ACL Drive |
+| S-17 | Soft-open: `UPLOAD_TOKENS` env gdy Drive store pada | Tylko znane env slugi — OK jako degrade; nie mylić z bypass |
+| S-18 | Brak magic-bytes MIME (tylko extension blocklist) | Świadomie OOS |
 
 ---
 
@@ -92,6 +96,7 @@ Lokalnie: Studio Console :8787 (Host/Origin/token) → proxy admin / notify-clie
 
 | Moduł | ~LOC | Co trzyma | Ryzyko |
 |---|---|---|---|
+| `src/app/globals.css` | ~2473 | Globalne style | Monolit CSS (P3) |
 | `studio-pull/ui/app.js` | ~2002 | Całe UI Console | Błędy auth/UX w jednym pliku; trudny review |
 | `studio-pull/ui-server.mjs` | ~1309 | HTTP API, publish, mail, proxy hub | M2M `ADMIN_SECRET`, Origin, SSE |
 | `SharePage.js` | ~935 | Portal share + upload | Cała UX Capability URL |
@@ -114,7 +119,9 @@ Lokalnie: Studio Console :8787 (Host/Origin/token) → proxy admin / notify-clie
 2. **H-01:** top-up mail ≠ dowód uploadu — powiadomienie da się wysłać bez pliku na Drive.  
 3. **S-08:** częściowa rejestracja zostawia `hubBound` token bez konta / zaproszenie w niejednoznacznym stanie przy race.  
 4. **Quota share:** wiele instancji Vercel = wielokrotność limitu (S-10).  
-5. **notify S-02:** legacy token bez prefill = SMTP do adresu z requestu (świadomy wyjątek — powinien zniknąć).
+5. **notify S-02:** legacy token bez prefill = SMTP do adresu z requestu (świadomy wyjątek — powinien zniknąć).  
+6. **S-15:** hub cookie + `validate-token` → slug w JSON (UI hub używa `upload-context`, ale endpoint zostaje footgunem).  
+7. **S-16:** złośliwa nazwa na Drive → zapis poza `destRoot` przy pull w Console.
 
 ---
 
@@ -128,6 +135,8 @@ Lokalnie: Studio Console :8787 (Host/Origin/token) → proxy admin / notify-clie
 | Separacja sekretów (admin ≠ client) | ❌ S-07 fallback |
 | Nie logować PII | ⚠️ S-03 |
 | Token upload nie w storage plaintext | ❌ H-02 |
+| Hubbound slug nigdy w przeglądarce | ⚠️ S-15 (`validate-token` echo) |
+| Path confinement lokalnego pull | ❌ S-16 |
 | Konta klienta poza scope → **wdrożone** | Hub jest — audyt musi nadążać |
 
 ---
@@ -136,10 +145,13 @@ Lokalnie: Studio Console :8787 (Host/Origin/token) → proxy admin / notify-clie
 
 1. **H-02** — fingerprint w progress + strip token z admin API (szybkie, wysoki zwrot).  
 2. **H-01** — utwardzić `notify-topup` (dowód batch / auth).  
-3. **S-01 + S-06** — lock prefill + usuń/zaostrz emailMatch w hub projects.  
-4. **S-02** — fail-closed notify bez prefill.  
-5. **S-07 / S-09 / S-08** — osobny secret, max password, atomowość invite.  
-6. Hygiene S-03/S-04/S-12 + split god-stores (P3 arch).
+3. **S-15 + S-16** — nie echo tokenu; confine `relativePath` w Console.  
+4. **S-01 + S-06** — lock prefill + usuń/zaostrz emailMatch w hub projects.  
+5. **S-02** — fail-closed notify bez prefill.  
+6. **S-07 / S-09 / S-08** — osobny secret, max password, atomowość invite.  
+7. Hygiene S-03/S-04/S-12 + split god-stores (P3 arch).
+
+> Uzupełnienie mapy API / auth: wewnętrzny przegląd tras (2026-11-17).
 
 ---
 
@@ -148,6 +160,7 @@ Lokalnie: Studio Console :8787 (Host/Origin/token) → proxy admin / notify-clie
 | Route | Auth |
 |---|---|
 | `/api/upload-session`, `create-folder`, `notify`, `upload-progress`, `build-structure`, … | Upload token **lub** hub session → linkedToken |
+| `/api/validate-token` | j.w. — **nie zwracać slug** (S-15) |
 | `/api/share/[id]`, `…/file`, `…/upload-session` | Share id |
 | `/api/share/[id]/notify-topup` | **Tylko share id** ⚠️ |
 | `/api/share/[id]/notify-client` | `x-admin-secret` |
